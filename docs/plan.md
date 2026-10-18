@@ -8,7 +8,7 @@ The work is split into small Claude Code sessions. Each one leaves the game work
 Tick a line (`[x]`) when its session or checkpoint is finished. **The next session to run is the first unticked line.**
 Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook spend approvals: the art session after it stops and waits for your OK before generating anything.
 
-- [ ] **P0** Prerequisites *(you)*: install Node.js LTS (and optionally Git)
+- [x] **P0** Prerequisites *(you)*: install Node.js LTS (and optionally Git)
 - [ ] **S1** Canvas test: court, ball, placeholder player
 - [ ] **CP-A** Checkpoint *(you)*: plain Canvas or Phaser? Character size and camera
 - [ ] **S2** Rally rules and scoring (headless, tested) + `npm test` that can fail
@@ -890,3 +890,4 @@ Go through "Done when", tick S12, add a Session log entry, and commit. Ask me be
 Each session adds a few lines here: date, what changed, numbers measured, anything left for later.
 
 - 2026-10-18, planning: wrote this plan. Decisions from the planning session are recorded above under "Decisions made while writing this plan".
+- 2026-10-18, P0: Node.js v24.20.0 / npm 11.19.0 installed (`C:\Program Files\nodejs`). `npm test` baseline (run2 + run3): golden 12309/12390 + 17452/17563 exact; flight 164 + 294 flights, all ended by a hit or rally end, 12274 + 17360 frames with zero error; shot-select 100/100 + 144/144; hits matched 67/81 + 73/111 (human and CPU hits counted together). Shells started before the install may not see `node` until they're reopened.
