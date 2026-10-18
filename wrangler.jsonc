@@ -1,0 +1,15 @@
+{
+  // Hogg Squash: static web game served by Cloudflare Workers (static assets).
+  // The game lives at https://roninray.com/hogg-squash/
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hogg-squash",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "404-page"
+  },
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "roninray.com/hogg-squash*", "zone_name": "roninray.com" }
+  ]
+}
