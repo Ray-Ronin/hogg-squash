@@ -1,0 +1,11 @@
+{
+  "name": "hogg-squash",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hogg Squash: a local-play browser squash game. No build step; public/ is served as-is.",
+  "scripts": {
+    "test": "node test/run-all.js",
+    "dev": "npx wrangler dev"
+  }
+}

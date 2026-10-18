@@ -1,0 +1,6 @@
+node_modules/
+.wrangler/
+.dev.vars
+# Never commit original game material (ROM, MAME, extracted art/sound). It lives outside this repo.
+*.zip
+*.rom

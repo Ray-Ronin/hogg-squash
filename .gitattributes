@@ -1,0 +1,7 @@
+# Store text with LF line endings in git; Windows checkouts may still use CRLF on disk.
+* text=auto
+*.gz binary
+*.png binary
+*.aseprite binary
+*.ase binary
+*.webp binary
