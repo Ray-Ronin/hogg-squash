@@ -98,6 +98,31 @@ test('an unreturned serve: point to the server, who keeps serving from the other
   assert.ok(w.ball.x < 0, 'serving from the left box');
 });
 
+test('the serve crosses the court: it first bounces in line with the opposite box, behind it', () => {
+  const w = makeWorld({ seed: 3 });
+  for (const [box, across] of [['right', 'left'], ['left', 'right']]) {
+    assert.equal(w.match.box, box);
+    const target = serviceBox(across);
+    stepWorld(w, ...serveNow(w));
+    const mark = w.landing;
+    assert.ok(mark, 'a landing marker');
+    assert.ok(Math.abs(mark.x - (target.xMin + target.xMax) / 2) < 1, `lands in line with the ${across} box (x ${mark.x})`);
+    assert.ok(mark.z > target.zMax, `behind the box (z ${mark.z})`);
+    // the plain physics agrees, and the serve is good (no tin, no out)
+    let front = false, first = null;
+    for (let i = 0; i < 200 && !first; i++) {
+      const e = stepWorld(w, NO_KEYS, NO_KEYS);
+      if (e.some(e => e.type === 'ball' && e.ev === 'frontWall')) front = true;
+      const f = e.find(e => e.type === 'ball' && e.ev === 'floor');
+      if (f && front) first = f;
+      assert.ok(!e.some(e => e.type === 'rally'), 'the serve is still live at its first bounce');
+    }
+    assert.deepEqual([first.x, first.z], [mark.x, mark.z]);
+    until(w, 'rally');
+    run(w, FREEZE);                                      // the unreturned serve wins; the server serves from the other box
+  }
+});
+
 test('turns: the server cannot hit the ball back, and nobody can take the serve before the front wall', () => {
   const w = makeWorld({ seed: 5 });
   const s = w.match.server, rcv = s === 0 ? 1 : 0;

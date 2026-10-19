@@ -45,6 +45,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **Rally scoring** (a point on every rally, as in the arcade).
 - **No "faults as lives".** The arcade's 5-faults-per-credit mechanic is dropped.
 - **Serving:** vs CPU, the human always serves first. In 2-player versus, the first server is random. (After that, the rally winner serves.)
+- **The serve crosses the court (2026-10-19).** The arcade serve flies straight (vx 0), so it came back down the server's own side. Now it keeps the arcade's height and depth but is angled across, so its first bounce lands in line with the opposite service box, about 1.9 m behind it (the opposite back quarter, where the receiver stands). `serveVx` in `js/sim/world.js` works out the angle with the real physics, so it still lands there at any game pace.
 - **Court line heights approved (2026-10-18, after S2):** tin **17**, front-wall out-line **161**, side-wall out-line sloping from **161** at the front wall to **75** at the back (the top of the back glass), in game units. The lines count against the ball. They live in `js/sim/court-rules.js` (`LINES`).
 
 ## CPU difficulty (2026-10-18, revised)

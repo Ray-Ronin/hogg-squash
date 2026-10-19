@@ -74,7 +74,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 
 Asked and answered before writing:
 - **Node.js** isn't installed on this PC yet. The owner installs Node.js LTS before Session 1 (P0).
-- **Serving is arcade-simple.** The server stands in a service box (alternating sides) and presses HARD or SOFT, and the ball leaves on the arcade's fixed serve trajectory (`SERVE` in the physics file). A serve can lose only the way any shot can (tin, out, not reaching the front wall). No service-box faults.
+- **Serving is arcade-simple.** The server stands in a service box (alternating sides) and presses HARD or SOFT, and the ball leaves on the arcade's fixed serve trajectory (`SERVE` in the physics file). *(Changed 2026-10-19: same height and depth, but angled across the court; see `docs/decisions.md`.)* A serve can lose only the way any shot can (tin, out, not reaching the front wall). No service-box faults.
 - **The live page shows the game as it grows.** The game is built in `public/hogg-squash/index.html` from Session 1 onward, replacing "Coming soon". The owner decides when each version goes live by approving pushes.
 
 Settled by the plan (say so if you disagree):
@@ -358,7 +358,7 @@ Play several games to 9, with a friend or with both hands. Note answers to:
 3. Reach and timing: do hits feel fair? Do misses feel like your fault? Since S4 a swing plants you for its whole 18 frames (0.31 s), as in the arcade recordings. Too stiff? (`SWING.MOVE_SPEED` 0 → 0xC000 would allow a slow shuffle.)
 4. Dive: S4 copies the arcade, so a dive happens when the ball is just *beyond* stretching reach (the classifier's "special" band), and you stay down for 143 frames (2.5 s). Does the dive come at the right moments, and is 2.5 s right? (`DIVE.RECOVERY` in `js/sim/player.js`; the plan's first guess was about 45 frames.)
 5. Rules: any call that felt wrong (tin height, out-lines, double bounce)? Two rulings from S3 to judge in particular:
-   - the arcade serve flies straight (vx 0), so it comes back down the server's own side and the receiver has to run across the court for it;
+   - ~~the arcade serve flies straight (vx 0)~~ settled 2026-10-19: the serve now crosses the court and lands behind the opposite box (`docs/decisions.md`). Does its depth feel right?
    - a swing only counts if it's your ball when you press, so a press before the ball has reached the front wall misses.
 6. Placeholder sizes and camera, now that you've played properly. The boxes now grow smoothly from 68 px (front) through 84 to 100 px (back). Is that range right, and does the growth look natural? **This confirms the heights A1 to A3 work to.**
 7. Screen: the game now fills the window (sharp-bilinear, slightly soft pixel edges at in-between sizes; exact at 3× in 1920×1080 fullscreen with F11). Is it sharp enough in a normal window, or should whole-number scaling (`?scale=int`) be the default?
@@ -999,3 +999,6 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
     - no console errors.
   - **Not checked in real time:** feel at full speed, and `?slow=4` on screen (the hidden pane gives no animation frames). The loop itself was checked in Node with a fake 60 Hz clock: 57.3 steps/s normally, 14.3 with `hz / 4`.
   - **For CP-B:** questions 3 and 4 now ask about the planted swing and the arcade dive (trigger and 2.5 s). The research note (`squash-game-logic.md` §5) records the measurements. A3's timing line now gives the swing (18 frames) and dive (143 frames) lengths.
+- 2026-10-19, after S4 (owner's request): **the serve crosses the court.** It used to fly straight (the arcade's vx 0) and come back down the server's own side. The owner chose to keep the arcade's height and depth and angle it across. `serveVx` in `js/sim/world.js` bisects for the sideways speed (with the real physics, so it holds at any pace) that makes the first bounce land at the opposite box's centre x. From the right box it's vx −6.74 (HARD) / −6.81 (SOFT) units/frame: front wall at x 20, 3.0 m up; first bounce at x −108, z 167–170 (about 1.9 m behind the left box); off the back glass; second bounce near the left side wall at z 150. The left box mirrors it. `squash-physics.js` is unchanged (`SERVE` keeps the arcade's vx 0).
+  - **Tests:** new world test: from each box the landing marker is in line with the opposite box and behind it, the plain physics bounces there, and the serve stays live to its first bounce. Unit tests: 44.
+  - **Checked in the browser:** a HARD serve from the right box came off the front wall heading left, and the landing ring showed in the back-left behind the left box, by the receiver. No console errors.

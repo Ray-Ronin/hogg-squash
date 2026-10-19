@@ -4,8 +4,9 @@
 //
 // Phases:  serve → rally → point (a freeze: callout, then POINT and the score) → serve … → over (HARD = rematch)
 //  - serve: the server stands in the service box match.js names and holds the ball. HARD or SOFT launches the
-//    arcade's fixed SERVE trajectory from there (arcade-simple: no service faults). The receiver starts in the
-//    opposite back quarter. Both may move; the server stays inside the box.
+//    arcade's SERVE height and depth from there, angled across the court (serveVx) so it first bounces in line
+//    with the opposite service box (arcade-simple: no service faults). The receiver starts in the opposite back
+//    quarter. Both may move; the server stays inside the box.
 //  - rally: each step runs stepPlayer for P1 then P2 (a 'hit' calls rallyStrike), then stepBall. Only the player
 //    whose turn it is (canStrike) can make contact; anyone else's swing misses.
 import { FP, makeBall, difficultyParams, predict, SERVE } from '../squash-physics.js';
@@ -144,6 +145,25 @@ export function landingSpot(ball, p, needFront) {
 }
 
 /**
+ * The sideways speed that makes a serve (ball already given its depth and height speeds) first bounce at x = targetX
+ * after the front wall. Found by bisection with the real physics, so it holds for any game pace.
+ * @param {Ball} ball  the served ball (vx is ignored)
+ * @param {ReturnType<typeof defaultParams>} p
+ * @param {number} targetX  game units
+ * @returns {number}  vx, 16.16
+ */
+export function serveVx(ball, p, targetX) {
+  const dir = targetX < ball.x / FP ? -1 : 1;
+  let lo = 0, hi = 12 * FP;                         // |vx|: lo lands short of the target, hi past it
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    const at = landingSpot({ ...ball, vx: dir * mid }, p, true);
+    if (at && (at.x - targetX) * dir < 0) lo = mid; else hi = mid;
+  }
+  return dir * hi;
+}
+
+/**
  * One sim step.
  * @param {World} w
  * @param {Actions} a1  P1's actions this step
@@ -180,9 +200,10 @@ function stepServe(w, acts, events) {
   const act = acts[s];
   if (act.hard || act.soft) {
     const button = act.hard ? 'hard' : 'soft';
-    w.ball.vx = SERVE.vx;
     w.ball.vz = SERVE.vz;
     w.ball.vy = SERVE.vy[button === 'hard' ? 1 : 0];
+    const across = serviceBox(w.match.box === 'right' ? 'left' : 'right');
+    w.ball.vx = serveVx(w.ball, w.params, (across.xMin + across.xMax) / 2);
     rallyStrike(w.rally, s, w.ball);
     w.phase = 'rally';
     w.landing = landingSpot(w.ball, w.params, true);
