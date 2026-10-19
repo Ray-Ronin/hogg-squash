@@ -56,6 +56,17 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
    - commit with the message `Sx: <session name>`.
 9. **Never push without asking.** A push to `main` deploys to https://roninray.com/hogg-squash/. At the end, ask whether to push.
 10. **Git:** if `git` isn't on the PATH, use GitHub Desktop's copy: `C:\Users\ronin\AppData\Local\GitHubDesktop\app-3.6.7\resources\app\git\cmd\git.exe` (the version folder changes when GitHub Desktop updates).
+11. **Hand-off:** the last thing every session does, after committing, is write the owner a ready-to-paste prompt for the **next unticked line**, and suggest an effort level for it.
+    - **The prompt:** start from that line's starter prompt in this file. Update it with anything this session learned, such as changed file names, a new fix-up item, or a question the owner still has to answer.
+    - **If the next line is a checkpoint** *(you)*: give a short list of what to play-test, then that checkpoint's planning prompt with the `<notes>` placeholders left for the owner.
+    - **If the next line is a 💳 approval:** give the art session's prompt. That prompt already begins with the spend gate.
+    - **Effort level:** suggest one of `low`, `medium`, `high`, `xhigh` or `max`, with one line of reasoning. Start from the guide below and adjust if this session found the next one harder or easier than planned.
+
+    | Suggested effort | Sessions |
+    |---|---|
+    | `high` | S1, S2, S3, S4, S5, S8: new foundations, the rules, or porting arcade logic, where mistakes are costly |
+    | `medium` | S6, S7, S9, S10, S11, S12, A1–A5: building on settled code or art work driven by the shared rules |
+    | `medium` | Checkpoint planning sessions (CP-A … CP-E): editing this plan from your notes |
 
 ---
 
