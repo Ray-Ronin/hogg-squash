@@ -14,7 +14,8 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S2** Rally rules and scoring (headless, tested) + `npm test` that can fail
 - [x] **S3** Playable 2-player rally on one keyboard
 - [x] **S4** Hitting and ball feel
-- [ ] **CP-B** Play-test 1 *(you)*: 2-player rallies
+- [x] **CP-B** Play-test 1 *(you)*: 2-player rallies
+- [ ] **S4b** CP-B fix-ups: aimed serve, 2 s dive, one smooth height curve
 - [ ] **S5** CPU opponent: movement and hitting
 - [ ] **S6** Difficulty 1–9 and game pace
 - [ ] **CP-C** Play-test 2 *(you)*: vs CPU at levels 1, 5 and 9
@@ -64,7 +65,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 
     | Suggested effort | Sessions |
     |---|---|
-    | `high` | S1, S2, S3, S4, S5, S8: new foundations, the rules, or porting arcade logic, where mistakes are costly |
+    | `high` | S1, S2, S3, S4, S4b, S5, S8: new foundations, the rules, or porting arcade logic, where mistakes are costly |
     | `medium` | S6, S7, S9, S10, S11, S12, A1–A5: building on settled code or art work driven by the shared rules |
     | `medium` | Checkpoint planning sessions (CP-A … CP-E): editing this plan from your notes |
 
@@ -74,7 +75,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 
 Asked and answered before writing:
 - **Node.js** isn't installed on this PC yet. The owner installs Node.js LTS before Session 1 (P0).
-- **Serving is arcade-simple.** The server stands in a service box (alternating sides) and presses HARD or SOFT, and the ball leaves on the arcade's fixed serve trajectory (`SERVE` in the physics file). *(Changed 2026-10-19: same height and depth, but angled across the court; see `docs/decisions.md`.)* A serve can lose only the way any shot can (tin, out, not reaching the front wall). No service-box faults.
+- **Serving is arcade-simple.** The server stands in a service box (alternating sides) and presses HARD or SOFT, and the ball leaves on the arcade's fixed serve trajectory (`SERVE` in the physics file). *(Changed 2026-10-19: same height and depth, but angled across the court. Changed again at CP-B: the server's spot in the box aims it and HARD/SOFT sets its depth (S4b). See `docs/decisions.md`.)* A serve can lose only the way any shot can (tin, out, not reaching the front wall). No service-box faults.
 - **The live page shows the game as it grows.** The game is built in `public/hogg-squash/index.html` from Session 1 onward, replacing "Coming soon". The owner decides when each version goes live by approving pushes.
 
 Settled by the plan (say so if you disagree):
@@ -102,9 +103,11 @@ Settled by the plan (say so if you disagree):
    | 8 | Hardest 3 | 2 | 4 | 296 | 19 | −3 | 0x2060 |
    | 9 | Hardest 4 | 1 | 2 | 304 | 19 | −3 | 0x2140 |
 
-2. **Pace by difficulty:** use the default. 1P uses the level's pace. 2P versus uses level 5's pace (speed 284, power 18, bounce −2, gravity 0x1FB8).
+   **Changed at CP-B:** the owner played at the game's current pace (`defaultParams()` = arcade index 0, Normal skill 0: speed 280, power 17, bounce −1, gravity 0x1F80) and said it's right for level 5. That is this table's *level 3* row, so S6 re-anchors the pace columns: level 5 = the CP-B pace, level 9 stays Hardest 4, and levels 1–4 get slower in even steps below it. The CPU columns (reaction, error step) stay as they are.
+
+2. **Pace by difficulty:** use the default. 1P uses the level's pace. 2P versus uses level 5's pace, which since CP-B is the pace played there (speed 280, power 17, bounce −1, gravity 0x1F80; see open question 1).
 3. **Rubber band:** use the default and leave it out. **One change I recommend:** the arcade also grows the CPU's positioning error after *every point* (§6 step 5). Over a game to 11 this makes the CPU steadily sloppier, so level 5 at 10–10 would play worse than level 5 at 0–0. The plan makes the error a fresh random offset each rally, sized by the level's error step, that doesn't build up. A level then means the same thing all match.
-4. **Character height:** settled at CP-A: **three pre-scaled sizes**, 100 px at the back (z ≥ 130), 84 px in the middle (70 ≤ z < 130) and 68 px at the front (z < 70), picked from the feet z with a little hysteresis. The camera is unchanged. Details in `docs/decisions.md` ("Camera and character size"). S3 draws the boxes this way and CP-B confirms the numbers. **Changed after S3:** the steps were jarring, so the boxes now change height smoothly through the same three sizes (68 / 84 / 100 px at z 39 / 100 / 155). A1 decides how the sprites do the same.
+4. **Character height:** settled at CP-A: **three pre-scaled sizes**, 100 px at the back (z ≥ 130), 84 px in the middle (70 ≤ z < 130) and 68 px at the front (z < 70), picked from the feet z with a little hysteresis. The camera is unchanged. Details in `docs/decisions.md` ("Camera and character size"). S3 draws the boxes this way and CP-B confirms the numbers. **Changed after S3:** the steps were jarring, so the boxes now change height smoothly through the same three sizes (68 / 84 / 100 px at z 39 / 100 / 155). A1 decides how the sprites do the same. **Changed at CP-B:** the 68–100 px range is right, but the growth didn't look natural (it stops growing near both walls and bends at mid-court). S4b replaces it with one smooth curve over the whole court, and the owner leans towards one sprite scaled to fit (A1 still compares).
 5. **Hogg colour shades:** chosen in A1 and written into `docs/theme.md`.
 6. **Logo on a public site:** there is no default for this, so the plan keeps it safe. **The school's shield logo stays out of the live game until you've confirmed with the school.** Until then the game uses the colours, a "HOGG RAZORBACKS" wordmark and our own original boar mascot. S9 leaves a single logo slot, so adding the logo later is a one-file change.
 7. **"Missing pieces" from the decompiled code:** only one of the five was actually found in the ROM.
@@ -370,6 +373,49 @@ Read docs/plan.md and its Session log (the S4 entry, and the two after it: PAUSE
 Turn it into changes to the remaining sessions (add small fix-up items to the right session, or a short fix-up session if needed), tick CP-B, and commit. Don't push.
 ```
 
+**Answers (2026-10-19):** 1 view readable, yes. 2 pace right for level 5 (it's actually the plan's level 3 row; see open question 1). 3 the planted swing feels fine. 4 the dive comes at the right moments, but 2 s on the ground, not 2.5. 5 the serve should land in a different spot depending on where the server stands in the box, and go to different depths for HARD and SOFT; a press before the ball reaches the front wall stays a miss. 6 the height range is right but the growth doesn't look natural: one size that grows smoothly all the way forward and back. 7 sharp enough in a normal window; sharp-bilinear stays the default. The fixes are S4b; the details are in the Session log.
+
+---
+
+## S4b: CP-B fix-ups (aimed serve, 2 s dive, one smooth height curve)
+
+**Goal:** the three changes from CP-B, before the CPU is built on top of them. Small, but the serve touches the rules, so it gets its own session and tests.
+
+**In scope**
+- **Dive: 2 s on the ground.** `DIVE.RECOVERY` 136 → 108 in `js/sim/player.js`, so a dive lasts 115 frames in all (contact on frame 7; 115 / 57.4 ≈ 2.00 s). Update `test/player.test.js` (143 → 115) and the comment.
+- **Aimed serve.** Replace "always the centre of the opposite box" in `js/sim/world.js`:
+  - **Where the server stands aims it.** The held ball's place across the server's box maps to the first bounce's place across the opposite back quarter, as a mirror image: near the centre line → near the centre line, near the side wall → near the side wall. Default target range: |x| 36 to 120 (keep the first bounce clear of the side wall; check the widest one doesn't hit the side wall first, and narrow the range if it does).
+  - **HARD and SOFT set the depth.** Default first-bounce depth: HARD z ≈ 168 (deep, about where it lands now, then off the back glass), SOFT z ≈ 140 (just behind the service box, shorter and slower). The server's depth in the box nudges it by up to ±8 units (front of the box shorter, back deeper). All of these are named constants for CP-C to tune.
+  - **Solve it with the real physics,** as `serveVx` does now: extend it (or add `serveAim`) to find the velocity whose first bounce lands on the target (x and z), keeping the arcade's `SERVE.vy` per button and solving sideways and depth speed (or say in the Session log if varying height works better). It must still work at any pace, since S6 changes the pace. `squash-physics.js` doesn't change.
+  - **Every serve stays legal:** it hits the front wall between the service line (63) and the out-line (161) and lands in the opposite back quarter (behind the short line, z > 103, on the receiver's side). A serve has no special faults, as now.
+  - The landing marker shows the target as soon as the serve is struck (it already uses `landingSpot`). The receiver's start spot stays at x ±72, z 150.
+- **One smooth height curve.** Replace the three-point line in `heightAt` (`js/render/actors.js`) with one smooth curve over the whole court, with no flat ends and no bend. Default: height = 100 × √(perspective scale at z ÷ scale at z 179), using `project()`'s scale, rounded to whole pixels. That is a "half-strength" perspective: ≈70 px at the front wall (z 12), 77 at z 70, 82 at z 100, 87 at z 130, 93 at z 155, 100 at the back (z 179). It keeps `?h=`. Also check that nothing wobbles: when the width (0.36 × height) changes, rounding can make one edge step back and forth, so keep the box's feet centre and both edges moving smoothly. Add `?curve=old` to show the S3 curve, so the owner can compare at CP-C.
+- **Tests:** player (dive length), world (from several spots in each box and both buttons: the first bounce lands on its target within a few units, HARD deeper than SOFT, every serve legal; the existing cross-court test updated), actors (the new curve: ≈70 at z 12, 100 at z 179, never shrinking as z grows, never more than 1 px a frame while running).
+
+**Not in scope:** CPU serving (S5 uses this), difficulty levels (S6), art, changes to the swing.
+
+**Depends on:** CP-B.
+
+**Main files:** `js/sim/player.js`, `js/sim/world.js`, `js/render/actors.js`, `js/render/debug.js` (show the serve target), `test/player.test.js`, `test/world.test.js`, `test/actors.test.js`, `docs/decisions.md` (the final serve and height numbers).
+
+**Done when…**
+- `npm test` and `npm run typecheck` pass.
+- In the browser:
+  - serves from the inner and outer edges of each box land in visibly different places, and HARD lands deeper than SOFT;
+  - a dive keeps the player down for about 2 s;
+  - walking from the back wall to the front wall shrinks the box smoothly the whole way, with no flat stretch, bend or wobble.
+
+**You check or decide at the end:** go straight on to S5. The serve numbers and the curve get their real test at CP-C.
+
+**Starter prompt**
+```text
+We're doing Session S4b of docs/plan.md: "CP-B fix-ups (aimed serve, 2 s dive, one smooth height curve)".
+Read CLAUDE.md, docs/decisions.md and docs/plan.md (rules, S4b, and the CP-B answers and Session log entry). Check CP-B is ticked.
+Build S4b's "In scope" list only. Don't change squash-physics.js: solve the serve with the real physics in js/sim/world.js, as serveVx does now. New tunables are named constants.
+The browser pane may be throttled: use ?dev (window.hogg.step(n), dispatched KeyboardEvents) to drive the game, and say what couldn't be checked in real time.
+Go through "Done when", tick S4b, add a Session log entry with the serve landing spots and the new heights, and commit. Ask me before pushing.
+```
+
 ---
 
 ## S5: CPU opponent: movement and hitting
@@ -384,7 +430,7 @@ Turn it into changes to the remaining sessions (add small fix-up items to the ri
   4. Press so that the contact frame (7 frames after the press) lands on the planned contact.
   5. Recover toward the T (z ≈ 96), offset by the positioning error.
 - **Positioning error:** a fresh deterministic random offset each rally, sized by the error step and not accumulated (see open question 3).
-- **CPU serve:** after about 1 s, it serves.
+- **CPU serve:** after about 1 s, it serves. Since S4b the serve is aimed by where the server stands and HARD/SOFT sets its depth, so the CPU picks a spot in its box and a button (a simple, varied, tunable choice, so it doesn't serve the same way every time), walks there, then serves. As receiver it reads the landing spot like any other ball.
 - **CPU button choice:** the arcade's logic isn't known, so it is a simple, tunable rule in one function (for example SOFT from the front court when the opponent is deep, otherwise HARD, with some randomness).
 - `isCpu` is passed to `applyShot`, so the CPU never aims into a near side wall.
 - **Modes:** the page defaults to 1P vs CPU with the human serving first, and `?mode=2p` gives versus. The CPU uses Normal/skill 0 parameters until S6.
@@ -393,7 +439,7 @@ Turn it into changes to the remaining sessions (add small fix-up items to the ri
 
 **Not in scope:** the 1–9 levels (S6), rubber-banding (left out), CPU-only shot adjustments (not found in the ROM), and art.
 
-**Depends on:** S4, CP-B.
+**Depends on:** S4b.
 
 **Main files:** `js/sim/cpu.js`, `js/sim/world.js`, `js/main.js`, `js/render/debug.js`, `test/cpu.test.js`.
 
@@ -411,7 +457,7 @@ Turn it into changes to the remaining sessions (add small fix-up items to the ri
 **Starter prompt**
 ```text
 We're doing Session S5 of docs/plan.md: "CPU opponent: movement and hitting".
-Read CLAUDE.md, docs/decisions.md, docs/research/squash-game-logic.md (§4 landing arrow, §6 CPU) and docs/plan.md (rules, open question 3, S5). Check S4 and CP-B are ticked.
+Read CLAUDE.md, docs/decisions.md, docs/research/squash-game-logic.md (§4 landing arrow, §6 CPU) and docs/plan.md (rules, open question 3, S5). Check S4b is ticked.
 Build S5's "In scope" list only. The CPU must output the same per-player actions as a human, and stay deterministic.
 Go through "Done when", tick S5, add a Session log entry, and commit. Ask me before pushing.
 ```
@@ -423,14 +469,14 @@ Go through "Done when", tick S5, add a Session log entry, and commit. Ask me bef
 **Goal:** the 1–9 difficulty table drives both the CPU's skill and the game's pace in 1P. 2P uses one fixed pace.
 
 **In scope**
-- `js/sim/difficulty.js`: the table from open question 1. `levelParams(level)` returns the physics params (speed, gravity, bounce offset, power mult, `latMult`) and the CPU params (reaction delay, error step).
+- `js/sim/difficulty.js`: the table from open question 1, **re-anchored at CP-B**: level 5's pace columns are the pace played at CP-B (speed 280, power 17, bounce −1, gravity 0x1F80, today's `defaultParams()`), level 9 stays Hardest 4, levels 1–4 get slower in even steps below level 5, and every column stays monotonic. The CPU columns stay as proposed. A 2P game at level 5 then plays exactly as at CP-B. `levelParams(level)` returns the physics params (speed, gravity, bounce offset, power mult, `latMult`) and the CPU params (reaction delay, error step).
 - 1P uses the chosen level for both. 2P uses level 5's pace.
 - `?level=1..9` (default 5), plus a debug key that changes the level between rallies.
 - CPU shot choice may get a little smarter at higher levels (for example choosing HARD or SOFT based on where the human is standing), kept in the same tunable function.
 - `test/difficulty.test.js`:
   - every column is monotonic;
   - every level gives sane ball flights (time to the front wall and to the bounce, within broad ranges around the arcade timings);
-  - the serve still crosses the court at every level: its first bounce is in line with the opposite box and behind it (`serveVx` recomputes the angle for the pace; checked 2026-10-19 with open question 1's levels 1, 5 and 9: x −108, z 159–171);
+  - the aimed serve (S4b) still works at every level: from the inner and outer edges of each box, with HARD and SOFT, the first bounce lands on its target in the opposite back quarter and the serve is legal (the solver recomputes for the pace);
   - in headless CPU-against-CPU play, rallies get longer as the level rises.
 - Record the final table in `docs/decisions.md`.
 
@@ -451,7 +497,7 @@ Go through "Done when", tick S5, add a Session log entry, and commit. Ask me bef
 ```text
 We're doing Session S6 of docs/plan.md: "Difficulty 1–9 and game pace".
 Read CLAUDE.md, docs/decisions.md, docs/research/squash-game-logic.md (§7 difficulty table) and docs/plan.md (rules, open questions 1–3, S6). Check S5 is ticked.
-Build S6's "In scope" list only, starting from the proposed table in the plan.
+Build S6's "In scope" list only, starting from the proposed table in the plan, re-anchored as open question 1 says (level 5 = the CP-B pace).
 Go through "Done when", tick S6, add a Session log entry, and commit. Ask me before pushing.
 ```
 
@@ -464,6 +510,8 @@ Play at levels 1, 5 and 9, and one 2P game. Note:
 2. Do the steps between levels feel even, or is there a jump?
 3. Does the CPU ever do something silly (stand still, run the wrong way, always the same shot)?
 4. Is the 2P pace right?
+5. Serves (S4b): do the spots and depths feel right, for you and the CPU? Is SOFT short enough and HARD deep enough? Is 2 s on the ground after a dive right?
+6. Height (S4b): does the box now grow naturally from front to back? Compare with `?curve=old` once.
 
 **Starter prompt** (planning-only session)
 ```text
@@ -527,7 +575,8 @@ These apply to A1–A5:
 - **Needs:** the SpriteCook connector signed in and credits on the account (the account had 0 credits on 2026-10-18), plus Aseprite and its connection.
 - **Three sizes (CP-A):** every character animation is generated once at 100 px. It is then downscaled to 84 and 68 px in Aseprite and cleaned up again at each size, with no extra SpriteCook credits. Each size is its own sheet (`player-100`, `player-84`, `player-68`, each a `.png` + `.json`) with identical tags, frame counts, durations and `feet` slice. This takes about three times the cleanup work of one size.
 - **Smooth height (after S3):** in the game the character's height now changes smoothly with depth (68 → 100 px), not in three steps. A1 tries three ways for the sprites to follow it and the owner picks one: scaling the 100 px art at draw time, exporting many sizes (about every 2–4 px) downscaled automatically, or scaling the nearest of the three hand-cleaned sizes (see `docs/decisions.md`). A2 and A3 then export whatever A1 picked. The "Three sizes" rule above applies until then, and is replaced if A1 picks otherwise.
-- **Order:** A1–A3 only touch art files, so they can be run earlier, in parallel with S2–S7, if you like. A1 can run any time after CP-A. A2 and A3 should wait until CP-B has confirmed the three sizes, or the smaller sizes may need cleaning up again. A3 also needs the S4 swing timings.
+- **After CP-B:** the 68–100 px range is confirmed, and since S4b the height follows one smooth curve (`heightAt`: ≈70 px at the front wall to 100 at the back, no flat ends). The owner leans towards **one sprite, scaled to fit** (method 1, the least art work), but wants to see real pixel art first, so A1 still shows all three methods, method 1 first.
+- **Order:** A1–A3 only touch art files, so they can be run earlier, in parallel with S2–S7, if you like. A1 can run any time after CP-A. A2 and A3 wait for A1's method (CP-B has confirmed the range). A3 also needs the swing and dive timings (S4, and S4b's 2 s dive).
 
 ## A1: Art: palette and style test sprite
 
@@ -540,7 +589,7 @@ These apply to A1–A5:
   - clean one ready-stance frame at 100 px;
   - downscale it to 84 and 68 px and clean those too, to show the smaller sizes still read;
   - make a palette-swapped version (for example a white-and-black kit) to prove the swap.
-- **Smooth-height test:** show the ready frame at every height from 68 to 100 px done the three ways in "Art sessions: shared rules" ("Smooth height"): a strip of sizes per method, plus a GIF made in Aseprite that walks it from the back to the front (art sessions don't change game code, so draw-time scaling is imitated by resizing in Aseprite: nearest-neighbour or smooth). The owner picks one. Record the choice in `docs/decisions.md` and `docs/art-style-guide.md`, and update A2, A3 and S8 to match.
+- **Smooth-height test:** show the ready frame at every height on the game's curve (`heightAt` after S4b: about 70 to 100 px) done the three ways, starting with method 1, the owner's lean, in "Art sessions: shared rules" ("Smooth height"): a strip of sizes per method, plus a GIF made in Aseprite that walks it from the back to the front (art sessions don't change game code, so draw-time scaling is imitated by resizing in Aseprite: nearest-neighbour or smooth). The owner picks one. Record the choice in `docs/decisions.md` and `docs/art-style-guide.md`, and update A2, A3 and S8 to match.
 - A mockup PNG of the sprite on a screenshot of our own court, at the back, middle and front.
 - Record the chosen hex colours in `docs/theme.md` (open question 5) and the character heights (68 → 100 px) and the chosen smooth-height method in `docs/art-style-guide.md`.
 
@@ -572,12 +621,12 @@ No game code changes. Never use ROM/MAME/Gaelco images as references. Finish wit
 **In scope**
 - After the spend gate, animate from the A1 base in SpriteCook: ready/idle, run sideways (one direction, mirrored for the other), run toward the front wall, run toward the back, and serve.
 - Aseprite cleanup as in the shared rules. Tags: `ready`, `run_side`, `run_up`, `run_down`, `serve`. Add a `feet` slice. Set frame timings.
-- Downscale to 84 and 68 px and clean each size (shared rules, "Three sizes").
+- Downscale to 84 and 68 px and clean each size (shared rules, "Three sizes"), or export what A1 picked instead (for method 1, only the 100 px sheet).
 - Export `public/hogg-squash/assets/player-100.png` + `player-100.json`, and the same for `-84` and `-68`.
 
 **Not in scope:** swings and dive (A3), game code.
 
-**Depends on:** A1, CP-B (sizes confirmed), and the 💳 approval line above it.
+**Depends on:** A1 (the smooth-height method), CP-B (range confirmed), and the 💳 approval line above it.
 
 **Main files:** `art/character/player.aseprite`, `public/hogg-squash/assets/player-{100,84,68}.png`, `public/hogg-squash/assets/player-{100,84,68}.json`, `art/spritecook-manifest.md`.
 
@@ -591,7 +640,7 @@ No game code changes. Never use ROM/MAME/Gaelco images as references. Finish wit
 **Starter prompt**
 ```text
 We're doing Session A2 of docs/plan.md: "Art: character animations, part 1 (ready, run, serve)".
-Read CLAUDE.md, docs/decisions.md ("Camera and character size"), docs/art-style-guide.md and docs/plan.md ("Art sessions: shared rules" + A2), plus art/spritecook-manifest.md from A1. Check A1 and CP-B are ticked (CP-B confirms the three sizes).
+Read CLAUDE.md, docs/decisions.md ("Camera and character size"), docs/art-style-guide.md and docs/plan.md ("Art sessions: shared rules" + A2), plus art/spritecook-manifest.md from A1. Check A1 and CP-B are ticked (CP-B confirmed the 68–100 px range; A1 picked how the sizes are made, so export the sheets A1's choice needs).
 First check my SpriteCook balance and list the planned generations with estimated credits, then STOP and wait for my OK.
 No game code changes. Finish with "Done when", tick A2, add a Session log entry, and commit. Ask me before pushing.
 ```
@@ -602,12 +651,12 @@ No game code changes. Finish with "Done when", tick A2, add a Session log entry,
 
 **In scope**
 - After the spend gate, animate in SpriteCook: forehand, backhand, overhead, and dive (left and right) + get-up. Celebrate and dejected only if the budget allows.
-- **Timing:** read the swing constants in `js/sim/player.js` (from S4). The contact frame must start 7 sim frames (≈122 ms) after the swing begins, and the recovery must last as long as the sim's recovery. Mark the contact frame (frame user data `contact`, or a `contact` tag). As built in S4 (check `SWING` and `DIVE`, CP-B may change them): a swing is 18 frames in all (contact on frame 7, ≈0.31 s), and a dive is 143 frames (contact on frame 7, then about 2.4 s lying down and getting up).
-- Cleanup, tags, `feet` slice, at all three sizes. Re-export `player-{100,84,68}.png` / `.json` with all tags.
+- **Timing:** read the swing constants in `js/sim/player.js` (from S4). The contact frame must start 7 sim frames (≈122 ms) after the swing begins, and the recovery must last as long as the sim's recovery. Mark the contact frame (frame user data `contact`, or a `contact` tag). As built in S4 and S4b (check `SWING` and `DIVE`): a swing is 18 frames in all (contact on frame 7, ≈0.31 s), and a dive is 115 frames (contact on frame 7, then about 1.9 s lying down and getting up; 2 s in all, set at CP-B).
+- Cleanup, tags, `feet` slice, at every size A1's method needs (all three for the shared rules' "Three sizes"; only 100 px for method 1). Re-export `player-{100,84,68}.png` / `.json` with all tags.
 
 **Not in scope:** game code, court art.
 
-**Depends on:** A2, S4, and the 💳 approval line above it.
+**Depends on:** A2, S4b (the 2 s dive), and the 💳 approval line above it.
 
 **Main files:** `art/character/player.aseprite`, `public/hogg-squash/assets/player-{100,84,68}.png`, `public/hogg-squash/assets/player-{100,84,68}.json`, `art/spritecook-manifest.md`.
 
@@ -1004,3 +1053,10 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Tests:** new world test: from each box the landing marker is in line with the opposite box and behind it, the plain physics bounces there, and the serve stays live to its first bounce. Unit tests: 44.
   - **Checked in the browser:** a HARD serve from the right box came off the front wall heading left, and the landing ring showed in the back-left behind the left box, by the receiver. No console errors.
 - 2026-10-19, after S4 (owner's request): **the court says PAUSED, not FROZEN**, and the key hint says "Esc pause" (`render/hud.js`, `main.js`; the code's `frozen` flag is unchanged). Plan check after this and the serve change: S6 gets a test that the serve still crosses the court at every level (`serveVx` already holds at levels 1, 5 and 9: x −108, z 159–171); S7 says "pause" instead of "freeze"; the CP-B prompt points at these entries. Nothing else in the remaining sessions depended on the straight serve or the word FROZEN.
+- 2026-10-19, CP-B (planning only): owner's play-test answers (listed under CP-B) turned into a new fix-up session, **S4b**, before S5.
+  - **Kept as they are:** the view and depth cues, the planted swing (`SWING.MOVE_SPEED` 0), the dive trigger (special band), "a press before the front wall is a miss", and sharp-bilinear fill as the default scaling.
+  - **Dive:** 2 s on the ground, not 2.5: `DIVE.RECOVERY` 136 → 108 (115 frames in all). In S4b; A3's timing line updated.
+  - **Serve:** where the server stands in the box aims the first bounce (a mirror image across the opposite back quarter, default |x| 36–120), and HARD/SOFT sets the depth (default HARD z ≈ 168, SOFT z ≈ 140, ±8 from the server's depth in the box), solved with the real physics and always legal. In S4b. S5's CPU now picks a spot and a button before serving; S6's every-level serve test now covers the aimed serves; CP-C asks about spots and depths.
+  - **Height:** the 68–100 px range is right, but the S3 curve is flat for the last 27 units at the front (z 12–39) and the last 24 at the back (z 155–179), and bends at z 100, so the box stops growing near both walls. S4b replaces it with one smooth curve: 100 × √(scale(z) ÷ scale(179)) from `project()`, measured now as 69.5 px at z 12, 76.8 at z 70, 81.5 at z 100, 87.3 at z 130, 93.1 at z 155 and 100 at z 179 (the S3 curve gives 68, 76, 84, 93, 100, 100). S4b also checks that rounding the width doesn't make an edge wobble, and adds `?curve=old` for comparing at CP-C. The owner leans towards one sprite scaled to fit, but wants to see real pixel art first, so A1 still compares the three methods, method 1 first; A2 and A3 now wait for A1's method, not CP-B's "three sizes".
+  - **Pace:** the owner says today's pace is right for level 5. Today's pace is `defaultParams()` = arcade index 0 (speed 280, power 17, bounce −1, gravity 0x1F80), which is the *level 3* row of open question 1's table. So S6 re-anchors the pace columns (level 5 = this pace, level 9 = Hardest 4, levels 1–4 slower below it), and 2P keeps playing at exactly the CP-B pace.
+  - **Effort for S4b:** `high` (the serve solver touches the rules and needs careful tests).

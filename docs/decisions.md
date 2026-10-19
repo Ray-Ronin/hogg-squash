@@ -32,7 +32,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 ## Art (2026-10-18)
 - Pixel art, at a **higher resolution than the arcade's 320×240**.
 - **Internal resolution: 640×360** (16:9). Scales cleanly to 1280×720 (2×), 1920×1080 (3×), 2560×1440 (4×).
-- **The game fills the window (2026-10-18, after S3).** Instead of only whole-number scales with a border, the screen scales to fill the window with sharp-bilinear scaling (a whole-number upscale with no smoothing, then a smooth shrink to fit). Exact sizes (2×, 3×, 4×, so 1920×1080 fullscreen too) skip the smoothing and stay pixel-exact. `?scale=int` keeps the old whole-number-only behaviour. The page background matches the court's margin colour, so there's no visible box.
+- **The game fills the window (2026-10-18, after S3).** Instead of only whole-number scales with a border, the screen scales to fill the window with sharp-bilinear scaling (a whole-number upscale with no smoothing, then a smooth shrink to fit). Exact sizes (2×, 3×, 4×, so 1920×1080 fullscreen too) skip the smoothing and stay pixel-exact. `?scale=int` keeps the old whole-number-only behaviour. The page background matches the court's margin colour, so there's no visible box. **Confirmed at CP-B (2026-10-19):** sharp enough in a normal window, so it stays the default.
 - **Tools:** Aseprite (drawing, cleanup, animation, export) and **SpriteCook** (AI generation of concepts, base sprites and animations). See `art-style-guide.md` §4.
 
 ## Theme (2026-10-18)
@@ -46,6 +46,12 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **No "faults as lives".** The arcade's 5-faults-per-credit mechanic is dropped.
 - **Serving:** vs CPU, the human always serves first. In 2-player versus, the first server is random. (After that, the rally winner serves.)
 - **The serve crosses the court (2026-10-19).** The arcade serve flies straight (vx 0), so it came back down the server's own side. Now it keeps the arcade's height and depth but is angled across, so its first bounce lands in line with the opposite service box, about 1.9 m behind it (the opposite back quarter, where the receiver stands). `serveVx` in `js/sim/world.js` works out the angle with the real physics, so it still lands there at any game pace.
+- **The serve is aimed (2026-10-19, CP-B).** Where the server stands in the box aims it: the first bounce lands at the mirror-image place across the opposite back quarter (near the centre line → near the centre line, near the side wall → near the side wall). **HARD serves deep, SOFT shorter**, and the server's depth in the box nudges it a little. Every serve stays legal (front wall between the service line and the out-line, first bounce in the opposite back quarter). Built in S4b; the target numbers are tuned at CP-C.
+- **Turns are checked at the press (confirmed at CP-B):** a press before the ball has reached the front wall is a miss.
+
+## Hitting (2026-10-19, CP-B)
+- **A swing plants the player** for its whole 18 frames (≈0.31 s), as in the arcade. Confirmed: it feels fine.
+- **Dives** happen on the classifier's special band (just beyond a stretch), as in the arcade. Confirmed. **Time on the ground: 2 s** (115 frames in all), shorter than the arcade's 2.5 s. Built in S4b.
 - **Court line heights approved (2026-10-18, after S2):** tin **17**, front-wall out-line **161**, side-wall out-line sloping from **161** at the front wall to **75** at the back (the top of the back glass), in game units. The lines count against the ball. They live in `js/sim/court-rules.js` (`LINES`).
 
 ## CPU difficulty (2026-10-18, revised)
@@ -53,6 +59,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - Later, when there are several characters, each CPU character may get its own level; the selector may change then.
 - The arcade has 20 internal difficulty steps (4 DIP settings × 5 hidden skill levels), and they are **not** in a clean easy→hard order. The plan must map 1–9 onto a smooth, monotonic curve built from those values (see `research/squash-game-logic.md`, "Difficulty index").
 - Note: in the arcade, difficulty changes **game pace too** (ball speed, gravity, shot power, bounce), not just how well the CPU plays. Default for the plan: keep that for 1P, and use one fixed mid-level pace for 2P versus.
+- **Level 5's pace is the CP-B pace (2026-10-19).** The pace played at CP-B (arcade Normal skill 0: speed 280, power 17, bounce −1, gravity 0x1F80) is right for level 5, and 2P versus uses it. The plan's proposed table put this pace at level 3, so S6 re-anchors the pace columns around it.
 
 ## Character (2026-10-18)
 - v1 character: an **adult player in red and black** (Hogg colours).
@@ -82,6 +89,8 @@ Settled decisions. Newest at the bottom of each section. If something here confl
     2. export many sizes, about every 2–4 px, downscaled automatically in Aseprite with only light cleanup;
     3. keep a few hand-cleaned sizes (100 / 84 / 68) and scale the nearest one at draw time for the heights in between.
   - Until A1 decides, the three hand-cleaned sizes below stay the art plan.
+- **One smooth curve over the whole court (2026-10-19, CP-B).** The 68–100 px range is right, but the S3 curve didn't look natural: it stops growing near both walls and bends at mid-court. It is replaced (in S4b) by one smooth curve with no flat ends: height = 100 × √(perspective scale at z ÷ scale at the back), about 70 px at the front wall, 82 at mid-court and 100 at the back. That's half-strength perspective.
+  - **For the sprites, the owner leans towards one sprite scaled to fit** (method 1 above), but wants to see real pixel art first. A1 still shows all three methods and the owner picks there.
 - **Ball feel and test feed:** the ball feels like the arcade, and the S1 feed (back to about the short line) is fine. No change.
 
 ## Screens (2026-10-18)
