@@ -341,8 +341,10 @@ Play-check it in the browser pane, go through "Done when", tick S3, add a Sessio
 **Starter prompt**
 ```text
 We're doing Session S4 of docs/plan.md: "Hitting and ball feel".
-Read CLAUDE.md, docs/decisions.md, docs/research/squash-game-logic.md (§4, §5, §9) and docs/plan.md (rules + S4). Check S3 is ticked.
+Read CLAUDE.md, docs/decisions.md, docs/research/squash-game-logic.md (§4, §5, §9) and docs/plan.md (rules + S4, and the S3 Session log entries). Check S3 is ticked.
 Build S4's "In scope" list only. Don't change the physics maths: if the ball feels off, note it for CP-B instead.
+The swing state machine goes in js/sim/player.js. Keep stepPlayer's turn argument ({ isP1, turnIsP1, mayStrike }); world.js gates turns at the press with canStrike. Add new tunables as named constants. Add test/player.test.js to UNIT_TESTS in test/run-all.js.
+The browser pane may be throttled: use ?dev (window.hogg.step(n), dispatched KeyboardEvents) to drive the game, and say what couldn't be checked in real time.
 Go through "Done when", tick S4, add a Session log entry with the shot-log numbers, and commit. Ask me before pushing.
 ```
 
@@ -355,8 +357,11 @@ Play several games to 9, with a friend or with both hands. Note answers to:
 2. Pace: too fast or too slow? (This is level 5's pace later.)
 3. Reach and timing: do hits feel fair? Do misses feel like your fault?
 4. Does the dive lockout last the right time?
-5. Rules: any call that felt wrong (tin height, out-lines, double bounce)?
+5. Rules: any call that felt wrong (tin height, out-lines, double bounce)? Two rulings from S3 to judge in particular:
+   - the arcade serve flies straight (vx 0), so it comes back down the server's own side and the receiver has to run across the court for it;
+   - a swing only counts if it's your ball when you press, so a press before the ball has reached the front wall misses.
 6. Placeholder sizes and camera, now that you've played properly. The boxes now grow smoothly from 68 px (front) through 84 to 100 px (back). Is that range right, and does the growth look natural? **This confirms the heights A1 to A3 work to.**
+7. Screen: the game now fills the window (sharp-bilinear, slightly soft pixel edges at in-between sizes; exact at 3× in 1920×1080 fullscreen with F11). Is it sharp enough in a normal window, or should whole-number scaling (`?scale=int`) be the default?
 
 **Starter prompt** (planning-only session)
 ```text
@@ -534,9 +539,9 @@ These apply to A1–A5:
   - clean one ready-stance frame at 100 px;
   - downscale it to 84 and 68 px and clean those too, to show the smaller sizes still read;
   - make a palette-swapped version (for example a white-and-black kit) to prove the swap.
-- **Smooth-height test:** show the ready frame at every height from 68 to 100 px done the three ways in "Art sessions: shared rules" ("Smooth height"): a strip of sizes per method, plus a small `?dev` test page or GIF that walks it from the back to the front. The owner picks one. Record the choice in `docs/decisions.md` and `docs/art-style-guide.md`, and update A2, A3 and S8 to match.
+- **Smooth-height test:** show the ready frame at every height from 68 to 100 px done the three ways in "Art sessions: shared rules" ("Smooth height"): a strip of sizes per method, plus a GIF made in Aseprite that walks it from the back to the front (art sessions don't change game code, so draw-time scaling is imitated by resizing in Aseprite: nearest-neighbour or smooth). The owner picks one. Record the choice in `docs/decisions.md` and `docs/art-style-guide.md`, and update A2, A3 and S8 to match.
 - A mockup PNG of the sprite on a screenshot of our own court, at the back, middle and front.
-- Record the chosen hex colours in `docs/theme.md` (open question 5) and the three sizes and bands in `docs/art-style-guide.md`.
+- Record the chosen hex colours in `docs/theme.md` (open question 5) and the character heights (68 → 100 px) and the chosen smooth-height method in `docs/art-style-guide.md`.
 
 **Not in scope:** animations, court art, the logo, game code.
 
@@ -744,7 +749,7 @@ No game code changes. No school logo. Finish with "Done when", tick A5, add a Se
 
 **In scope**
 - Draw `court.png` as the background (the code-drawn court is kept behind a debug toggle for checking alignment).
-- Ball sprite size picked by depth band. Shadow, landing marker, impact ring and sparkle from `fx.json`.
+- Ball sprite size picked by depth (the ball is tiny, so a few sizes chosen by depth is fine; check it doesn't pop next to the smoothly sizing character). Shadow, landing marker, impact ring and sparkle from `fx.json`.
 - `js/render/text.js`: a bitmap-font text renderer. All in-game text switches to it.
 - The HUD in the side margins (score panel, serve indicator), and callouts and the score painted on the front wall.
 - **One logo slot:** a single asset path and flag, off by default, so the school logo can be added later as a one-file change once it's confirmed.
