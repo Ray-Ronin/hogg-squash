@@ -1,0 +1,15 @@
+{
+  // Type check only (npm run typecheck): the game is plain JavaScript with // @ts-check and JSDoc, and nothing is built.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "strict": false,
+    "skipLibCheck": true
+  },
+  "include": ["public/hogg-squash/js/**/*.js"]
+}

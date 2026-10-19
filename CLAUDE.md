@@ -19,7 +19,7 @@ Read `docs/decisions.md` first, then `docs/open-questions.md`.
 - See `docs/research/physics-core.md` and `docs/research/squash-game-logic.md`.
 
 ## Architecture rules
-- Plain JavaScript ES modules with `// @ts-check` and JSDoc types. No build.
+- Plain JavaScript ES modules with `// @ts-check` and JSDoc types. No build. `npm run typecheck` checks the types of everything in `public/hogg-squash/js/` (TypeScript's checker via `npx`, pinned in `package.json`; check only, no output).
 - Keep the simulation (physics, rules, CPU) separate from rendering and input. The sim runs at a fixed step; rendering just draws the latest state.
 - Input is abstracted into per-player actions (`left right up down hard soft`), so keyboard and gamepad are interchangeable. See `docs/controls.md`.
 - The sim is 3D (x = width, y = height, z = depth from the front wall), projected to a fixed 2D camera behind the players.

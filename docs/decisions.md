@@ -18,6 +18,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **Plain JavaScript with `// @ts-check` + JSDoc types** (type checking in the editor, no build).
 - **Renderer: plain Canvas**, proven by a small test that is **step 1 of the build** and is kept (see `research/canvas-vs-phaser.md`, "The test"). Phaser stays the fallback if the test goes badly.
 - **Confirmed at CP-A (2026-10-18): plain Canvas.** The S1 test needed about 150 lines of plumbing and nothing felt heavy. Phaser is no longer planned.
+- **Type check allowed (2026-10-18, after S2):** `npm run typecheck` runs TypeScript's checker over `public/hogg-squash/js/` (settings in `tsconfig.json`). It is a check only: no build output, no runtime dependency, and TypeScript isn't installed in the repo (`npx` fetches one pinned version when the script runs). The game stays plain JavaScript.
 
 ## Repo layout (2026-10-18)
 - Physics core: `public/hogg-squash/js/squash-physics.js` (moved in from `../prototype`; loads in the browser with no build).
@@ -43,6 +44,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **Rally scoring** (a point on every rally, as in the arcade).
 - **No "faults as lives".** The arcade's 5-faults-per-credit mechanic is dropped.
 - **Serving:** vs CPU, the human always serves first. In 2-player versus, the first server is random. (After that, the rally winner serves.)
+- **Court line heights approved (2026-10-18, after S2):** tin **17**, front-wall out-line **161**, side-wall out-line sloping from **161** at the front wall to **75** at the back (the top of the back glass), in game units. The lines count against the ball. They live in `js/sim/court-rules.js` (`LINES`).
 
 ## CPU difficulty (2026-10-18, revised)
 - **Difficulty selector, levels 1–9** (1 = easiest, 9 = hardest), chosen before a 1P match.
