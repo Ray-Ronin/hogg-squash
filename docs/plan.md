@@ -10,7 +10,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 
 - [x] **P0** Prerequisites *(you)*: install Node.js LTS (and optionally Git)
 - [x] **S1** Canvas test: court, ball, placeholder player
-- [ ] **CP-A** Checkpoint *(you)*: plain Canvas or Phaser? Character size and camera
+- [x] **CP-A** Checkpoint *(you)*: plain Canvas or Phaser? Character size and camera
 - [ ] **S2** Rally rules and scoring (headless, tested) + `npm test` that can fail
 - [ ] **S3** Playable 2-player rally on one keyboard
 - [ ] **S4** Hitting and ball feel
@@ -104,7 +104,7 @@ Settled by the plan (say so if you disagree):
 
 2. **Pace by difficulty:** use the default. 1P uses the level's pace. 2P versus uses level 5's pace (speed 284, power 18, bounce −2, gravity 0x1FB8).
 3. **Rubber band:** use the default and leave it out. **One change I recommend:** the arcade also grows the CPU's positioning error after *every point* (§6 step 5). Over a game to 11 this makes the CPU steadily sloppier, so level 5 at 10–10 would play worse than level 5 at 0–0. The plan makes the error a fresh random offset each rally, sized by the level's error step, that doesn't build up. A level then means the same thing all match.
-4. **Character height:** settled at CP-A from the S1 placeholder, starting at 100 px. S1 also shows whether one fixed sprite size looks right at the front and the back of the court (arcade-style), or whether we need a few pre-scaled sizes.
+4. **Character height:** settled at CP-A: **three pre-scaled sizes**, 100 px at the back (z ≥ 130), 84 px in the middle (70 ≤ z < 130) and 68 px at the front (z < 70), picked from the feet z with a little hysteresis. The camera is unchanged. Details in `docs/decisions.md` ("Camera and character size"). S3 draws the boxes this way and CP-B confirms the numbers.
 5. **Hogg colour shades:** chosen in A1 and written into `docs/theme.md`.
 6. **Logo on a public site:** there is no default for this, so the plan keeps it safe. **The school's shield logo stays out of the live game until you've confirmed with the school.** Until then the game uses the colours, a "HOGG RAZORBACKS" wordmark and our own original boar mascot. S9 leaves a single logo slot, so adding the logo later is a one-file change.
 7. **"Missing pieces" from the decompiled code:** only one of the five was actually found in the ROM.
@@ -269,6 +269,7 @@ Show me the deliberate-break check failing and passing. Then go through "Done wh
 - **Serving (arcade-simple):** the server stands in the right or left box, as `match.js` says, and the receiver stands in the opposite back quarter. The server holds the ball, then HARD or SOFT launches the `SERVE` trajectory from the server's position.
 - **Turns:** only the player whose turn it is can make contact. The other player's swing misses (`classifyContact` turn options).
 - A second box player in another colour, with everything drawn in depth order.
+- **Fix-up from CP-A: sized by depth band.** Both boxes are drawn at 100 / 84 / 68 px for the back / middle / front band (edges at z 130 and 70), picked from the feet z with about 4 units of hysteresis. Sizes, edges and hysteresis are named constants in one place in `js/render/actors.js`, so S8 reuses them for the sprites. This replaces the single `?h=` box height (`?h=` may stay as an override for the back size). The debug overlay shows each player's band.
 - A **landing marker** from `predict()`: where the ball will first bounce after the front wall, drawn on the floor.
 - **After a rally:** the game freezes for about 1.5 s and shows the callout (OUT / TIN / DOWN / NOT UP), then "POINT" and the score painted on the front wall in plain canvas text, then the next serve.
   - At match end: "P1 WINS 9–6" and "HARD to play again".
@@ -289,6 +290,7 @@ Show me the deliberate-break check failing and passing. Then go through "Done wh
 - Tin, out, down and not-up each give the point to the right player, with the reason shown and confirmed in the debug overlay.
 - `?to=5` ends a game at 5–3 but carries on from 4–4 to 6–4.
 - Arrow keys don't scroll the page. Alt-tab freezes the game.
+- Walking a box from the back wall to the front wall steps it down 100 → 84 → 68 px, and standing still on a band edge doesn't flicker.
 - No console errors.
 
 **You check or decide at the end:** do the rules feel right? Should this first playable version go live (push)?
@@ -354,7 +356,7 @@ Play several games to 9, with a friend or with both hands. Note answers to:
 3. Reach and timing: do hits feel fair? Do misses feel like your fault?
 4. Does the dive lockout last the right time?
 5. Rules: any call that felt wrong (tin height, out-lines, double bounce)?
-6. Placeholder height and camera, now that you've played properly.
+6. Placeholder sizes and camera, now that you've played properly. Are 100 / 84 / 68 px and the band edges (z 130 and 70) right? Is the size change between bands distracting, and would two sizes do? **This confirms the sizes A2 and A3 export.**
 
 **Starter prompt** (planning-only session)
 ```text
@@ -517,7 +519,8 @@ These apply to A1–A5:
   - export as spritesheet PNG + JSON (array, with tags and slices) to `public/hogg-squash/assets/`.
 - Source `.aseprite` files go in `art/`.
 - **Needs:** the SpriteCook connector signed in and credits on the account (the account had 0 credits on 2026-10-18), plus Aseprite and its connection.
-- **Order:** A1–A3 only touch art files, so they can be run earlier, in parallel with S2–S7, if you like. They need the CP-A height, and A3 needs the S4 swing timings.
+- **Three sizes (CP-A):** every character animation is generated once at 100 px. It is then downscaled to 84 and 68 px in Aseprite and cleaned up again at each size, with no extra SpriteCook credits. Each size is its own sheet (`player-100`, `player-84`, `player-68`, each a `.png` + `.json`) with identical tags, frame counts, durations and `feet` slice. This takes about three times the cleanup work of one size.
+- **Order:** A1–A3 only touch art files, so they can be run earlier, in parallel with S2–S7, if you like. A1 can run any time after CP-A. A2 and A3 should wait until CP-B has confirmed the three sizes, or the smaller sizes may need cleaning up again. A3 also needs the S4 swing timings.
 
 ## A1: Art: palette and style test sprite
 
@@ -527,10 +530,11 @@ These apply to A1–A5:
 - After the spend gate, use SpriteCook to make concept images of an adult player in red and black seen from behind, pick one, and keep it as the style reference for everything later.
 - In Aseprite:
   - build the palette (32–48 colours) and save it as `art/palette/hogg-squash.gpl`;
-  - clean one ready-stance frame;
+  - clean one ready-stance frame at 100 px;
+  - downscale it to 84 and 68 px and clean those too, to show the smaller sizes still read;
   - make a palette-swapped version (for example a white-and-black kit) to prove the swap.
-- A mockup PNG of the sprite on a screenshot of our own court.
-- Record the chosen hex colours in `docs/theme.md` (open question 5) and the height in `docs/art-style-guide.md`.
+- A mockup PNG of the sprite on a screenshot of our own court, with each size placed in its own depth band.
+- Record the chosen hex colours in `docs/theme.md` (open question 5) and the three sizes and bands in `docs/art-style-guide.md`.
 
 **Not in scope:** animations, court art, the logo, game code.
 
@@ -539,7 +543,7 @@ These apply to A1–A5:
 **Main files:** `art/palette/hogg-squash.gpl`, `art/character/player.aseprite`, `art/mockups/a1-court-mockup.png`, `art/spritecook-manifest.md`, `docs/theme.md`, `docs/art-style-guide.md`.
 
 **Done when…**
-- You've seen and approved the palette, the sprite and the swapped kit.
+- You've seen and approved the palette, the sprite at all three sizes and the swapped kit.
 - The manifest shows credits spent within the approved amount.
 - `npm test` still passes, and the page still works because nothing in it changed.
 
@@ -560,17 +564,18 @@ No game code changes. Never use ROM/MAME/Gaelco images as references. Finish wit
 **In scope**
 - After the spend gate, animate from the A1 base in SpriteCook: ready/idle, run sideways (one direction, mirrored for the other), run toward the front wall, run toward the back, and serve.
 - Aseprite cleanup as in the shared rules. Tags: `ready`, `run_side`, `run_up`, `run_down`, `serve`. Add a `feet` slice. Set frame timings.
-- Export `public/hogg-squash/assets/player.png` + `player.json`.
+- Downscale to 84 and 68 px and clean each size (shared rules, "Three sizes").
+- Export `public/hogg-squash/assets/player-100.png` + `player-100.json`, and the same for `-84` and `-68`.
 
 **Not in scope:** swings and dive (A3), game code.
 
-**Depends on:** A1, and the 💳 approval line above it.
+**Depends on:** A1, CP-B (sizes confirmed), and the 💳 approval line above it.
 
-**Main files:** `art/character/player.aseprite`, `public/hogg-squash/assets/player.png`, `public/hogg-squash/assets/player.json`, `art/spritecook-manifest.md`.
+**Main files:** `art/character/player.aseprite`, `public/hogg-squash/assets/player-{100,84,68}.png`, `public/hogg-squash/assets/player-{100,84,68}.json`, `art/spritecook-manifest.md`.
 
 **Done when…**
-- Each tag loops cleanly in Aseprite's preview with no height jumps or foot sliding.
-- The JSON contains the tags and the `feet` slice.
+- Each tag loops cleanly in Aseprite's preview with no height jumps or foot sliding, at every size.
+- Each size's JSON contains the same tags, frame counts and durations, and the `feet` slice.
 - The manifest is updated, and `npm test` passes.
 
 **You check or decide at the end:** approve the run and serve animations.
@@ -578,7 +583,7 @@ No game code changes. Never use ROM/MAME/Gaelco images as references. Finish wit
 **Starter prompt**
 ```text
 We're doing Session A2 of docs/plan.md: "Art: character animations, part 1 (ready, run, serve)".
-Read CLAUDE.md, docs/art-style-guide.md and docs/plan.md ("Art sessions: shared rules" + A2), plus art/spritecook-manifest.md from A1.
+Read CLAUDE.md, docs/decisions.md ("Camera and character size"), docs/art-style-guide.md and docs/plan.md ("Art sessions: shared rules" + A2), plus art/spritecook-manifest.md from A1. Check A1 and CP-B are ticked (CP-B confirms the three sizes).
 First check my SpriteCook balance and list the planned generations with estimated credits, then STOP and wait for my OK.
 No game code changes. Finish with "Done when", tick A2, add a Session log entry, and commit. Ask me before pushing.
 ```
@@ -590,17 +595,17 @@ No game code changes. Finish with "Done when", tick A2, add a Session log entry,
 **In scope**
 - After the spend gate, animate in SpriteCook: forehand, backhand, overhead, and dive (left and right) + get-up. Celebrate and dejected only if the budget allows.
 - **Timing:** read the swing constants in `js/sim/player.js` (from S4). The contact frame must start 7 sim frames (≈122 ms) after the swing begins, and the recovery must last as long as the sim's recovery. Mark the contact frame (frame user data `contact`, or a `contact` tag).
-- Cleanup, tags, `feet` slice. Re-export `player.png` / `player.json` with all tags.
+- Cleanup, tags, `feet` slice, at all three sizes. Re-export `player-{100,84,68}.png` / `.json` with all tags.
 
 **Not in scope:** game code, court art.
 
 **Depends on:** A2, S4, and the 💳 approval line above it.
 
-**Main files:** `art/character/player.aseprite`, `public/hogg-squash/assets/player.png`, `public/hogg-squash/assets/player.json`, `art/spritecook-manifest.md`.
+**Main files:** `art/character/player.aseprite`, `public/hogg-squash/assets/player-{100,84,68}.png`, `public/hogg-squash/assets/player-{100,84,68}.json`, `art/spritecook-manifest.md`.
 
 **Done when…**
-- In Aseprite, each swing's contact frame is at 122 ms ± one frame and its total length matches the sim.
-- All tags are in the JSON. The manifest is updated, and `npm test` passes.
+- In Aseprite, each swing's contact frame is at 122 ms ± one frame and its total length matches the sim, at every size.
+- All tags are in every size's JSON. The manifest is updated, and `npm test` passes.
 
 **You check or decide at the end:** approve the swings and the dive.
 
@@ -621,10 +626,10 @@ No game code changes. Finish with "Done when", tick A3, add a Session log entry,
 **In scope**
 - `js/engine/assets.js`: loads images and JSON, with a simple loading state.
 - `js/render/sprites.js`: reads Aseprite JSON (frames, durations, tags, slices/pivot) and runs a per-player animation player. Animation is chosen from sim state (ready, run direction, swing type, dive, serve, recovery). Animation time counts in sim frames, so the contact frame lines up with the hit.
-- Palette swap done once at load: an offscreen canvas recolours the sheet from a colour→colour table.
-- Sprites drawn at the CP-A size (fixed, or pre-scaled sizes if CP-A asked for them), positioned at the projected feet point, in depth order.
+- Palette swap done once at load: an offscreen canvas recolours each of the three sheets from a colour→colour table.
+- Sprites drawn from the sheet for the player's depth band (100 / 84 / 68 px, using S3's band constants and hysteresis), positioned at the projected feet point, in depth order. A band change keeps the current tag and frame, so the animation doesn't restart.
 - Placeholder boxes kept behind a debug toggle.
-- `test/sprites.test.js`: parses the exported `player.json` and checks that all expected tags exist and that the contact frame timing matches the sim constants.
+- `test/sprites.test.js`: parses all three exported `player-*.json` files and checks that every expected tag exists in each, that frame counts and durations match across sizes, and that the contact frame timing matches the sim constants.
 
 **Not in scope:** court, ball and HUD art (S9), menus.
 
@@ -635,6 +640,7 @@ No game code changes. Finish with "Done when", tick A3, add a Session log entry,
 **Done when…**
 - `npm test` passes.
 - In the browser, both players animate correctly while running, swinging, diving and serving, and P2/CPU wears the swapped kit.
+- Running from the back to the front steps through the three sizes without the animation jumping.
 - In slow motion (`?slow=4`) the racket visibly meets the ball on the contact frame.
 - The page still runs at a steady 57.4 sim steps per second.
 
@@ -650,7 +656,7 @@ Go through "Done when", tick S8, add a Session log entry, and commit. Ask me bef
 
 ## CP-D: Play-test 3: the character in motion *(you)*
 
-1. Does the character read clearly against the floor at the front and the back of the court?
+1. Does the character read clearly against the floor at the front and the back of the court, at all three sizes? Is the size step between bands acceptable?
 2. Do the swings look like they hit the ball?
 3. Is the palette swap distinct enough?
 4. **Last chance for the camera:** after this, the camera is frozen because A4 paints the court to match it.
@@ -910,3 +916,9 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Camera** (`CAMERA` in `projection.js`): 8.1 m behind the back wall, 4.0 m high, focal 557 px, eye line at y 70. On screen the front wall is 200 × 143 px (up to the out-line) and the floor is 150 px deep. The court spans x 100–540 at its widest, so each side margin is 100 px.
   - **Small extras:** the box turns pink while swinging (so a press is visible), there's a one-line key hint under the court, and the overlay also shows the player's x/z. There's also a launch config outside the repo: the desktop app looks for `.claude/launch.json` in its session folder (`C:\Hogg Squash`, the repo's parent), so an uncommitted copy there runs `npm --prefix hogg-squash run dev`.
   - **For later:** the feed (the arcade's `SERVE` from the box's racket side) comes back to about the short line, so you have to step forward to hit it. Ball and shadow are drawn as plain circles. There's no landing marker yet (S3).
+- 2026-10-18, CP-A (planning only): owner's answers recorded in `docs/decisions.md`.
+  - **Renderer:** plain Canvas, confirmed. No S1b.
+  - **Camera:** kept as in S1. No fix-up item needed.
+  - **Character height (open question 4):** three pre-scaled sizes: 100 px for z ≥ 130, 84 px for 70 ≤ z < 130, 68 px for z < 70, with hysteresis. They come from the S1 camera's scale (67 px/m at z 178, 45 at z 103, 33 at z 22): true perspective would halve the height from back to front, and these sizes split the difference.
+  - **Ball feel:** like the arcade. **Feed depth:** fine as it is.
+  - **Plan changes:** S3 gets a fix-up item to draw the boxes by depth band; CP-B question 6 confirms the sizes; the art shared rules, A1, A2 and A3 now produce three sizes (generate once at 100 px, downscale and clean in Aseprite), and A2/A3 wait for CP-B; S8 picks the sheet by band and tests all three; CP-D question 1 checks the size steps.

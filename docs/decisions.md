@@ -17,6 +17,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **No build step for now.** Plain JS ES modules served directly. Revisit Vite later if we want TypeScript, npm packages, or minified and cache-busted bundles.
 - **Plain JavaScript with `// @ts-check` + JSDoc types** (type checking in the editor, no build).
 - **Renderer: plain Canvas**, proven by a small test that is **step 1 of the build** and is kept (see `research/canvas-vs-phaser.md`, "The test"). Phaser stays the fallback if the test goes badly.
+- **Confirmed at CP-A (2026-10-18): plain Canvas.** The S1 test needed about 150 lines of plumbing and nothing felt heavy. Phaser is no longer planned.
 
 ## Repo layout (2026-10-18)
 - Physics core: `public/hogg-squash/js/squash-physics.js` (moved in from `../prototype`; loads in the browser with no build).
@@ -57,6 +58,21 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - Like the Hogg courts: **white walls, red lines, light wood floor**. No court photos are needed.
 - **No back wall drawn** in v1 (the camera looks in from behind). The ball still bounces off the back wall in the physics.
 - **No crowd** in v1. Later.
+
+## Camera and character size (2026-10-18, CP-A)
+- **Camera stays as built in S1** (`CAMERA` in `js/render/projection.js`): 8.1 m behind the back wall, 4.0 m high, focal 557 px, eye line at y 70. The front wall is 200 × 143 px, the floor is 150 px deep and each side margin is 100 px. It can still change until CP-D. After that it is frozen, because A4 paints the court to match it.
+- **Character height (open question 4): three pre-scaled sizes, not one fixed size.** With this camera a single 100 px sprite looks right at the back but like a giant at the front wall. True perspective would halve the height from back to front (about 67 px/m at z 178 against 33 px/m at z 22), so the sizes split the difference:
+
+  | Depth band (game units) | Sprite height |
+  |---|---|
+  | back: z ≥ 130 | 100 px |
+  | middle: 70 ≤ z < 130 | 84 px |
+  | front: z < 70 | 68 px |
+
+  - The band is chosen from the player's feet z, with a few units of hysteresis so a player standing on a band edge doesn't flicker between sizes.
+  - These are starting values. S3 draws the placeholder boxes this way, and CP-B confirms the sizes and edges (or drops to two sizes).
+  - Art is generated once at 100 px. The smaller sizes are downscaled and cleaned in Aseprite (no extra SpriteCook credits). Every size has the same tags, frame counts and timings.
+- **Ball feel and test feed:** the ball feels like the arcade, and the S1 feed (back to about the short line) is fine. No change.
 
 ## Screens (2026-10-18)
 - Flow: **title → 1P / 2P → match length (5/7/9/11) → difficulty 1–9 (1P only) → controller assignment → match → result → rematch / menu.**
