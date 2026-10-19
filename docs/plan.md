@@ -366,7 +366,7 @@ Play several games to 9, with a friend or with both hands. Note answers to:
 **Starter prompt** (planning-only session)
 ```text
 Planning only: change no files except docs/plan.md (and docs/decisions.md for settled decisions).
-Read docs/plan.md and its Session log. Here's my CP-B play-test feedback: <notes>.
+Read docs/plan.md and its Session log (the S4 entry, and the two after it: PAUSED on the court, and the cross-court serve). Here's my CP-B play-test feedback: <notes>.
 Turn it into changes to the remaining sessions (add small fix-up items to the right session, or a short fix-up session if needed), tick CP-B, and commit. Don't push.
 ```
 
@@ -430,6 +430,7 @@ Go through "Done when", tick S5, add a Session log entry, and commit. Ask me bef
 - `test/difficulty.test.js`:
   - every column is monotonic;
   - every level gives sane ball flights (time to the front wall and to the bounce, within broad ranges around the arcade timings);
+  - the serve still crosses the court at every level: its first bounce is in line with the opposite box and behind it (`serveVx` recomputes the angle for the pace; checked 2026-10-19 with open question 1's levels 1, 5 and 9: x −108, z 159–171);
   - in headless CPU-against-CPU play, rallies get longer as the level rises.
 - Record the final table in `docs/decisions.md`.
 
@@ -478,10 +479,10 @@ Update the difficulty table and the remaining sessions as needed, tick CP-C, and
 **Goal:** two gamepads (or a keyboard and a pad) work, one per player, using the browser's Gamepad API.
 
 **In scope**
-- `js/input/gamepad.js`, polled once per sim step: left stick (with a dead zone) or D-pad to move, A/Cross = HARD, B/Circle or X/Square = SOFT, Start = freeze/pause.
+- `js/input/gamepad.js`, polled once per sim step: left stick (with a dead zone) or D-pad to move, A/Cross = HARD, B/Circle or X/Square = SOFT, Start = pause (the same toggle as Esc; the court shows PAUSED).
 - A temporary "Press any button to join" overlay that assigns pads to P1 and P2. The proper screen comes in S10.
 - Keyboard and pad can be mixed.
-- A pad unplugged mid-match freezes the game with "Controller disconnected".
+- A pad unplugged mid-match pauses the game with "Controller disconnected".
 - Chrome and Edge are the targets, with Firefox best effort.
 - `test/input.test.js`: maps a fake gamepad object to actions (dead zone, D-pad, buttons, press detection).
 
@@ -495,7 +496,7 @@ Update the difficulty table and the remaining sessions as needed, tick CP-C, and
 - `npm test` passes.
 - A 2P game can be played on two pads, and with keyboard + pad.
 - 1P works on a pad.
-- Unplugging a pad freezes the game, and plugging it back in plus a button press carries on.
+- Unplugging a pad pauses the game, and plugging it back in plus a button press carries on.
 
 **You check or decide at the end:** tell the session which controllers you tested with, and whether any button felt wrong.
 
@@ -1002,3 +1003,4 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
 - 2026-10-19, after S4 (owner's request): **the serve crosses the court.** It used to fly straight (the arcade's vx 0) and come back down the server's own side. The owner chose to keep the arcade's height and depth and angle it across. `serveVx` in `js/sim/world.js` bisects for the sideways speed (with the real physics, so it holds at any pace) that makes the first bounce land at the opposite box's centre x. From the right box it's vx −6.74 (HARD) / −6.81 (SOFT) units/frame: front wall at x 20, 3.0 m up; first bounce at x −108, z 167–170 (about 1.9 m behind the left box); off the back glass; second bounce near the left side wall at z 150. The left box mirrors it. `squash-physics.js` is unchanged (`SERVE` keeps the arcade's vx 0).
   - **Tests:** new world test: from each box the landing marker is in line with the opposite box and behind it, the plain physics bounces there, and the serve stays live to its first bounce. Unit tests: 44.
   - **Checked in the browser:** a HARD serve from the right box came off the front wall heading left, and the landing ring showed in the back-left behind the left box, by the receiver. No console errors.
+- 2026-10-19, after S4 (owner's request): **the court says PAUSED, not FROZEN**, and the key hint says "Esc pause" (`render/hud.js`, `main.js`; the code's `frozen` flag is unchanged). Plan check after this and the serve change: S6 gets a test that the serve still crosses the court at every level (`serveVx` already holds at levels 1, 5 and 9: x −108, z 159–171); S7 says "pause" instead of "freeze"; the CP-B prompt points at these entries. Nothing else in the remaining sessions depended on the straight serve or the word FROZEN.
