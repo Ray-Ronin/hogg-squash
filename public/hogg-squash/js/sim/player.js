@@ -37,7 +37,7 @@ export const PLAYER_LIMITS = { xMin: -140, xMax: 140, zMin: 8, zMax: 180 };
  * @property {number} flags
  * @property {string} zone
  * @property {number} index
- * @property {boolean} reach
+ * @property {boolean} reach           false = a miss (out of reach, or not this player's turn)
  * @property {number} [aim]             set on 'hit'
  */
 
@@ -59,9 +59,11 @@ export function makePlayer(x, z) {
  * @param {ReturnType<typeof import('../squash-physics.js').makeBall>} ball
  * @param {any} p       physics params: difficultyParams(...) plus latMult
  * @param {number} frame  sim frame counter
+ * @param {{ isP1: boolean, turnIsP1: boolean, mayStrike: boolean }} [turn]  whose turn it is (the classifier's
+ *   special flag needs it). A press while mayStrike is false is a miss, like a press with the ball out of reach.
  * @returns {SwingEvent | null}
  */
-export function stepPlayer(pl, act, ball, p, frame) {
+export function stepPlayer(pl, act, ball, p, frame, turn = { isP1: true, turnIsP1: true, mayStrike: true }) {
   /** @type {SwingEvent | null} */
   let event = null;
   const s = pl.swing;
@@ -78,8 +80,8 @@ export function stepPlayer(pl, act, ball, p, frame) {
     }
   } else if (act.hard || act.soft) {
     const button = act.hard ? 'hard' : 'soft';
-    const c = classifyContact(ball, pl, p, { isP1: true, turnIsP1: true });
-    const reach = !(c.flags & 0x20);
+    const c = classifyContact(ball, pl, p, { isP1: turn.isP1, turnIsP1: turn.turnIsP1 });
+    const reach = turn.mayStrike && !(c.flags & 0x20);
     pl.swing = { timer: SWING.CONTACT_DELAY, button, contact: reach ? c : null };
     event = { type: 'swing', button, flags: c.flags, zone: c.zone, index: c.index, reach };
   }

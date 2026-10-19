@@ -3,13 +3,7 @@
 // into its own canvas and copied in each frame.
 import { project, UNITS_PER_M } from './projection.js';
 import { WIDTH, HEIGHT } from '../engine/screen.js';
-
-/** Court lines in game units (plan: "Decisions made while writing this plan"). */
-export const LINES = {
-  SIDE: 144, BACK: 183,
-  TIN: 17, SERVICE: 63, FRONT_OUT: 161, BACK_OUT: 75,
-  SHORT_Z: 103, BOX_W: 72, BOX_BACK_Z: 133,
-};
+import { LINES } from '../sim/court-rules.js';
 
 const COLOURS = {
   margin: '#16161a',

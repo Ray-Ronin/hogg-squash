@@ -12,7 +12,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S1** Canvas test: court, ball, placeholder player
 - [x] **CP-A** Checkpoint *(you)*: plain Canvas or Phaser? Character size and camera
 - [x] **S2** Rally rules and scoring (headless, tested) + `npm test` that can fail
-- [ ] **S3** Playable 2-player rally on one keyboard
+- [x] **S3** Playable 2-player rally on one keyboard
 - [ ] **S4** Hitting and ball feel
 - [ ] **CP-B** Play-test 1 *(you)*: 2-player rallies
 - [ ] **S5** CPU opponent: movement and hitting
@@ -935,3 +935,24 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Checked in the browser:** the page loads with no console errors; the court, ball and box draw; Space feeds a ball; the debug overlay works; and the three new sim modules import and run in the browser. The pane was hidden, so it got about 1.3 animation frames/s (5 sim steps/s with the catch-up cap), and the 57.4 steps/s figure wasn't re-measured. The loop code is unchanged. (The browser automation's backquote key arrives with an empty `e.code`, so the overlay had to be toggled with a dispatched `Backquote` event. That's an automation quirk, not a game bug.)
   - **For the owner:** approve the tin (17) and out-line (161 front, sloping to 75) heights, and decide on the optional `npm run typecheck` script.
 - 2026-10-18, after S2 (owner's answers): **line heights approved** as they are (recorded in `docs/decisions.md`, "Match rules"). **Type check: yes.** `npm run typecheck` runs `npx -y -p typescript@7.0.2 tsc -p tsconfig.json`; `tsconfig.json` checks `public/hogg-squash/js/**/*.js` with no output and `strict` off (the physics file can't change code to satisfy strict mode). First run: 12 files, **0 errors**, so the S2 JSDoc in `squash-physics.js` needed no code changes. A probe file with 4 planted mistakes (a wrong return type, `makeRally(2)`, a string coordinate, missing physics params) gave 4 errors and exit 1, and was deleted. It isn't part of `npm test` (the first run downloads TypeScript); rule 8 now asks every session to run both. Git for Windows is now installed, and pushing from Claude's shell works (S2 was pushed).
+- 2026-10-18, S3: the first playable game. Two players on one keyboard play a full match with serving, rules, score, callouts and a landing marker, using placeholder boxes.
+  - **New:** `js/input/keyboard.js` (keys by `KeyboardEvent.code`, `preventDefault` on game keys, everything cleared on blur, presses kept between samples) + `js/input/actions.js` (the two default layouts from `docs/controls.md`, read once per sim step). `js/sim/world.js` (`makeWorld`, `stepWorld(world, p1Actions, p2Actions)` → events; phases serve → rally → point → … → over; `landingSpot`). `js/render/hud.js` (scores and server in the margins, callouts and the score on the front wall, the match result, the freeze notice). `test/world.test.js` (7 tests). About 800 new lines with comments, tests included.
+  - **Changed:** `main.js` now only wires the loop, keyboard, world and renderer (the S1 feed and reset keys are gone). `player.js`: `stepPlayer` takes the turn (`isP1`, `turnIsP1`, `mayStrike`); a press when it isn't your ball is a miss, and the classifier's special flag now gets real turn info. `render/court.js` imports `LINES` from `sim/court-rules.js`, so the line-sync unit test was removed (unit tests: 24 − 1 + 7 = 30). `actors.js` draws both boxes and the ball in depth order, plus the landing cross. `debug.js` shows both players and their bands, the rally (turn, striker, needFront, bounces), the match and the last result. The world's params are `difficultyParams(0)` with `latMult = powerMult` (17). `squash-physics.js` is unchanged.
+  - **Rulings made in the code** (say if any feel wrong):
+    - The server stands so the held ball is mid-box (ball 18 units to the server's right, y 30) and may move inside the box before serving. HARD serves with the higher `SERVE.vy`, SOFT with the lower one. The receiver starts at x ∓72, z 150.
+    - Turns are checked **at the press** with `canStrike`. A press before the ball has reached the front wall is a miss, even if contact (7 frames later) would come after it.
+    - The freeze after a rally is 43 frames of callout, then 43 frames of POINT and the score (1.5 s in all). P1 is red, P2 a placeholder blue.
+    - A rematch picks its first server from `seed + matchNo`. `?seed=` fixes the seed (default random); `?dev` exposes `window.hogg` (world, keyboard, `step(n)`, `render`, `frozen`, `bands`) for testing.
+    - Depth bands: a player changes band only once their feet are 4 units past an edge (back → middle at z < 126, middle → back at z ≥ 134, middle → front at z < 66, front → middle at z ≥ 74).
+  - **Checked in the browser** (http://localhost:8788/hogg-squash/; Wrangler took 8788 because 8787 was busy). The pane only got about 1.5 animation frames a second (the app window wasn't in view), so real-time play wasn't possible. Instead the `?dev` hook ran the real loop step (keyboard → actions → world) and the renderer, driven by `KeyboardEvent`s dispatched with real codes on all 12 keys of both layouts:
+    - a full game to 9 ended 9–4, and an independent tally of rally winners matched the score;
+    - over 6 more matches (74 rallies) all four reasons occurred (not up 32, out 24, down 11, tin 7), with no point given to the wrong player;
+    - TIN and POINT 5–6 were seen on the front wall, with the reason confirmed in the debug overlay;
+    - `?to=5` ended at 5–3, and from 4–4 went on to 5–4 and ended at 6–4;
+    - arrows, F and Numpad 0 are prevented and don't scroll (real arrow presses too), and blur freezes the game and clears held keys;
+    - Esc toggles the freeze;
+    - walking a box from the back wall to the front wall stepped 100 → 84 → 68 px (at z 125 and 65), and standing on or rocking across an edge never changed the band;
+    - no console errors.
+  - **Not checked in the browser:** real-time feel, two humans at once on one keyboard (ghosting), and 57.4 steps/s, which wasn't re-measured (the loop is unchanged).
+  - **Tests only:** determinism (6000 steps of two ball-chasing scripted players, run twice, give identical worlds and events), serve setup, the box clamp, turns, a scripted good return, the landing marker matching the real first bounce, and a match to 5 with a rematch.
+  - **For CP-B:** the arcade serve is straight (vx 0), so it comes back down the server's own side and the receiver has to run across the court for it. That's what the plan specified; say at CP-B if it feels wrong. Text is still soft canvas `fillText` (the bitmap font comes in S9).

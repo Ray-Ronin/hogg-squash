@@ -1,73 +1,53 @@
 // @ts-check
-// S1 Canvas test: the projected court, the real physics ball and a placeholder player box.
-// Keys: WASD move, F = HARD, G = SOFT, Space = feed a ball, R = reset, ` = debug overlay.
-// ?h=<px> sets the box height (default 100) for trying character sizes.
-import { FP, makeBall, step, difficultyParams, SERVE } from './squash-physics.js';
+// Boot: wires the loop, the keyboard, the world (all game logic is in js/sim/) and the renderer.
+// 2 players on one keyboard: P1 WASD + F (HARD) / G (SOFT), P2 arrows + Numpad 0 (HARD) / Numpad . (SOFT).
+// Esc freezes (so does losing focus), ` toggles the debug overlay.
+// URL options: ?to=5|7|9|11 match length (default 9), ?seed=<n> first-server seed (default random),
+// ?h=<px> back-band box height, ?dev exposes the world as window.hogg for testing.
 import { startLoop } from './engine/loop.js';
 import { createScreen, WIDTH, HEIGHT } from './engine/screen.js';
+import { createKeyboard } from './input/keyboard.js';
+import { DEFAULT_LAYOUTS, layoutCodes, readActions } from './input/actions.js';
+import { makeWorld, stepWorld } from './sim/world.js';
+import { MATCH_LENGTHS } from './sim/match.js';
 import { drawCourt } from './render/court.js';
-import { drawActors } from './render/actors.js';
+import { drawActors, bands } from './render/actors.js';
+import { drawHud } from './render/hud.js';
 import { drawDebug } from './render/debug.js';
-import { makePlayer, stepPlayer, PLAYER_LIMITS } from './sim/player.js';
 
-const params = { ...difficultyParams(0), latMult: 17 };
-const START = { x: 0, z: 140 };
-const BOX_HEIGHT = Number(new URLSearchParams(location.search).get('h')) || 100;
+const query = new URLSearchParams(location.search);
+const to = Number(query.get('to'));
+const target = MATCH_LENGTHS.includes(to) ? to : 9;
+const seed = query.has('seed') ? Number(query.get('seed')) | 0 : crypto.getRandomValues(new Uint32Array(1))[0] | 0;
+const BACK_HEIGHT = Number(query.get('h')) || undefined;
 
 // --- state ---
-let player = makePlayer(START.x, START.z);
-let ball = makeBall({ x: 0, z: 96 * FP });
-let frame = 0;
+const world = makeWorld({ target, seed });
 /** @type {{ ev: string, frame: number } | null} */
 let lastEvent = null;
-/** @type {import('./sim/player.js').SwingEvent | null} */
+/** @type {import('./render/debug.js').DebugInfo['lastContact']} */
 let lastContact = null;
 let showDebug = false;
+let frozen = false;
 
-// --- keyboard (KeyboardEvent.code) ---
-const held = new Set();
-const pressed = new Set();         // presses since the last sim step
-const GAME_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'Space', 'KeyR', 'Backquote']);
-window.addEventListener('keydown', e => {
-  if (!GAME_KEYS.has(e.code)) return;
-  e.preventDefault();
-  if (e.repeat) return;
-  held.add(e.code);
-  pressed.add(e.code);
-  if (e.code === 'Backquote') showDebug = !showDebug;
-});
-window.addEventListener('keyup', e => { held.delete(e.code); });
-window.addEventListener('blur', () => held.clear());
+// --- input ---
+const layouts = DEFAULT_LAYOUTS;
+const kb = createKeyboard(layoutCodes(layouts));
+kb.onPress('Escape', () => { frozen = !frozen; });
+kb.onPress('Backquote', () => { showDebug = !showDebug; });
+window.addEventListener('blur', () => { frozen = true; });
+document.addEventListener('visibilitychange', () => { if (document.hidden) frozen = true; });
 
 // --- sim step (57.4 Hz) ---
-function feed() {
-  const x = Math.min(player.x + 36 * FP, PLAYER_LIMITS.xMax * FP);
-  ball = makeBall({ x, y: 30 * FP, z: player.z, vx: SERVE.vx, vy: SERVE.vy[0], vz: SERVE.vz });
-  lastEvent = null;
-}
-
-function reset() {
-  player = makePlayer(START.x, START.z);
-  ball = makeBall({ x: 0, z: 96 * FP });
-  lastEvent = null;
-  lastContact = null;
-}
-
 let stepCount = 0;
 function simStep() {
-  if (pressed.has('KeyR')) reset();
-  if (pressed.has('Space')) feed();
-  const act = {
-    up: held.has('KeyW'), down: held.has('KeyS'), left: held.has('KeyA'), right: held.has('KeyD'),
-    hard: pressed.has('KeyF'), soft: pressed.has('KeyG'),
-  };
-  pressed.clear();
-
-  const contact = stepPlayer(player, act, ball, params, frame);
-  if (contact) lastContact = contact;
-  const ev = step(ball, params);
-  if (ev) lastEvent = { ev, frame };
-  frame++;
+  const presses = kb.takePresses();       // sampled once per step; presses made while frozen are dropped
+  if (frozen) return;
+  const events = stepWorld(world, readActions(kb, layouts[0], presses), readActions(kb, layouts[1], presses));
+  for (const e of events) {
+    if (e.type === 'ball') lastEvent = { ev: e.ev, frame: world.frame - 1 };
+    else if (e.type === 'swing' || e.type === 'hit') lastContact = e;
+  }
   stepCount++;
 }
 
@@ -86,15 +66,26 @@ function render() {
   }
 
   drawCourt(ctx);
-  drawActors(ctx, ball, player, { boxHeight: BOX_HEIGHT });
+  drawActors(ctx, world.ball, world.players, { landing: world.landing, backHeight: BACK_HEIGHT });
+  drawHud(ctx, world, { paused: frozen });
   ctx.font = '10px monospace';
   ctx.textBaseline = 'bottom';
   ctx.fillStyle = '#777';
   ctx.textAlign = 'center';
-  ctx.fillText('WASD move  F hard  G soft  Space feed  R reset  ` debug', WIDTH / 2, HEIGHT - 2);
+  ctx.fillText('P1 WASD  F hard  G soft     P2 arrows  Num0 hard  Num. soft     Esc freeze  ` debug', WIDTH / 2, HEIGHT - 2);
   ctx.textAlign = 'left';
-  if (showDebug) drawDebug(ctx, { stepsPerSec, frame, ball, player, params, lastEvent, lastContact });
+  if (showDebug) drawDebug(ctx, { stepsPerSec, world, bands, lastEvent, lastContact });
   screen.present();
+}
+
+// testing hook: run whole sim steps (keyboard → actions → world, as the loop does) and draw, without waiting for frames
+if (query.has('dev')) {
+  Object.assign(window, { hogg: {
+    world, kb, render,
+    /** @param {number} n */ step(n = 1) { for (let i = 0; i < n; i++) simStep(); render(); },
+    get frozen() { return frozen; },
+    get bands() { return [...bands]; },
+  } });
 }
 
 startLoop({ step: simStep, render });

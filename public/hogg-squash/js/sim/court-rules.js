@@ -2,10 +2,10 @@
 // Court lines and the verdicts for a ball touching a wall. Pure sim code: no DOM, so Node tests can import it.
 // The tin and out-line checks weren't found in the ROM, so the heights come from a real court scaled into the
 // arcade's units (≈45 per metre across, ≈35.2 high, ≈18.8 deep). See docs/plan.md, "Decisions made while
-// writing this plan". They are a starting point for the owner to approve.
+// writing this plan". The owner approved them after S2 (docs/decisions.md, "Match rules").
 import { COURT } from '../squash-physics.js';
 
-/** Court lines in game units. `render/court.js` draws the same numbers (a unit test keeps them equal). */
+/** Court lines in game units. `render/court.js` draws the court from these. */
 export const LINES = {
   SIDE: COURT.SIDE,         // 144: side walls at x = ±144
   BACK: COURT.BACK,         // 183: back wall (glass) at z = 183

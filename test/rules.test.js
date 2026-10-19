@@ -5,7 +5,6 @@ import { FP, makeBall, difficultyParams, classifyContact, SERVE } from '../publi
 import { LINES, frontWallVerdict, sideWallVerdict, sideOutHeight, serviceBox } from '../public/hogg-squash/js/sim/court-rules.js';
 import { makeRally, canStrike, rallyStrike, stepBall } from '../public/hogg-squash/js/sim/rally.js';
 import { makePlayer, stepPlayer } from '../public/hogg-squash/js/sim/player.js';
-import { LINES as DRAWN } from '../public/hogg-squash/js/render/court.js';
 
 const p = { ...difficultyParams(0), latMult: 17 };
 const NO_KEYS = { up: false, down: false, left: false, right: false, hard: false, soft: false };
@@ -25,10 +24,6 @@ function fire(b, striker = 0, maxFrames = 600) {
 
 /** The arcade serve from the right-hand box. */
 const serve = () => ({ x: 108 * FP, y: 30 * FP, z: 118 * FP, vx: SERVE.vx, vy: SERVE.vy[0], vz: SERVE.vz });
-
-test('court lines: the rules use the same numbers the court is drawn with', () => {
-  for (const k of Object.keys(DRAWN)) assert.equal(LINES[k], DRAWN[k], k);
-});
 
 test('front-wall verdicts at the lines', () => {
   assert.equal(frontWallVerdict(0), 'tin');
