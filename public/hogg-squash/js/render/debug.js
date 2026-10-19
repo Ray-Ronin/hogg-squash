@@ -1,5 +1,5 @@
 // @ts-check
-// Debug overlay (toggled with the backquote key): sim rate, ball, players and their depth bands, the rally and
+// Debug overlay (toggled with the backquote key): sim rate, ball, players and their heights, the rally and
 // match state, the last rally result, the last physics event and the last contact.
 import { FP } from '../squash-physics.js';
 import { UNITS_PER_M } from './projection.js';
@@ -9,7 +9,7 @@ import { SIM_HZ } from '../engine/loop.js';
  * @typedef {object} DebugInfo
  * @property {number} stepsPerSec
  * @property {import('../sim/world.js').World} world
- * @property {(import('./actors.js').Band | null)[]} bands
+ * @property {number[]} heights  each player's box height in px
  * @property {{ ev: string, frame: number } | null} lastEvent
  * @property {(import('../sim/player.js').SwingEvent & { side: number }) | null} lastContact
  */
@@ -36,7 +36,7 @@ export function drawDebug(ctx, d) {
     `sim ${d.stepsPerSec.toFixed(1)} steps/s   frame ${w.frame}   ${w.phase} ${w.timer}`,
     `ball x${f1(b.x / FP)} y${f1(b.y / FP)} z${f1(b.z / FP)}`,
     `speed ${mps.toFixed(1)} m/s  bounces ${b.bounces}${b.out ? '  OUT' : ''}`,
-    ...w.players.map((pl, i) => `P${i + 1} x${f1(pl.x / FP)} z${f1(pl.z / FP)}  ${d.bands[i] ?? '-'}`),
+    ...w.players.map((pl, i) => `P${i + 1} x${f1(pl.x / FP)} z${f1(pl.z / FP)}  ${d.heights[i]}px`),
     `rally turn ${P(r.turn)} striker ${P(r.striker)} needFront ${r.needFront ? 'y' : 'n'} bounces ${r.bounces}`,
     `match ${m.scores[0]}-${m.scores[1]} to ${m.target}  server ${P(m.server)} ${m.box}  winner ${P(m.winner)}`,
     `result ${res}`,

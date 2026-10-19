@@ -75,6 +75,12 @@ Settled decisions. Newest at the bottom of each section. If something here confl
   - The band is chosen from the player's feet z, with a few units of hysteresis so a player standing on a band edge doesn't flicker between sizes.
   - These are starting values. S3 draws the placeholder boxes this way, and CP-B confirms the sizes and edges (or drops to two sizes).
   - Art is generated once at 100 px. The smaller sizes are downscaled and cleaned in Aseprite (no extra SpriteCook credits). Every size has the same tags, frame counts and timings.
+- **Smooth height, not steps (2026-10-18, after S3).** Played in S3, the sizes were right, but the jump between bands was jarring. The placeholder boxes now change height smoothly with the feet z, 1 px at a time, through **68 px at z 39, 84 px at z 100 and 100 px at z 155** (the middle of each old band), holding 68 in front and 100 behind (`CHARACTER_HEIGHT` and `heightAt` in `js/render/actors.js`). There are no bands or hysteresis any more.
+  - **Still open, settled in A1: how the sprites get smooth sizes.** Pixel art can't be resized freely without some cost, so A1 tries the options on the test sprite and the owner picks:
+    1. scale the 100 px art at draw time to the exact height (no extra art work; pixels go slightly uneven or soft while the size changes);
+    2. export many sizes, about every 2–4 px, downscaled automatically in Aseprite with only light cleanup;
+    3. keep a few hand-cleaned sizes (100 / 84 / 68) and scale the nearest one at draw time for the heights in between.
+  - Until A1 decides, the three hand-cleaned sizes below stay the art plan.
 - **Ball feel and test feed:** the ball feels like the arcade, and the S1 feed (back to about the short line) is fine. No change.
 
 ## Screens (2026-10-18)

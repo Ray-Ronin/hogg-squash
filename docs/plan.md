@@ -104,7 +104,7 @@ Settled by the plan (say so if you disagree):
 
 2. **Pace by difficulty:** use the default. 1P uses the level's pace. 2P versus uses level 5's pace (speed 284, power 18, bounce −2, gravity 0x1FB8).
 3. **Rubber band:** use the default and leave it out. **One change I recommend:** the arcade also grows the CPU's positioning error after *every point* (§6 step 5). Over a game to 11 this makes the CPU steadily sloppier, so level 5 at 10–10 would play worse than level 5 at 0–0. The plan makes the error a fresh random offset each rally, sized by the level's error step, that doesn't build up. A level then means the same thing all match.
-4. **Character height:** settled at CP-A: **three pre-scaled sizes**, 100 px at the back (z ≥ 130), 84 px in the middle (70 ≤ z < 130) and 68 px at the front (z < 70), picked from the feet z with a little hysteresis. The camera is unchanged. Details in `docs/decisions.md` ("Camera and character size"). S3 draws the boxes this way and CP-B confirms the numbers.
+4. **Character height:** settled at CP-A: **three pre-scaled sizes**, 100 px at the back (z ≥ 130), 84 px in the middle (70 ≤ z < 130) and 68 px at the front (z < 70), picked from the feet z with a little hysteresis. The camera is unchanged. Details in `docs/decisions.md` ("Camera and character size"). S3 draws the boxes this way and CP-B confirms the numbers. **Changed after S3:** the steps were jarring, so the boxes now change height smoothly through the same three sizes (68 / 84 / 100 px at z 39 / 100 / 155). A1 decides how the sprites do the same.
 5. **Hogg colour shades:** chosen in A1 and written into `docs/theme.md`.
 6. **Logo on a public site:** there is no default for this, so the plan keeps it safe. **The school's shield logo stays out of the live game until you've confirmed with the school.** Until then the game uses the colours, a "HOGG RAZORBACKS" wordmark and our own original boar mascot. S9 leaves a single logo slot, so adding the logo later is a one-file change.
 7. **"Missing pieces" from the decompiled code:** only one of the five was actually found in the ROM.
@@ -356,7 +356,7 @@ Play several games to 9, with a friend or with both hands. Note answers to:
 3. Reach and timing: do hits feel fair? Do misses feel like your fault?
 4. Does the dive lockout last the right time?
 5. Rules: any call that felt wrong (tin height, out-lines, double bounce)?
-6. Placeholder sizes and camera, now that you've played properly. Are 100 / 84 / 68 px and the band edges (z 130 and 70) right? Is the size change between bands distracting, and would two sizes do? **This confirms the sizes A2 and A3 export.**
+6. Placeholder sizes and camera, now that you've played properly. The boxes now grow smoothly from 68 px (front) through 84 to 100 px (back). Is that range right, and does the growth look natural? **This confirms the heights A1 to A3 work to.**
 
 **Starter prompt** (planning-only session)
 ```text
@@ -520,6 +520,7 @@ These apply to A1–A5:
 - Source `.aseprite` files go in `art/`.
 - **Needs:** the SpriteCook connector signed in and credits on the account (the account had 0 credits on 2026-10-18), plus Aseprite and its connection.
 - **Three sizes (CP-A):** every character animation is generated once at 100 px. It is then downscaled to 84 and 68 px in Aseprite and cleaned up again at each size, with no extra SpriteCook credits. Each size is its own sheet (`player-100`, `player-84`, `player-68`, each a `.png` + `.json`) with identical tags, frame counts, durations and `feet` slice. This takes about three times the cleanup work of one size.
+- **Smooth height (after S3):** in the game the character's height now changes smoothly with depth (68 → 100 px), not in three steps. A1 tries three ways for the sprites to follow it and the owner picks one: scaling the 100 px art at draw time, exporting many sizes (about every 2–4 px) downscaled automatically, or scaling the nearest of the three hand-cleaned sizes (see `docs/decisions.md`). A2 and A3 then export whatever A1 picked. The "Three sizes" rule above applies until then, and is replaced if A1 picks otherwise.
 - **Order:** A1–A3 only touch art files, so they can be run earlier, in parallel with S2–S7, if you like. A1 can run any time after CP-A. A2 and A3 should wait until CP-B has confirmed the three sizes, or the smaller sizes may need cleaning up again. A3 also needs the S4 swing timings.
 
 ## A1: Art: palette and style test sprite
@@ -533,7 +534,8 @@ These apply to A1–A5:
   - clean one ready-stance frame at 100 px;
   - downscale it to 84 and 68 px and clean those too, to show the smaller sizes still read;
   - make a palette-swapped version (for example a white-and-black kit) to prove the swap.
-- A mockup PNG of the sprite on a screenshot of our own court, with each size placed in its own depth band.
+- **Smooth-height test:** show the ready frame at every height from 68 to 100 px done the three ways in "Art sessions: shared rules" ("Smooth height"): a strip of sizes per method, plus a small `?dev` test page or GIF that walks it from the back to the front. The owner picks one. Record the choice in `docs/decisions.md` and `docs/art-style-guide.md`, and update A2, A3 and S8 to match.
+- A mockup PNG of the sprite on a screenshot of our own court, at the back, middle and front.
 - Record the chosen hex colours in `docs/theme.md` (open question 5) and the three sizes and bands in `docs/art-style-guide.md`.
 
 **Not in scope:** animations, court art, the logo, game code.
@@ -543,7 +545,7 @@ These apply to A1–A5:
 **Main files:** `art/palette/hogg-squash.gpl`, `art/character/player.aseprite`, `art/mockups/a1-court-mockup.png`, `art/spritecook-manifest.md`, `docs/theme.md`, `docs/art-style-guide.md`.
 
 **Done when…**
-- You've seen and approved the palette, the sprite at all three sizes and the swapped kit.
+- You've seen and approved the palette, the sprite at all three sizes and the swapped kit, and picked the smooth-height method.
 - The manifest shows credits spent within the approved amount.
 - `npm test` still passes, and the page still works because nothing in it changed.
 
@@ -627,7 +629,7 @@ No game code changes. Finish with "Done when", tick A3, add a Session log entry,
 - `js/engine/assets.js`: loads images and JSON, with a simple loading state.
 - `js/render/sprites.js`: reads Aseprite JSON (frames, durations, tags, slices/pivot) and runs a per-player animation player. Animation is chosen from sim state (ready, run direction, swing type, dive, serve, recovery). Animation time counts in sim frames, so the contact frame lines up with the hit.
 - Palette swap done once at load: an offscreen canvas recolours each of the three sheets from a colour→colour table.
-- Sprites drawn from the sheet for the player's depth band (100 / 84 / 68 px, using S3's band constants and hysteresis), positioned at the projected feet point, in depth order. A band change keeps the current tag and frame, so the animation doesn't restart.
+- Sprites drawn at the smooth height from `heightAt` in `js/render/actors.js`, by the method A1 picked. They're positioned at the projected feet point, in depth order. A change of size keeps the current tag and frame, so the animation doesn't restart.
 - Placeholder boxes kept behind a debug toggle.
 - `test/sprites.test.js`: parses all three exported `player-*.json` files and checks that every expected tag exists in each, that frame counts and durations match across sizes, and that the contact frame timing matches the sim constants.
 
@@ -640,7 +642,7 @@ No game code changes. Finish with "Done when", tick A3, add a Session log entry,
 **Done when…**
 - `npm test` passes.
 - In the browser, both players animate correctly while running, swinging, diving and serving, and P2/CPU wears the swapped kit.
-- Running from the back to the front steps through the three sizes without the animation jumping.
+- Running from the back to the front shrinks the character smoothly, without the animation jumping.
 - In slow motion (`?slow=4`) the racket visibly meets the ball on the contact frame.
 - The page still runs at a steady 57.4 sim steps per second.
 
@@ -656,7 +658,7 @@ Go through "Done when", tick S8, add a Session log entry, and commit. Ask me bef
 
 ## CP-D: Play-test 3: the character in motion *(you)*
 
-1. Does the character read clearly against the floor at the front and the back of the court, at all three sizes? Is the size step between bands acceptable?
+1. Does the character read clearly against the floor at the front and the back of the court? Does the smooth change of size look clean while running in depth?
 2. Do the swings look like they hit the ball?
 3. Is the palette swap distinct enough?
 4. **Last chance for the camera:** after this, the camera is frozen because A4 paints the court to match it.
@@ -958,3 +960,7 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **For CP-B:** the arcade serve is straight (vx 0), so it comes back down the server's own side and the receiver has to run across the court for it. That's what the plan specified; say at CP-B if it feels wrong. Text is still soft canvas `fillText` (the bitmap font comes in S9).
 - 2026-10-18, after S3 (owner's request): **the game fills the window.** At the owner's 1878×915 browser window the old whole-number scaling gave a 2× box (1280×720), because 3× needs 1920×1080. `js/engine/screen.js` now defaults to sharp-bilinear fill: the 640×360 buffer is scaled up by the next whole number with no smoothing, then shrunk smoothly to the window's exact fit. `?scale=int` keeps the old behaviour. `index.html`'s background now matches the court margin (#16161a), with no outline.
   - **Checked in the browser** (sizes emulated in the pane): at 1878×915 the canvas is 1627×915 (2.54×), and 97.1% of screen pixels exactly match their game pixel's centre colour (plain bilinear from 640×360 would manage 94.4%). At 1920×1080 it's exactly 3× with smoothing off and 100% exact pixels. `?scale=int` at 1878×915 gives the old 1280×720. A 500×400 window fills its width with no page scroll. No console errors.
+- 2026-10-18, after S3 (owner's request): **smooth character height.** The three sizes were right, but stepping between them was jarring. The boxes now change height smoothly with the feet z: a straight line through 68 px at z 39, 84 at z 100 and 100 at z 155 (the middle of each old band), rounded to whole pixels and holding 68 in front and 100 behind. `CHARACTER_HEIGHT` and `heightAt` in `js/render/actors.js` replace `DEPTH_BANDS`, `nextBand` and the hysteresis. The debug overlay and `?dev` show each player's height in px (`hogg.heights`). `?h=` scales the whole curve.
+  - **Tests:** new `test/actors.test.js` (3 tests): the three sizes and both ends; running in depth goes through every pixel from 68 to 100, never down and never more than 1 px a frame; `?h=` scaling. Unit tests: 33.
+  - **Checked in the browser:** walking P1 from the back wall (z 180) to the front wall (z 8) with W went 100 → 68 px through all 33 heights, never more than 1 px a frame. The height holds when standing still. No console errors.
+  - **Plan changes:** how the *sprites* get smooth sizes is now an open choice, settled in A1 from the test sprite: scale the 100 px art at draw time, export many auto-downscaled sizes, or scale the nearest of three hand-cleaned sizes (`docs/decisions.md`, "Smooth height"). The art shared rules, A1, S8, CP-B question 6 and CP-D question 1 were updated to match. The "three sizes" rule stands until A1 picks.

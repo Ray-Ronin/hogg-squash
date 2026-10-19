@@ -12,7 +12,7 @@ import { DEFAULT_LAYOUTS, layoutCodes, readActions } from './input/actions.js';
 import { makeWorld, stepWorld } from './sim/world.js';
 import { MATCH_LENGTHS } from './sim/match.js';
 import { drawCourt } from './render/court.js';
-import { drawActors, bands } from './render/actors.js';
+import { drawActors, heights } from './render/actors.js';
 import { drawHud } from './render/hud.js';
 import { drawDebug } from './render/debug.js';
 
@@ -75,7 +75,7 @@ function render() {
   ctx.textAlign = 'center';
   ctx.fillText('P1 WASD  F hard  G soft     P2 arrows  Num0 hard  Num. soft     Esc freeze  ` debug', WIDTH / 2, HEIGHT - 2);
   ctx.textAlign = 'left';
-  if (showDebug) drawDebug(ctx, { stepsPerSec, world, bands, lastEvent, lastContact });
+  if (showDebug) drawDebug(ctx, { stepsPerSec, world, heights, lastEvent, lastContact });
   screen.present();
 }
 
@@ -85,7 +85,7 @@ if (query.has('dev')) {
     world, kb, render,
     /** @param {number} n */ step(n = 1) { for (let i = 0; i < n; i++) simStep(); render(); },
     get frozen() { return frozen; },
-    get bands() { return [...bands]; },
+    get heights() { return [...heights]; },
   } });
 }
 

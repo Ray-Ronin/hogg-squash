@@ -1,7 +1,6 @@
 // @ts-check
 // The ball, its shadow, the landing marker and the two placeholder player boxes, drawn in depth order (far first).
-// Boxes are drawn at one of three pre-scaled heights picked from the feet z (docs/decisions.md, "Camera and
-// character size"), as the sprites will be in S8.
+// Box height changes smoothly with the feet z, through the CP-A sizes (docs/decisions.md, "Camera and character size").
 import { FP } from '../squash-physics.js';
 import { project } from './projection.js';
 
@@ -11,49 +10,44 @@ const COLOURS = {
   players: [{ box: '#c8102e', swing: '#ff6a7f' }, { box: '#1f4fa8', swing: '#7aa2ff' }],
 };
 
-/** Depth bands for the character's height (game units of feet z; pixels). S8 reuses these for the sprites. */
-export const DEPTH_BANDS = {
-  BACK_Z: 130,          // z ≥ 130: back
-  FRONT_Z: 70,          // z < 70: front; in between: middle
-  HYSTERESIS: 4,        // a player must pass an edge by this many units to change band (no flicker on the edge)
-  HEIGHTS: { back: 100, middle: 84, front: 68 },
+/**
+ * Character height by feet depth: [feet z in game units, height in px], front to back. The CP-A sizes (68 / 84 /
+ * 100 px) sit at the middle of their old bands (front z 8–70, middle 70–130, back 130–180). In between, the height
+ * is interpolated in a straight line and rounded to a whole pixel, so it changes 1 px at a time (about every 3
+ * frames when running in depth). In front of the first point and behind the last it stays at that size.
+ */
+export const CHARACTER_HEIGHT = {
+  POINTS: /** @type {[number, number][]} */ ([[39, 68], [100, 84], [155, 100]]),
+  WIDTH_RATIO: 0.36,    // box width / height
 };
 
-/** @typedef {'back' | 'middle' | 'front'} Band */
-
 /**
- * The band for feet depth z, ignoring the previous band.
+ * Character height in pixels for feet depth z.
  * @param {number} z  game units
- * @returns {Band}
+ * @param {number} [backHeight]  overrides the back height (?h=); the curve is scaled to match
+ * @returns {number}  whole pixels
  */
-function bandAt(z) {
-  return z >= DEPTH_BANDS.BACK_Z ? 'back' : z >= DEPTH_BANDS.FRONT_Z ? 'middle' : 'front';
+export function heightAt(z, backHeight) {
+  const P = CHARACTER_HEIGHT.POINTS;
+  let h = P[0][1];
+  if (z >= P[P.length - 1][0]) h = P[P.length - 1][1];
+  else for (let i = 1; i < P.length; i++) {
+    const [z0, h0] = P[i - 1], [z1, h1] = P[i];
+    if (z < z1) { h = z <= z0 ? h0 : h0 + (h1 - h0) * (z - z0) / (z1 - z0); break; }
+  }
+  if (backHeight) h *= backHeight / P[P.length - 1][1];
+  return Math.round(h);
 }
 
-/**
- * The band for feet depth z, given the band the player is in now: it only changes once z is HYSTERESIS units
- * past the edge.
- * @param {Band | null} prev
- * @param {number} z  game units
- * @returns {Band}
- */
-export function nextBand(prev, z) {
-  const B = DEPTH_BANDS, h = B.HYSTERESIS;
-  if (prev === null) return bandAt(z);
-  const lo = prev === 'back' ? B.BACK_Z : prev === 'middle' ? B.FRONT_Z : -Infinity;
-  const hi = prev === 'back' ? Infinity : prev === 'middle' ? B.BACK_Z : B.FRONT_Z;
-  return z < lo - h || z >= hi + h ? bandAt(z) : prev;
-}
-
-/** Each player's current band (drawing state, not sim state). @type {[Band | null, Band | null]} */
-export const bands = [null, null];
+/** Each player's height at the last draw (for the debug overlay). @type {[number, number]} */
+export const heights = [0, 0];
 
 /**
  * @param {CanvasRenderingContext2D} ctx
  * @param {{ x: number, y: number, z: number }} ball  16.16
  * @param {{ x: number, z: number, swing: unknown }[]} players  16.16, P1 first
  * @param {{ landing: { x: number, z: number } | null, backHeight?: number }} opts
- *   backHeight overrides the back band's height (?h=); the other bands keep their ratio to it.
+ *   backHeight overrides the height at the back (?h=); the other heights keep their ratio to it.
  */
 export function drawActors(ctx, ball, players, opts) {
   const bx = ball.x / FP, by = Math.max(0, ball.y / FP), bz = ball.z / FP;
@@ -80,9 +74,7 @@ export function drawActors(ctx, ball, players, opts) {
   }];
   players.forEach((pl, i) => {
     const z = pl.z / FP;
-    const band = bands[i] = nextBand(bands[i], z);
-    const H = DEPTH_BANDS.HEIGHTS;
-    const h = opts.backHeight ? Math.round(opts.backHeight * H[band] / H.back) : H[band];
+    const h = heights[i] = heightAt(z, opts.backHeight);
     items.push({ z, draw: () => drawBox(ctx, pl, h, COLOURS.players[i]) });
   });
   items.sort((a, b) => a.z - b.z).forEach(it => it.draw());
@@ -96,7 +88,7 @@ export function drawActors(ctx, ball, players, opts) {
  */
 function drawBox(ctx, pl, h, c) {
   const p = project(pl.x / FP, 0, pl.z / FP);
-  const w = Math.round(h * 0.36);
+  const w = Math.round(h * CHARACTER_HEIGHT.WIDTH_RATIO);
   const x = Math.round(p.sx - w / 2), y = Math.round(p.sy) - h;
   ctx.fillStyle = COLOURS.outline;
   ctx.fillRect(x, y, w, h);
