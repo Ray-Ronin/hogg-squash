@@ -54,7 +54,7 @@ export const SERVE_SPOT = {
  * @typedef {(
  *   { type: 'swing' | 'hit', side: Side } & import('./player.js').SwingEvent |
  *   { type: 'serve', side: Side, button: 'hard' | 'soft' } |
- *   { type: 'ball', ev: string } |
+ *   { type: 'ball', ev: string, x: number, y: number, z: number } |
  *   { type: 'rally', winner: Side, reason: import('./rally.js').RallyReason, scores: [number, number] } |
  *   { type: 'newRally', server: Side } |
  *   { type: 'match', winner: Side, scores: [number, number] } |
@@ -198,8 +198,9 @@ function stepRally(w, acts, events) {
     events.push({ ...e, side });
     if (e.type === 'hit' && rallyStrike(w.rally, side, w.ball)) w.landing = landingSpot(w.ball, w.params, true);
   }
+  const at = { x: w.ball.x / FP, y: w.ball.y / FP, z: w.ball.z / FP };   // a collision happens before the move
   const { ev, result } = stepBall(w.rally, w.ball, w.params);
-  if (ev) events.push({ type: 'ball', ev });
+  if (ev) events.push({ type: 'ball', ev, ...at });
   if (ev === 'floor') w.landing = null;
   if (result) {
     scoreRally(w.match, result.winner);

@@ -132,6 +132,12 @@ After each hit a "ghost ball" object re-runs the physics 3 steps per frame until
 - Both players had identical speed and shot multipliers in the recording, and **no per-character stat table was found** —
   the 8 characters appear to be cosmetic (portrait, flag, shirt). 🟡 (worth one more check if stats matter to you)
 - Dive: when the contact is a "stretch", a dive/stretch animation plays and the player can't move until it ends. 🟡
+  **Measured in the recordings (S4, 2026-10-18), and it differs:** every one of the 16 recorded dives (all by the CPU) followed a
+  *special* contact (flag 0x10, contact types 10–11: the band just beyond a stretch), lasted 143–153 frames, and the
+  player didn't move at all during it (contact ≈ 6 frames into the animation). Ordinary swings, stretch included, never
+  dive: all 142 human swings had a ~15-frame animation starting ~3 frames after the press, contact 7 frames after the
+  press, **no movement at all** while it played, and full run speed straight after (no slower recovery phase). The
+  0xC000 walk shows up only before a player's first swing of a rally (likely the serve phase), not after swings.
 - There are 12 swing animations (pointer table `0x52FC`) matching the 12 contact types. ✅
 
 ---

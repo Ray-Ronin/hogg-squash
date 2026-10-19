@@ -106,7 +106,7 @@ test('turns: the server cannot hit the ball back, and nobody can take the serve 
   const press = side => (side === 0 ? [keys('hard'), NO_KEYS] : [NO_KEYS, keys('hard')]);
   let e = stepWorld(w, ...press(rcv)).find(e => e.type === 'swing');
   assert.equal(e?.reach, false, 'no swing at a held ball');
-  run(w, 10);
+  run(w, 20);                                   // let that swing finish (18 frames)
   stepWorld(w, ...serveNow(w));
   e = stepWorld(w, ...press(rcv)).find(e => e.type === 'swing');
   assert.equal(e?.reach, false, 'the receiver waits for the front wall');

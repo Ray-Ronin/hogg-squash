@@ -13,7 +13,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **CP-A** Checkpoint *(you)*: plain Canvas or Phaser? Character size and camera
 - [x] **S2** Rally rules and scoring (headless, tested) + `npm test` that can fail
 - [x] **S3** Playable 2-player rally on one keyboard
-- [ ] **S4** Hitting and ball feel
+- [x] **S4** Hitting and ball feel
 - [ ] **CP-B** Play-test 1 *(you)*: 2-player rallies
 - [ ] **S5** CPU opponent: movement and hitting
 - [ ] **S6** Difficulty 1–9 and game pace
@@ -112,7 +112,7 @@ Settled by the plan (say so if you disagree):
    - **Tin and out-line checks** weren't found. They are designed in S2 from real court heights (above).
    - **Serve rules** weren't found. Serving is arcade-simple (decided above).
    - **CPU-only shot adjustments** weren't found (the CPU's hits differ from the plain formula 34 times in 70). The CPU uses the same shot formula as a human. This is accepted rather than guessed at.
-   - **Dive range** wasn't found. A dive is triggered by the classifier's existing "stretch" band, with a recovery lockout tuned in play-testing (S4).
+   - **Dive range** wasn't found. A dive is triggered by the classifier's existing "stretch" band, with a recovery lockout tuned in play-testing (S4). **Found in S4:** in the MAME recordings every dive (16, all by the CPU) followed a *special* contact (flag 0x10, contact types 10–11, the band just beyond a stretch), and nearly every ordinary swing had the stretch flag. So the game dives on the special band, as the arcade does (see the S4 Session log).
 
    So `squash-physics.js` keeps its maths as it is, and the new rules live in `js/sim/`.
 
@@ -355,8 +355,8 @@ Go through "Done when", tick S4, add a Session log entry with the shot-log numbe
 Play several games to 9, with a friend or with both hands. Note answers to:
 1. Is the view readable? Can you judge depth from the shadow and the landing marker?
 2. Pace: too fast or too slow? (This is level 5's pace later.)
-3. Reach and timing: do hits feel fair? Do misses feel like your fault?
-4. Does the dive lockout last the right time?
+3. Reach and timing: do hits feel fair? Do misses feel like your fault? Since S4 a swing plants you for its whole 18 frames (0.31 s), as in the arcade recordings. Too stiff? (`SWING.MOVE_SPEED` 0 → 0xC000 would allow a slow shuffle.)
+4. Dive: S4 copies the arcade, so a dive happens when the ball is just *beyond* stretching reach (the classifier's "special" band), and you stay down for 143 frames (2.5 s). Does the dive come at the right moments, and is 2.5 s right? (`DIVE.RECOVERY` in `js/sim/player.js`; the plan's first guess was about 45 frames.)
 5. Rules: any call that felt wrong (tin height, out-lines, double bounce)? Two rulings from S3 to judge in particular:
    - the arcade serve flies straight (vx 0), so it comes back down the server's own side and the receiver has to run across the court for it;
    - a swing only counts if it's your ball when you press, so a press before the ball has reached the front wall misses.
@@ -601,7 +601,7 @@ No game code changes. Finish with "Done when", tick A2, add a Session log entry,
 
 **In scope**
 - After the spend gate, animate in SpriteCook: forehand, backhand, overhead, and dive (left and right) + get-up. Celebrate and dejected only if the budget allows.
-- **Timing:** read the swing constants in `js/sim/player.js` (from S4). The contact frame must start 7 sim frames (≈122 ms) after the swing begins, and the recovery must last as long as the sim's recovery. Mark the contact frame (frame user data `contact`, or a `contact` tag).
+- **Timing:** read the swing constants in `js/sim/player.js` (from S4). The contact frame must start 7 sim frames (≈122 ms) after the swing begins, and the recovery must last as long as the sim's recovery. Mark the contact frame (frame user data `contact`, or a `contact` tag). As built in S4 (check `SWING` and `DIVE`, CP-B may change them): a swing is 18 frames in all (contact on frame 7, ≈0.31 s), and a dive is 143 frames (contact on frame 7, then about 2.4 s lying down and getting up).
 - Cleanup, tags, `feet` slice, at all three sizes. Re-export `player-{100,84,68}.png` / `.json` with all tags.
 
 **Not in scope:** game code, court art.
@@ -969,3 +969,33 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Tests:** new `test/actors.test.js` (3 tests): the three sizes and both ends; running in depth goes through every pixel from 68 to 100, never down and never more than 1 px a frame; `?h=` scaling. Unit tests: 33.
   - **Checked in the browser:** walking P1 from the back wall (z 180) to the front wall (z 8) with W went 100 → 68 px through all 33 heights, never more than 1 px a frame. The height holds when standing still. No console errors.
   - **Plan changes:** how the *sprites* get smooth sizes is now an open choice, settled in A1 from the test sprite: scale the 100 px art at draw time, export many auto-downscaled sizes, or scale the nearest of three hand-cleaned sizes (`docs/decisions.md`, "Smooth height"). The art shared rules, A1, S8, CP-B question 6 and CP-D question 1 were updated to match. The "three sizes" rule stands until A1 picks.
+- 2026-10-18, S4: hitting and ball feel. A swing state machine with arcade-measured timings, dives, placeholder hit feedback, slow motion and a shot log. `squash-physics.js` is unchanged.
+  - **Measured first, in the MAME recordings** (scratch scripts over `test/fixtures`, not committed). Two of the plan's starting guesses didn't match the arcade, so the arcade values were used (say at CP-B if you want the plan's):
+    - **Swing:** contact 7 frames after the press (the plan's number, confirmed). The ~15-frame swing animation starts ~3 frames after the press, and in all 142 human swings the player **didn't move at all** while it played, then ran at full speed straight away. There's no slower 0xC000 recovery (that walk speed only shows up before a player's first swing of a rally, probably the serve phase). So `SWING` = contact on frame 7, ready on frame 18 (≈0.31 s), `MOVE_SPEED` 0 (planted from the press).
+    - **Dive:** all 16 recorded dives (all by the CPU) came from the classifier's **special** flag (0x10, contact types 10–11: the ball 44–64 units to the left or 76–96 to the right, just beyond a stretch, on your turn only). None came from the stretch flag, which nearly every ordinary swing has, so diving on stretch would have made almost every shot a dive. Each dive left the player still for **143–153 frames**. So `DIVE` = contact on frame 7, back up on frame 143 (≈2.5 s, the arcade's, not the plan's 45), locked in place.
+  - **New:** `js/render/effects.js` (front-wall ring, contact flash, a MISS label shown when the racket would have met the ball; effects age by sim frames, so they slow in `?slow` and stop when frozen). `test/player.test.js` (10 tests: contact exactly 7 frames after the press with the table's shot; ready on frame 18; planted while swinging; out of reach and not-your-ball misses; stretch isn't a dive; dives on both sides with a 143-frame lock; no dive on the other player's turn; overheads 8–9; court limits). Unit tests: 33 → 43, plus `npm run typecheck` clean.
+  - **Changed:** `sim/player.js`: `SWING`, `DIVE`, `DIVE_FLAG`, `swingLength`, `swingPhase`; the swing keeps `kind`, `t`, `hand` (fore/back from classifier flag 4) and `contact`. Presses during a swing are ignored, and a miss plays the whole swing. `stepPlayer` keeps its turn argument. The `hit` event now carries the ball's position and new velocity. `PLAYER_LIMITS` is x ±134 (about a body's half-width from the walls; the box no longer pokes into the side margin) and z 12–179 (179 = the furthest back a human got in the recordings). `sim/world.js`: `ball` events carry the collision position. `render/actors.js`: a racket stub shows the swing side (right = forehand, left = backhand), raised in the wind-up, level at contact, low in the recovery; a diving box lies on the floor on the dive side; the landing cross is now a 0.3 m ring with a centre dot. `render/debug.js`: each player's swing phase, and the last 5 shots. `main.js`: `?slow=<n>` (the sim runs n times slower, with "SLOW ×n" shown) and `hogg.shots` / `hogg.debug` for testing. `test/world.test.js`: one wait lengthened from 10 to 20 frames, because a swing now lasts 18.
+  - **Shot log against §9** (a scripted player stood next to the 7-frame look-ahead ball and pressed real keys; m/s is depth speed off the racket, which includes the ×0.75–1.19 random factor and a quarter of the incoming ball's speed, so it spreads more than §9's single estimate):
+
+    | Shot | Measured (m/s, front-wall height) | §9 |
+    |---|---|---|
+    | BACK HARD #1 (drive, ball ~0.85 m high) | 28–41, 1.7–2.5 m | 32, 1.8 m |
+    | BACK HARD #0 (drive, low ball) | 20–30, 2.4–3.5 m | 25, 2.8 m |
+    | BACK SOFT #1 / #4 | 19–26, 2.0–2.8 m | 21, 2.1 m |
+    | MID HARD #0 | 29–33, 2.1–2.5 m | 25, 2.1 m |
+    | MID SOFT #0 | 17–29, 1.4–1.5 m | 21, 1.1 m |
+    | FRONT SOFT #0 (drop) | 14, 0.54 m from z 12; 18–23, 1.1–1.3 m from z 56–66 | 18, 0.8 m |
+    | FRONT HARD #1 / SOFT #1 | 20, 2.2 m / 37, 1.5 m | 25, 2.0 m / 36, 0.5 m |
+    | FRONT overhead #8 (HARD/SOFT) | 23–30, 1.4–2.6 m | 32, 1.3 m / 28, 0.2 m |
+    | DIVE BACK #10 / #11 | 27–31, 1.9 m | 25, 1.6 m |
+
+    Speeds are in range. Front-court overheads and SOFT #1 hit the wall higher than §9 because those contacts were high (ball 1.3–2.6 m up, where §9 assumes a typical lower contact). The same physics, so not a CP-B question unless they feel wrong.
+  - **Checked in the browser** (http://localhost:8788/hogg-squash/; the pane was hidden, so it had no animation frames, and the `?dev` hook drove the real loop step with dispatched `KeyboardEvent`s; for still screenshots `?slow=100000` stopped the real loop):
+    - drives (BACK/MID HARD), drops (FRONT SOFT, 0.54 m) and boasts (a late forehand near the right wall hit the side wall first, then the front wall at 0.65 m) were all hit on purpose;
+    - timing changes the angle: the same ball struck from 18 units early to 18 late gave aim 6 → 5 → 4 → 2 → 1 and sideways speed −6.7 → −3.3 → 0 → +6.7 → +10.0 m/s (forehand; the backhand mirrors it);
+    - the special band dives (DIVE BACK #10 and #11 seen), the box lies down on the dive side, and it stayed put with run keys held until the rally ended;
+    - out of reach shows MISS over the box and the ball flies on; overheads (#8) and dives (#10–11) both work;
+    - the racket stub, flash, wall ring and new landing ring were checked in screenshots; walking into the corners stops at (−134, 179) and (134, 12) with the box inside the court;
+    - no console errors.
+  - **Not checked in real time:** feel at full speed, and `?slow=4` on screen (the hidden pane gives no animation frames). The loop itself was checked in Node with a fake 60 Hz clock: 57.3 steps/s normally, 14.3 with `hz / 4`.
+  - **For CP-B:** questions 3 and 4 now ask about the planted swing and the arcade dive (trigger and 2.5 s). The research note (`squash-game-logic.md` §5) records the measurements. A3's timing line now gives the swing (18 frames) and dive (143 frames) lengths.
