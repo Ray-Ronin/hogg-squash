@@ -1,9 +1,50 @@
+// @ts-check
 // Hogg Squash — ball physics ported from Gaelco's Squash (1992), 68000 routines 0x80C6 (integrate),
 // 0x81C2 (collide) and 0x82D2 (restitution). Integer 16.16 fixed point, so every browser computes
-// identical results (needed for lockstep / rollback online play).
+// identical results (deterministic: the tests, replays and the CPU's ball prediction rely on it).
+// Verified frame by frame against the arcade (npm test). Don't simplify the maths or convert it to floats.
 //
 // Units: x -144..144 (side walls), y = height (0 floor, back glass 75 high), z = depth (0 front wall .. 183 back wall).
 // A position/velocity value v means v/65536 game units (per frame for velocities).
+
+/**
+ * The ball. x, y, z and vx, vy, vz are 16.16 fixed point (velocities in units per frame).
+ * @typedef {object} Ball
+ * @property {number} x
+ * @property {number} y
+ * @property {number} z
+ * @property {number} vx
+ * @property {number} vy
+ * @property {number} vz
+ * @property {number} bounces  floor bounces counted by collide()
+ * @property {boolean} out     set by integrate() once the ball passes z = 293 (it has left the court)
+ */
+
+/** @typedef {'sideWall' | 'frontWall' | 'floor' | 'backGlass'} BallEvent  what collide() reports */
+
+/**
+ * Physics params for the ball: gameSpeed (/256 time scale), gravity (16.16 per frame²) and the restitution offset.
+ * @typedef {{ speed: number, gravity: number, bounceOffset: number }} BallParams
+ */
+
+/**
+ * Shot params: depth power multiplier and sideways multiplier. In the recordings latMult equals powerMult when each
+ * rally starts (17 at Normal, 16 at Easy) and creeps up during play, so the game passes latMult = powerMult.
+ * @typedef {{ powerMult: number, latMult: number }} ShotParams
+ */
+
+/**
+ * One row of the difficulty table (see DIFFICULTY).
+ * @typedef {object} DifficultyParams
+ * @property {number} speed
+ * @property {number} gravity
+ * @property {number} bounceOffset
+ * @property {number} powerMult
+ * @property {number} cpuReaction   frames
+ * @property {number} cpuErrorStep
+ */
+
+/** @typedef {{ lift: number, side: number, power: number }} ShotEntry  lift int16, side uint8, power uint8 */
 
 export const FP = 65536;
 export const COURT = { SIDE: 0x90, BACK: 0xb7, GLASS_H: 0x4b, OUT_Z: 0x125 };
@@ -24,23 +65,43 @@ export const DIFFICULTY = {
                  0x1f80,0x1fb8,0x1ff0,0x2060,0x2100, 0x1f80,0x1ff0,0x2140,0x2060,0x2140],
 };
 
+/**
+ * The difficulty row for one arcade index. latMult isn't in the table: pass it in alongside (see ShotParams).
+ * @param {number} index  dipDifficulty*5 + skillLevel, 0..19
+ * @returns {DifficultyParams}
+ */
 export function difficultyParams(index) {
   const d = DIFFICULTY;
   return { speed: d.speed[index], gravity: d.gravity[index], bounceOffset: d.bounceOffset[index],
            powerMult: d.powerMult[index], cpuReaction: d.cpuReaction[index], cpuErrorStep: d.cpuErrorStep[index] };
 }
 
+/** @type {(v: number) => number} */
 const s16 = v => ((v & 0xffff) << 16) >> 16;          // low word as signed 16-bit (68000 muls.w operand)
+/** @type {(v: number) => number} */
 const s32 = v => v | 0;                                // wrap to signed 32-bit
+/** @type {(v: number) => number} */
 const hi  = v => v >> 16;                              // integer part (signed) of a 16.16 value
+/** @type {(v: number) => number} */
 const asr8 = v => Math.floor(v / 256);                 // arithmetic shift right 8 (v is int32)
+/** @type {(a: number, b: number) => number} */
 const mulsw = (a, b) => Math.imul(s16(a), s16(b));     // 68000 MULS.W
 
+/**
+ * A ball at rest at the origin, with any fields overridden.
+ * @param {Partial<Ball>} [o]
+ * @returns {Ball}
+ */
 export function makeBall(o = {}) {
   return { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, bounces: 0, out: false, ...o };
 }
 
 // restitution for an impact of speed v (16.16); offset = bounceOffset
+/**
+ * @param {number} v       impact speed, 16.16
+ * @param {number} offset  bounceOffset
+ * @returns {number}       restitution numerator (/256)
+ */
 export function restitution(v, offset) {
   let a = Math.abs(v);
   let idx = s16(((a << 1) >>> 16) & 0xffff) - offset;
@@ -49,6 +110,10 @@ export function restitution(v, offset) {
 }
 
 // one frame of motion (0x80C6). p = { speed, gravity }
+/**
+ * @param {Ball} b
+ * @param {{ speed: number, gravity: number }} p
+ */
 export function integrate(b, p) {
   let d0 = b.vx;
   if (d0 <= 0x4000 && d0 >= -0x4000) b.vx = 0;
@@ -67,6 +132,11 @@ export function integrate(b, p) {
 }
 
 // one collision check (0x81C2). Returns event name or null. p = { bounceOffset }
+/**
+ * @param {Ball} b
+ * @param {{ bounceOffset: number }} p
+ * @returns {BallEvent | null}
+ */
 export function collide(b, p) {
   let ev = null, c, cz;
   if (hi(b.x) <= -COURT.SIDE && b.vx < 0) { b.vx = -b.vx; c = cz = restitution(b.vx, p.bounceOffset); ev = 'sideWall'; }
@@ -89,9 +159,22 @@ export function collide(b, p) {
 }
 
 // The game checks collisions first, then moves the ball (verified frame-by-frame against MAME).
+/**
+ * One sim frame for the ball. Returns the collision event, if any (it happened at the position before the move).
+ * @param {Ball} b
+ * @param {BallParams} p
+ * @returns {BallEvent | null}
+ */
 export function step(b, p) { const ev = collide(b, p); integrate(b, p); return ev; }
 
 // Predict the ball forward (what the game's "ghost ball" does for the landing arrow / CPU).
+/**
+ * Steps a copy of the ball until its second bounce, until it leaves the court, or for maxFrames.
+ * @param {Ball} ball
+ * @param {BallParams} p
+ * @param {number} [maxFrames]
+ * @returns {{ i: number, x: number, y: number, z: number, ev: BallEvent | null }[]}  i = frames ahead
+ */
 export function predict(ball, p, maxFrames = 200) {
   const g = { ...ball }, path = [];
   for (let i = 1; i <= maxFrames; i++) {
@@ -105,12 +188,28 @@ export function predict(ball, p, maxFrames = 200) {
 // ---------------------------------------------------------------------------------------------
 // Racket hit (ROM 0x6EF2 → 0x6FAE..0x7142). Computes the ball's new velocity.
 //   shot      : 32-bit shot entry {lift:int16, side:uint8, power:uint8} (from the zone/contact tables)
-//   aim       : 0..7 (player +0x20 low bits; joystick-driven)
+//   aim       : 0..7 (player +0x20 low bits; in the arcade it follows timing, not the joystick: see aimFromTiming)
 //   hitter    : { z: player depth (16.16), flags1b, isCpu }
 //   rng       : frame counter value (screen RAM 0x102414)
 //   p         : { powerMult, latMult }
+/**
+ * Unpack a 32-bit shot-table entry.
+ * @param {number} long
+ * @returns {ShotEntry}
+ */
 export function shotEntry(long) { return { lift: (long >> 16) << 16 >> 16, side: (long >> 8) & 0xff, power: long & 0xff }; }
 
+/**
+ * Set the ball's velocity for a racket hit (mutates and returns the ball).
+ * @param {Ball} ball
+ * @param {ShotEntry} shot
+ * @param {number} aim  0..7
+ * @param {{ z: number, flags1b: number, isCpu?: boolean }} hitter  z 16.16; flags1b = the contact flags
+ * @param {number} rng  frame counter
+ * @param {ShotParams} p
+ * @param {number} [ballFlags1b]  the ball's +0x1B flags (bit 0 reverses the depth direction)
+ * @returns {Ball}
+ */
 export function applyShot(ball, shot, aim, hitter, rng, p, ballFlags1b = 0) {
   const pz = hi(hitter.z);
   const midCourt = pz > 0x48 && pz <= 0x88;
@@ -158,6 +257,20 @@ export const SHOT_TABLES = {
 // (integrate THEN collide in this routine), then set flags:
 //  1 = ball high (>24)  2 = stretching  4 = ball on the other side  8 = overhead (>48)
 //  0x10 = special (volley/approach shot, only in some cases)  0x20 = out of reach (no shot)
+/**
+ * @typedef {object} Contact
+ * @property {number} flags   the flag bits above, plus the player's 0xC0 bits
+ * @property {'FRONT' | 'MID' | 'BACK'} zone  shot table, from the ghost ball's depth
+ * @property {number} index   contact type 0..11 (row in the shot table)
+ * @property {Ball} ghost     the ball 7 frames ahead
+ */
+/**
+ * @param {Ball} ball
+ * @param {{ x: number, z: number, flags1b?: number }} player  x, z 16.16
+ * @param {BallParams} p
+ * @param {{ ballFlags1b?: number, isP1?: boolean, turnIsP1?: boolean }} [opts]  turn info enables the special flag
+ * @returns {Contact}
+ */
 export function classifyContact(ball, player, p, opts = {}) {
   const g = { ...ball, bounces: 0 };
   for (let i = 0; i < 7; i++) { integrate(g, p); collide(g, p); }
@@ -191,6 +304,11 @@ export function classifyContact(ball, player, p, opts = {}) {
   return { flags: f, zone, index: contactIndex(f), ghost: g };
 }
 
+/**
+ * Contact type 0..11 from the classifier flags.
+ * @param {number} f
+ * @returns {number}
+ */
 export function contactIndex(f) {               // 0x74F6
   if (f & 0x10) return 0x0a | ((f >> 2) & 1);
   if (f & 0x08) return 0x08 | ((f >> 2) & 1);
@@ -201,6 +319,11 @@ export function contactIndex(f) {               // 0x74F6
 // the ball is in depth relative to the player when struck (dz = ball z - player z, game units):
 //   ball behind the player (late, dz +8..+24) → 0..2 · level (dz ≈ 0) → 3..4 (straight) · ball in front (early, dz −8..−24) → 5..7
 // The arcade value scatters ±1–2 around this trend; this is a fitted approximation.
+/**
+ * @param {number} ballZ    16.16
+ * @param {number} playerZ  16.16
+ * @returns {number}  aim 0..7
+ */
 export function aimFromTiming(ballZ, playerZ) {
   const dz = hi(ballZ) - hi(playerZ);
   const a = dz >= 0 ? 4 - dz / 5 : 4 + (-dz) / 10;
@@ -211,6 +334,11 @@ export function aimFromTiming(ballZ, playerZ) {
 // (2.5 units), moving up/down (depth) covers 1× (1.25 units); diagonals combine both at full speed.
 // Joystick UP = toward the front wall (z decreases). Speed drops to 0xC000 (0.75) in some states (swing/recover).
 export const PLAYER = { RUN_SPEED: 0x14000, X_FACTOR: 2, Z_FACTOR: 1 };
+/**
+ * @param {{ x: number, z: number }} pl  16.16, moved in place
+ * @param {{ up?: boolean, down?: boolean, left?: boolean, right?: boolean }} joy
+ * @param {number} [speed]  16.16 run speed
+ */
 export function movePlayer(pl, joy, speed = PLAYER.RUN_SPEED) {   // joy: {up,down,left,right}
   if (joy.left)  pl.x = s32(pl.x - speed * PLAYER.X_FACTOR);
   if (joy.right) pl.x = s32(pl.x + speed * PLAYER.X_FACTOR);

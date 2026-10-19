@@ -1,0 +1,50 @@
+{
+  "note": "Golden-test results that npm test must not drop below. Written by `node test/run-all.js --record`.",
+  "recorded": "2026-10-18",
+  "results": {
+    "golden.test.js": {
+      "run2_frames.bin.gz": {
+        "tested": 12390,
+        "exact": 12309
+      },
+      "run3_frames.bin.gz": {
+        "tested": 17563,
+        "exact": 17452
+      }
+    },
+    "flight.test.js": {
+      "run2_frames.bin.gz": {
+        "flights": 164,
+        "explained": 164,
+        "frames": 12274,
+        "longest": 167
+      },
+      "run3_frames.bin.gz": {
+        "flights": 294,
+        "explained": 294,
+        "frames": 17360,
+        "longest": 171
+      }
+    },
+    "shot-select.test.js": {
+      "run2_frames.bin.gz": {
+        "loads": 100,
+        "reproduced": 100
+      },
+      "run3_frames.bin.gz": {
+        "loads": 144,
+        "reproduced": 144
+      }
+    },
+    "hits.test.js": {
+      "run2_frames.bin.gz": {
+        "hits": 81,
+        "matched": 67
+      },
+      "run3_frames.bin.gz": {
+        "hits": 111,
+        "matched": 73
+      }
+    }
+  }
+}
