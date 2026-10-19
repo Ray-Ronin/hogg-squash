@@ -5,16 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hogg Squash</title>
   <style>
-    html, body { margin: 0; height: 100%; background: #111; color: #f4f4f4;
-      font-family: system-ui, sans-serif; display: grid; place-items: center; text-align: center; }
-    h1 { font-size: clamp(2rem, 8vw, 4rem); margin: 0 0 .5rem; letter-spacing: .05em; }
-    p { opacity: .7; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0b0d; }
+    body { display: grid; place-items: center; }
+    canvas { display: block; image-rendering: pixelated; outline: 1px solid #2a2a30; }
   </style>
 </head>
 <body>
-  <main>
-    <h1>HOGG SQUASH</h1>
-    <p>Coming soon.</p>
-  </main>
+  <canvas id="game" width="640" height="360"></canvas>
+  <noscript><p style="color:#eee;font-family:system-ui">Hogg Squash needs JavaScript.</p></noscript>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
