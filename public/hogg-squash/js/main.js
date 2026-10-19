@@ -81,7 +81,7 @@ function render() {
   ctx.textBaseline = 'bottom';
   ctx.fillStyle = '#777';
   ctx.textAlign = 'center';
-  ctx.fillText('P1 WASD  F hard  G soft     P2 arrows  Num0 hard  Num. soft     Esc freeze  ` debug', WIDTH / 2, HEIGHT - 2);
+  ctx.fillText('P1 WASD  F hard  G soft     P2 arrows  Num0 hard  Num. soft     Esc pause  ` debug', WIDTH / 2, HEIGHT - 2);
   if (SLOW > 1) {
     ctx.textAlign = 'right';
     ctx.fillText(`SLOW ×${SLOW}`, WIDTH - 4, HEIGHT - 2);
