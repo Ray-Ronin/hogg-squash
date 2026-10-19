@@ -124,7 +124,7 @@ public/hogg-squash/
   js/squash-physics.js       existing verified physics (maths untouched)
   js/main.js                 boot: wires loop, sim, input and renderer
   js/engine/loop.js          fixed 57.4 Hz step with an accumulator
-  js/engine/screen.js        640×360 back buffer, crisp integer scaling
+  js/engine/screen.js        640×360 back buffer, fills the window (sharp-bilinear; ?scale=int for whole numbers)
   js/engine/assets.js        image + JSON loader (S8)
   js/sim/                    pure, deterministic, Node-testable
     court-rules.js rally.js match.js player.js world.js cpu.js difficulty.js
@@ -956,3 +956,5 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Not checked in the browser:** real-time feel, two humans at once on one keyboard (ghosting), and 57.4 steps/s, which wasn't re-measured (the loop is unchanged).
   - **Tests only:** determinism (6000 steps of two ball-chasing scripted players, run twice, give identical worlds and events), serve setup, the box clamp, turns, a scripted good return, the landing marker matching the real first bounce, and a match to 5 with a rematch.
   - **For CP-B:** the arcade serve is straight (vx 0), so it comes back down the server's own side and the receiver has to run across the court for it. That's what the plan specified; say at CP-B if it feels wrong. Text is still soft canvas `fillText` (the bitmap font comes in S9).
+- 2026-10-18, after S3 (owner's request): **the game fills the window.** At the owner's 1878×915 browser window the old whole-number scaling gave a 2× box (1280×720), because 3× needs 1920×1080. `js/engine/screen.js` now defaults to sharp-bilinear fill: the 640×360 buffer is scaled up by the next whole number with no smoothing, then shrunk smoothly to the window's exact fit. `?scale=int` keeps the old behaviour. `index.html`'s background now matches the court margin (#16161a), with no outline.
+  - **Checked in the browser** (sizes emulated in the pane): at 1878×915 the canvas is 1627×915 (2.54×), and 97.1% of screen pixels exactly match their game pixel's centre colour (plain bilinear from 640×360 would manage 94.4%). At 1920×1080 it's exactly 3× with smoothing off and 100% exact pixels. `?scale=int` at 1878×915 gives the old 1280×720. A 500×400 window fills its width with no page scroll. No console errors.

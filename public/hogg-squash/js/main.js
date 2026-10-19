@@ -3,7 +3,8 @@
 // 2 players on one keyboard: P1 WASD + F (HARD) / G (SOFT), P2 arrows + Numpad 0 (HARD) / Numpad . (SOFT).
 // Esc freezes (so does losing focus), ` toggles the debug overlay.
 // URL options: ?to=5|7|9|11 match length (default 9), ?seed=<n> first-server seed (default random),
-// ?h=<px> back-band box height, ?dev exposes the world as window.hogg for testing.
+// ?h=<px> back-band box height, ?scale=int whole-number scaling only (default: fill the window),
+// ?dev exposes the world as window.hogg for testing.
 import { startLoop } from './engine/loop.js';
 import { createScreen, WIDTH, HEIGHT } from './engine/screen.js';
 import { createKeyboard } from './input/keyboard.js';
@@ -53,7 +54,7 @@ function simStep() {
 
 // --- render ---
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('game'));
-const screen = createScreen(canvas);
+const screen = createScreen(canvas, { mode: query.get('scale') === 'int' ? 'int' : 'fill' });
 const ctx = screen.ctx;
 
 let stepsPerSec = 0, rateStart = performance.now(), rateSteps = 0;

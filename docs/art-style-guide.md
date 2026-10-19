@@ -3,8 +3,10 @@
 Pixel art, original characters and courts, drawn in Aseprite. Sharper than the 1992 arcade but still clearly pixel art.
 
 ## 1. Internal resolution: **640×360** (decided)
-The game draws to a 640×360 canvas, then scales it up by a whole number with no smoothing, so every pixel stays crisp:
-1280×720 (2×), 1920×1080 (3×), 2560×1440 (4×). Other window sizes get the largest whole-number scale that fits, with a border.
+The game draws to a 640×360 canvas and scales it up to fill the window (16:9, with bars in the margin colour).
+At 1280×720 (2×), 1920×1080 (3×) and 2560×1440 (4×) every pixel is exact. Other sizes use sharp-bilinear scaling:
+a whole-number upscale with no smoothing, then a smooth shrink to fit, so pixels stay sharp with slightly soft edges.
+`?scale=int` keeps the largest exact whole-number scale instead, with a border. Art is still drawn for 640×360.
 
 - That's 2× the arcade's detail in each direction, so a sprite has about 4× as many pixels to draw.
 - 16:9: the court sits in the middle; the extra width holds the score panel, player names and Hogg branding (and a crowd, later).
