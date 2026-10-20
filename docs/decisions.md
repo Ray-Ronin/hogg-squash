@@ -53,6 +53,8 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 ## Hitting (2026-10-19, CP-B)
 - **A swing plants the player** for its whole 18 frames (≈0.31 s), as in the arcade. Confirmed: it feels fine.
 - **Dives** happen on the classifier's special band (just beyond a stretch), as in the arcade. Confirmed. **Time on the ground: 2 s** (115 frames in all), shorter than the arcade's 2.5 s. Built in S4b (`DIVE.RECOVERY` 108).
+- **SOFT from the front court is a short drop (2026-10-20, CP-C).** It ran deep: some of the arcade's front-court SOFT rows are hit at twice the drop's power, so the ball takes its second bounce near the back wall. For the human and the CPU, a front-court SOFT gets a capped power and lift (in `js/sim/`, not the physics file), so its second bounce is in front of the short line. This departs from the arcade's tables on purpose. Built in S6b.
+- **Serves and the 2 s dive confirmed at CP-C (2026-10-20).** No change.
 - **Court line heights approved (2026-10-18, after S2):** tin **17**, front-wall out-line **161**, side-wall out-line sloping from **161** at the front wall to **75** at the back (the top of the back glass), in game units. The lines count against the ball. They live in `js/sim/court-rules.js` (`LINES`).
 
 ## CPU difficulty (2026-10-18, revised)
@@ -78,6 +80,11 @@ Settled decisions. Newest at the bottom of each section. If something here confl
   - Speed and gravity step evenly through all nine levels (+6 and +0x70 a level). Power and bounce change every second level. Level 1's power 15 and bounce +1 are below the arcade's range (extrapolated); its shots take about 20% longer to reach the front wall than level 5's, and level 9's about 15% less.
   - The CPU columns are the plan's proposal. `latMult` = power mult.
   - **CPU shot sense** is new: how far the CPU's HARD/SOFT choice leans on the situation (drop when the opponent is deep, drive when they're up the court, and don't drop a ball at the floor, which went into the tin about half the time). 0 plays the S5 rule unchanged.
+- **CP-C (2026-10-20): the levels need to differ more, and level 1 must be beatable.** The owner lost 4–9 at level 1, and levels 1, 5 and 9 felt about the same. In S6b:
+  - the CPU reacts more slowly at the low levels (level 1: 36 frames ≈ 0.63 s; level 9 unchanged);
+  - **how well the CPU hits scales with the level**: press-timing error, no angled shots, fewer drops and no volleys at the low levels, growing to today's CPU at level 9;
+  - the pace columns stay as above. Widen them only if the levels still feel too close after S6b.
+  - The 2P pace stays level 5's.
 
 ## Character (2026-10-18)
 - v1 character: an **adult player in red and black** (Hogg colours).
@@ -110,6 +117,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **One smooth curve over the whole court (2026-10-19, CP-B).** The 68–100 px range is right, but the S3 curve didn't look natural: it stops growing near both walls and bends at mid-court. It is replaced (in S4b) by one smooth curve with no flat ends: height = 100 × √(perspective scale at z ÷ scale at the back), about 70 px at the front wall, 82 at mid-court and 100 at the back. That's half-strength perspective.
   - **As built (S4b):** `heightAt` in `js/render/actors.js`: **70 px at z 12, 73 at z 39, 77 at z 70, 82 at z 100, 87 at z 130, 93 at z 155, 100 at z 179**, rounded to whole pixels (at most 0.4 px of change per running frame). The box's left and right edges are each rounded from the unrounded size, so neither edge steps back and forth as the player walks (rounding the width first did, by 1 px, near the centre). `?curve=old` shows the S3 curve for comparison.
   - **For the sprites, the owner leans towards one sprite scaled to fit** (method 1 above), but wants to see real pixel art first. A1 still shows all three methods and the owner picks there.
+- **The S4b height curve is confirmed (2026-10-20, CP-C):** it looks natural, with no difference visible against the old one while moving.
 - **Ball feel and test feed:** the ball feels like the arcade, and the S1 feed (back to about the short line) is fine. No change.
 
 ## Screens (2026-10-18)

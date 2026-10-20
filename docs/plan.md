@@ -18,7 +18,8 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S4b** CP-B fix-ups: aimed serve, 2 s dive, one smooth height curve
 - [x] **S5** CPU opponent: movement and hitting
 - [x] **S6** Difficulty 1–9 and game pace
-- [ ] **CP-C** Play-test 2 *(you)*: vs CPU at levels 1, 5 and 9
+- [x] **CP-C** Play-test 2 *(you)*: vs CPU at levels 1, 5 and 9
+- [ ] **S6b** CP-C fix-ups: a gentler CPU at low levels, shot quality by level, short SOFT drops
 - [ ] **S7** Gamepads
 - [ ] 💳 Approve SpriteCook spend for A1 *(you)*
 - [ ] **A1** Art: palette and style test sprite
@@ -65,7 +66,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 
     | Suggested effort | Sessions |
     |---|---|
-    | `high` | S1, S2, S3, S4, S4b, S5, S8: new foundations, the rules, or porting arcade logic, where mistakes are costly |
+    | `high` | S1, S2, S3, S4, S4b, S5, S6b, S8: new foundations, the rules, or porting arcade logic, where mistakes are costly |
     | `medium` | S6, S7, S9, S10, S11, S12, A1–A5: building on settled code or art work driven by the shared rules |
     | `medium` | Checkpoint planning sessions (CP-A … CP-E): editing this plan from your notes |
 
@@ -520,6 +521,59 @@ Read docs/plan.md and its Session log. My CP-C feedback: <notes>.
 Update the difficulty table and the remaining sessions as needed, tick CP-C, and commit. Don't push.
 ```
 
+**Answers (2026-10-20):**
+1. **No.** The owner lost 4–9 to the level 1 CPU. Its reaction should be a little slower, and it hits shots that are too good: how well it hits should scale with the level.
+2. **Levels 1, 5 and 9 felt about the same.** Level 9 a little harder than level 1, level 5 in between and close to both. Only the pace (±8–9% from level 5) and the reaction time changed between levels, and that isn't enough to feel.
+3. **No.** Nothing silly seen.
+4. **No verdict.** The owner wasn't sure what the levels change. Explained: in 1P the level sets the ball's pace and the CPU's skill; 2P has no CPU and always plays level 5's pace (the CP-B pace). Kept as it is.
+5. **SOFT in a rally goes too deep.** SOFT pressed with the ball in the front court should be a short drop, but it often runs to the back of the court. Serves and the 2 s dive got no complaints, so they stay.
+6. **Height is natural.** The difference couldn't be seen while moving. Keep the S4b curve; `?curve=old` can go in S12.
+
+---
+
+## S6b: CP-C fix-ups (a gentler CPU at low levels, shot quality by level, short SOFT drops)
+
+**Goal:** the levels feel clearly different, a beginner can beat level 1, and SOFT from the front court is a short drop.
+
+**Measured while planning (level 5 pace, every front-court SOFT row at aims 1/3/5, from contacts at y 8 and y 30, z 50):** every first bounce lands in front of the short line (z 14–93), so the drop *starts* short. But rows #1, #3, #5 and #7 (high contacts) leave the racket at depth power 160, twice row #0's 80, so the ball is still travelling at its second bounce: z 123–173, near the back wall. Even row #0 reaches z 123 from a waist-high contact. That's the "goes pretty far back".
+
+**In scope**
+- **Slower CPU reaction at the low levels.** Default `cpuReaction` 36, 30, 24, 18, 12, 8, 5, 3, 1 (level 1 = 0.63 s, was 0.42 s; level 9 unchanged).
+- **CPU shot quality scales with the level** (new columns in `LEVEL_TABLE`, monotonic, level 9 = today's CPU). Defaults, all tunable:
+  - **Timing error:** the CPU presses up to ±N frames off its planned press (fresh per shot, deterministic): N = 4, 3, 3, 2, 2, 1, 1, 0, 0. Off-timing changes the aim the way it does for a human (`aimFromTiming`) and can turn a clean contact into a stretch or a miss.
+  - **Placement:** at low levels it doesn't pick angles: no `AIM_JITTER` (it stands square, so most shots come back down the middle), growing to today's ±8 at level 9.
+  - **Drops and kills:** fewer SOFTs at low levels. The plain SOFT chances in `chooseButton` scale down (default ×0.3 at level 1, ×1 at level 9), on top of the existing shot sense.
+  - **Takes the ball later at low levels:** prefer a comfortable contact (after the bounce, waist height) over the earliest one (volleys, half-volleys), when both are reachable. Default: volleys allowed from level 6.
+- **SOFT from the front court is a short drop**, for the human and the CPU. In `js/sim/` where the shot entry is chosen (`player.js`), not in `squash-physics.js` or `SHOT_TABLES` (the golden tests use them): for the FRONT zone, a SOFT's depth power is capped (default 64) and its lift too (default row #0's, 3072), as named constants. Tune them so that from any front-court contact up to y 30, at every level's pace, the **second bounce is in front of the short line (z < 103)** and the drop gets no more tins than today. Report the same numbers for MID-court SOFTs (not changed unless they also run deep).
+- **A human-like reference player for the tests:** a scripted opponent that plays like a beginner, not like a second CPU: a 15-frame reaction (≈ 0.26 s), aims at the ball's *current* landing marker rather than the predictor's exact contact, ±3 frames of press timing, ±16 units of positioning error. The S6 browser check used a CPU brain with a 12-frame reaction and perfect prediction, which beat level 1 by 9–2, while the owner lost 4–9. The new player is meant to be closer to a person.
+- `test/difficulty.test.js`: keep the S6 tests (monotonic columns, flights, serves; "rallies get longer as the level rises" may be replaced if the new columns break it, but say so). Add:
+  - the reference player's share of points falls with the level, roughly: **≥ 60% at level 1, 35–55% at level 5, ≤ 20% at level 9** (starting targets; say what was measured);
+  - the CPU's shot quality at level 1 is measurably worse than at level 9: more swings missed or stretched, fewer angled shots, fewer SOFTs;
+  - the front-court SOFT test above (second bounce before the short line, tins no worse).
+- Record the new table and the drop numbers in `docs/decisions.md`.
+
+**Not in scope:** the pace columns (unchanged: the CPU's skill should make the difference; widen the pace only if the owner asks after this session), menus (S10), rubber-banding, serves, the dive.
+
+**Depends on:** CP-C.
+
+**Main files:** `js/sim/difficulty.js`, `js/sim/cpu.js`, `js/sim/player.js`, `test/difficulty.test.js`, `test/cpu.test.js`, `docs/decisions.md`.
+
+**Done when…**
+- `npm test` passes, and the golden numbers are exactly the P0 baseline (the drop change must not touch `squash-physics.js`).
+- In the browser (driven with `?dev` if the pane is throttled), the reference player wins a game at `?level=1` and loses one at `?level=9`, and the debug overlay shows the CPU's timing error and the level's shot-quality settings.
+- A SOFT from the front court takes its second bounce in front of the short line.
+
+**You check or decide at the end:** play levels 1, 5 and 9 again (`[` / `]` switch between rallies). Can you beat level 1 now? Do the three feel clearly different? Is SOFT from the front a proper drop? If the levels still feel too close, say whether to widen the pace too.
+
+**Starter prompt**
+```text
+We're doing Session S6b of docs/plan.md: "CP-C fix-ups (a gentler CPU at low levels, shot quality by level, short SOFT drops)".
+Read CLAUDE.md, docs/decisions.md and docs/plan.md (rules, the CP-C answers, S6b, and the S6 and CP-C Session log entries). Check CP-C is ticked.
+Build S6b's "In scope" list only. Don't change squash-physics.js or SHOT_TABLES: the drop change goes where player.js picks the shot entry. New tunables are named constants or LEVEL_TABLE columns, and the CPU stays deterministic.
+The browser pane may be throttled: use ?dev (window.hogg.step(n), dispatched KeyboardEvents; hogg.cpus has the CPU) to drive the game. A hidden pane auto-pauses: unpause with a dispatched Escape. Say what couldn't be checked in real time.
+Go through "Done when", tick S6b, add a Session log entry, and commit. Ask me before pushing.
+```
+
 ---
 
 ## S7: Gamepads
@@ -536,7 +590,7 @@ Update the difficulty table and the remaining sessions as needed, tick CP-C, and
 
 **Not in scope:** remapping pads (only keys are remappable, in S11), menus, vibration.
 
-**Depends on:** CP-C.
+**Depends on:** S6b.
 
 **Main files:** `js/input/gamepad.js`, `js/input/actions.js`, `js/main.js`, `test/input.test.js`.
 
@@ -551,7 +605,7 @@ Update the difficulty table and the remaining sessions as needed, tick CP-C, and
 **Starter prompt**
 ```text
 We're doing Session S7 of docs/plan.md: "Gamepads".
-Read CLAUDE.md, docs/controls.md and docs/plan.md (rules + S7). Check CP-C is ticked.
+Read CLAUDE.md, docs/controls.md and docs/plan.md (rules + S7). Check S6b is ticked.
 Build S7's "In scope" list only. I'll test with real controllers, so tell me what to try and when.
 Go through "Done when", tick S7, add a Session log entry, and commit. Ask me before pushing.
 ```
@@ -1122,3 +1176,9 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
     - no console errors.
   - **Not checked in real time:** how levels 1, 5 and 9 feel at full speed with a real person playing (the pane gave no animation frames). "Clearly slower" at level 1 rests on the numbers above.
   - **For CP-C:** level 5's CPU is now quicker than S5's (reaction 8, not 16; error 12, not 16), as the plan's table says, and the shot sense makes it drop less often at the floor, so level 5 may feel stronger than at the end of S5. Knobs: `LEVEL_TABLE` in `difficulty.js` and the `SENSE_*` values in `CPU`. `[` / `]` change the level between rallies, which makes comparing levels in one sitting quick. The world test of the serve over the 20 arcade paces is kept; the difficulty test covers the nine levels.
+- 2026-10-20, CP-C (planning only): owner's play-test answers (listed under CP-C) turned into a new fix-up session, **S6b**, before S7.
+  - **Level 1 too strong:** the owner lost 4–9 to it, though S6's scripted player (a CPU brain with a 12-frame reaction and perfect prediction) beat it 9–2. So S6b tests against a more human reference player (15-frame reaction, follows the landing marker, ±3 frames of timing, ±16 units of position) with targets of ≥ 60% of points at level 1, 35–55% at 5 and ≤ 20% at 9.
+  - **Levels felt alike:** only the pace (±8–9%) and the reaction time differed. S6b slows the low levels' reaction (level 1: 36 frames, was 24) and adds CPU shot quality by level: press-timing error (±4 frames at level 1 → 0), no angling at low levels (`AIM_JITTER` 0 → ±8), fewer SOFTs at low levels, and no volleys below level 6. Level 9's CPU stays as it is, and the pace columns are unchanged unless the owner asks after S6b.
+  - **SOFT from the front court runs deep** (measured at level 5's pace: first bounce z 14–93, but rows #1/#3/#5/#7 at depth power 160 take their second bounce at z 123–173, and row #0 reaches z 123 from a waist-high contact). S6b caps the front-court SOFT's power (default 64) and lift (3072) in `player.js`, so the second bounce is in front of the short line. This departs from the arcade's tables on purpose; `squash-physics.js` and `SHOT_TABLES` stay as they are.
+  - **Kept:** the 2P pace (the owner had no complaint once it was explained), serves, the 2 s dive, the S4b height curve (no difference seen while moving; `?curve=old` can go in S12). The CPU was never seen doing anything silly.
+  - **Effort for S6b:** `high` (it changes the hit rules and needs a new reference player and careful tests).
