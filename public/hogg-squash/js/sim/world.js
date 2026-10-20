@@ -12,7 +12,8 @@
 //    whose turn it is (canStrike) can make contact; anyone else's swing misses.
 // A slot the computer plays (makeWorld's `cpu`) gets its actions from cpu.js, like keys; here it only gets the arcade's
 // CPU flag on its player, and vs CPU the human serves first.
-import { FP, makeBall, difficultyParams, predict, SERVE } from '../squash-physics.js';
+import { FP, makeBall, predict, SERVE } from '../squash-physics.js';
+import { levelParams, DEFAULT_LEVEL } from './difficulty.js';
 import { serviceBox, LINES } from './court-rules.js';
 import { makeRally, canStrike, rallyStrike, stepBall } from './rally.js';
 import { firstServer, makeMatch, scoreRally } from './match.js';
@@ -90,10 +91,9 @@ export const SERVE_AIM = {
  * )} WorldEvent
  */
 
-/** The game pace until difficulty levels exist (S6): the S1 params, with latMult = powerMult (S2). */
+/** The default params: level 5 (difficulty.js), whose pace is the arcade's Normal/skill 0, as played at CP-B. */
 export function defaultParams() {
-  const d = difficultyParams(0);
-  return { ...d, latMult: d.powerMult };
+  return levelParams(DEFAULT_LEVEL);
 }
 
 /** The arcade's CPU bit in a player's flags: applyShot then never aims into a near side wall. */

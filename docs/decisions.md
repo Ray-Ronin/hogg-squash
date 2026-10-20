@@ -61,6 +61,23 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - The arcade has 20 internal difficulty steps (4 DIP settings × 5 hidden skill levels), and they are **not** in a clean easy→hard order. The plan must map 1–9 onto a smooth, monotonic curve built from those values (see `research/squash-game-logic.md`, "Difficulty index").
 - Note: in the arcade, difficulty changes **game pace too** (ball speed, gravity, shot power, bounce), not just how well the CPU plays. Default for the plan: keep that for 1P, and use one fixed mid-level pace for 2P versus.
 - **Level 5's pace is the CP-B pace (2026-10-19).** The pace played at CP-B (arcade Normal skill 0: speed 280, power 17, bounce −1, gravity 0x1F80) is right for level 5, and 2P versus uses it. The plan's proposed table put this pace at level 3, so S6 re-anchors the pace columns around it.
+- **The table as built (2026-10-19, S6)** (`LEVEL_TABLE` in `js/sim/difficulty.js`; tuned at CP-C). 1P plays the chosen level for both the pace and the CPU; 2P always plays level 5's pace. `?level=1..9` picks it (default 5) until the menus (S10).
+
+  | Level | Like arcade… | Game speed | Gravity | Power mult | Bounce offset | CPU reaction (frames) | CPU error step | CPU shot sense |
+  |---|---|---|---|---|---|---|---|---|
+  | 1 | below anything | 256 (1.00×) | 0x1DC0 | 15 | +1 | 24 | 24 | 0 |
+  | 2 | below Easy 0 | 262 | 0x1E30 | 16 | 0 | 20 | 20 | 0.125 |
+  | 3 | | 268 | 0x1EA0 | 16 | 0 | 16 | 16 | 0.25 |
+  | 4 | | 274 | 0x1F10 | 17 | −1 | 12 | 16 | 0.375 |
+  | 5 | Normal 0 (CP-B pace) | 280 | 0x1F80 | 17 | −1 | 8 | 12 | 0.5 |
+  | 6 | ≈ Normal 2 | 286 | 0x1FF0 | 18 | −2 | 6 | 10 | 0.625 |
+  | 7 | ≈ Normal 4 | 292 | 0x2060 | 18 | −2 | 4 | 6 | 0.75 |
+  | 8 | | 298 | 0x20D0 | 19 | −3 | 2 | 4 | 0.875 |
+  | 9 | Hardest 4 | 304 (1.19×) | 0x2140 | 19 | −3 | 1 | 2 | 1 |
+
+  - Speed and gravity step evenly through all nine levels (+6 and +0x70 a level). Power and bounce change every second level. Level 1's power 15 and bounce +1 are below the arcade's range (extrapolated); its shots take about 20% longer to reach the front wall than level 5's, and level 9's about 15% less.
+  - The CPU columns are the plan's proposal. `latMult` = power mult.
+  - **CPU shot sense** is new: how far the CPU's HARD/SOFT choice leans on the situation (drop when the opponent is deep, drive when they're up the court, and don't drop a ball at the floor, which went into the tin about half the time). 0 plays the S5 rule unchanged.
 
 ## Character (2026-10-18)
 - v1 character: an **adult player in red and black** (Hogg colours).

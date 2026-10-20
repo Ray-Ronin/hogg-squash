@@ -6,7 +6,7 @@ import fs from 'node:fs';
 
 const BASELINES = 'test/baselines.json';
 const fixtures = ['test/fixtures/run2_frames.bin.gz', 'test/fixtures/run3_frames.bin.gz'];
-const UNIT_TESTS = ['test/rules.test.js', 'test/match.test.js', 'test/world.test.js', 'test/actors.test.js', 'test/player.test.js', 'test/cpu.test.js'];
+const UNIT_TESTS = ['test/rules.test.js', 'test/match.test.js', 'test/world.test.js', 'test/actors.test.js', 'test/player.test.js', 'test/cpu.test.js', 'test/difficulty.test.js'];
 
 /** Read numbers out of each golden test's first line, and say which must not change and which must not drop. */
 const GOLDEN = {

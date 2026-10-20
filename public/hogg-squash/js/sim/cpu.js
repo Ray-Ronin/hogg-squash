@@ -16,6 +16,8 @@
 // Positioning error (plan, open question 3): a fresh random offset each rally, up to the error step across (half that
 // in depth), that doesn't build up over a match as the arcade's does.
 // Serving: it picks a spot in its box and a button (chooseServe), walks there, waits SERVE_WAIT frames and serves.
+// Its skill comes from the world's params (difficulty.js): reaction delay, error step and shot sense. It reads them
+// again at the start of each rally, so a level changed between rallies takes effect on the next one.
 import { FP, PLAYER, predict } from '../squash-physics.js';
 import { SWING, PLAYER_LIMITS } from './player.js';
 import { SERVE_SPOT, serverArea, serveTarget } from './world.js';
@@ -41,6 +43,16 @@ export const CPU = {
   SOFT_OTHER: 0.15,      // …otherwise
   FRONT_Z: 72,
   DEEP_Z: 130,
+  // Shot sense (params.cpuSense, 0 at level 1 → 1 at level 9) moves those chances toward these, which read where the
+  // opponent stands and how low the ball is: drop when they're deep, drive past them when they're up the court, and
+  // don't drop a ball at the floor (in play, about half of those SOFTs went into the tin).
+  SENSE_LOW: 0.05,        // SOFT for a contact below LOW_Y, wherever the opponent is
+  LOW_Y: 4,
+  SENSE_FRONT_DEEP: 0.9,  // SOFT for a front-court contact with the opponent deep (z ≥ DEEP_Z)
+  SENSE_FRONT: 0.3,       // …with the opponent further up
+  SENSE_DEEP: 0.6,        // SOFT for any other contact with the opponent deep
+  SENSE_UP: 0.05,         // …with the opponent in front of UP_Z
+  UP_Z: 100,
 };
 
 /** Run speeds, units per frame. */
@@ -74,6 +86,7 @@ const RUN_Z = PLAYER.RUN_SPEED * PLAYER.Z_FACTOR / FP;     // 1.25
  * @property {Side} side
  * @property {number} reaction   frames of reaction delay (params.cpuReaction)
  * @property {number} errorStep  size of the positioning error (params.cpuErrorStep)
+ * @property {number} sense      0…1, how much its HARD/SOFT choice reads the opponent (params.cpuSense)
  * @property {CpuState} state
  * @property {number} delay      reaction frames left
  * @property {boolean} mine      it was the CPU's turn last step
@@ -104,14 +117,14 @@ export function cpuRandom(...ints) {
 }
 
 /**
- * A CPU for one player slot, with the world's CPU params (reaction delay and error step).
+ * A CPU for one player slot, with the world's CPU params (reaction delay, error step and shot sense).
  * @param {World} w
  * @param {Side} side
  * @returns {Cpu}
  */
 export function makeCpu(w, side) {
   return {
-    side, reaction: w.params.cpuReaction, errorStep: w.params.cpuErrorStep,
+    side, reaction: w.params.cpuReaction, errorStep: w.params.cpuErrorStep, sense: w.params.cpuSense,
     state: 'wait', delay: 0, mine: false, rally: null, home: { x: CPU.T_X, z: CPU.T_Z }, plan: null, serve: null,
   };
 }
@@ -159,8 +172,15 @@ export function cpuActions(cpu, w) {
   return moveToward(me, plan.stand.x, plan.stand.z);
 }
 
-/** A new rally: a fresh positioning error, and no plan or serve yet. @param {Cpu} cpu @param {World} w */
+/**
+ * A new rally: the level's skill from the world's params, a fresh positioning error, and no plan or serve yet.
+ * @param {Cpu} cpu
+ * @param {World} w
+ */
 function newRally(cpu, w) {
+  cpu.reaction = w.params.cpuReaction;
+  cpu.errorStep = w.params.cpuErrorStep;
+  cpu.sense = w.params.cpuSense;
   const n = w.matchNo * 1024 + w.match.scores[0] + w.match.scores[1];
   const e = cpu.errorStep;
   cpu.home = {
@@ -243,21 +263,27 @@ export function planContact(w, side) {
     if (late === 0) break;
   }
   if (!best) return null;
-  return { ...best, button: chooseButton(w, side, best.ball, cpuRandom(w.seed, side, SALT.BUTTON, w.frame)) };
+  return { ...best, button: chooseButton(w, side, best.ball, w.params.cpuSense, cpuRandom(w.seed, side, SALT.BUTTON, w.frame)) };
 }
 
 /**
  * HARD or SOFT for a rally shot. The arcade's rule isn't known, so this is a simple, tunable one: mostly HARD, with
- * drops (SOFT) more likely from the front court or when the opponent stands deep.
+ * drops (SOFT) more likely from the front court or when the opponent stands deep. With more shot sense (higher
+ * levels) the chances lean further on where the opponent stands (drops when they're deep, drives when they're up),
+ * and away from dropping a ball at the floor.
  * @param {World} w
  * @param {Side} side
- * @param {{ z: number }} contact  where the ball will be (units)
+ * @param {{ y: number, z: number }} contact  where the ball will be (units)
+ * @param {number} sense  0…1 (params.cpuSense)
  * @param {number} r  a random number in [0, 1)
  * @returns {'hard' | 'soft'}
  */
-export function chooseButton(w, side, contact, r) {
-  const opp = w.players[side === 0 ? 1 : 0];
-  const soft = contact.z <= CPU.FRONT_Z ? CPU.SOFT_FRONT : opp.z / FP >= CPU.DEEP_Z ? CPU.SOFT_OPP_DEEP : CPU.SOFT_OTHER;
+export function chooseButton(w, side, contact, sense, r) {
+  const oppZ = w.players[side === 0 ? 1 : 0].z / FP, deep = oppZ >= CPU.DEEP_Z, front = contact.z <= CPU.FRONT_Z;
+  const plain = front ? CPU.SOFT_FRONT : deep ? CPU.SOFT_OPP_DEEP : CPU.SOFT_OTHER;
+  const sensed = contact.y < CPU.LOW_Y ? CPU.SENSE_LOW : front ? (deep ? CPU.SENSE_FRONT_DEEP : CPU.SENSE_FRONT)
+    : deep ? CPU.SENSE_DEEP : oppZ < CPU.UP_Z ? CPU.SENSE_UP : CPU.SOFT_OTHER;
+  const soft = plain + (sensed - plain) * sense;
   return r < soft ? 'soft' : 'hard';
 }
 

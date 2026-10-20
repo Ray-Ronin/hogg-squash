@@ -30,6 +30,7 @@ import { SIM_HZ } from '../engine/loop.js';
  * @property {(import('../sim/player.js').SwingEvent & { side: number }) | null} lastContact
  * @property {Shot[]} shots     newest last
  * @property {(import('../sim/cpu.js').Cpu | null)[]} [cpus]  the CPU for each slot it plays
+ * @property {number | null} [nextLevel]  a level waiting for the next rally
  */
 
 /** Shots kept in the log. */
@@ -98,7 +99,7 @@ function shotLine(s) {
 function cpuLines(c, w) {
   const p = c.plan, s = c.serve;
   const head = `CPU P${c.side + 1} ${c.state}${c.state === 'react' ? ` ${c.delay}` : ''}  home x${f1(c.home.x)} z${f1(c.home.z)}` +
-    `  reaction ${c.reaction} error ${c.errorStep}`;
+    `  reaction ${c.reaction} error ${c.errorStep} sense ${c.sense}`;
   const plan = p
     ? `  plan ${p.button.toUpperCase()} press in ${p.press - w.frame} at x${f1(p.ball.x)} y${f1(p.ball.y)} z${f1(p.ball.z)}` +
       `  stand x${f1(p.stand.x)} z${f1(p.stand.z)}  ${p.late ? `${p.late} frames late` : 'in time'}`
@@ -154,6 +155,8 @@ export function drawDebug(ctx, d) {
   const lines = [
     `sim ${d.stepsPerSec.toFixed(1)} steps/s   frame ${w.frame}   ${w.phase} ${w.timer}`,
     `ball x${f1(b.x / FP)} y${f1(b.y / FP)} z${f1(b.z / FP)}`,
+    `level ${w.params.level}${d.nextLevel != null ? ` (next ${d.nextLevel})` : ''}  pace ${w.params.speed} gravity ${hex(w.params.gravity)}` +
+      `  power ${w.params.powerMult} bounce ${w.params.bounceOffset}`,
     `speed ${mps.toFixed(1)} m/s  bounces ${b.bounces}${b.out ? '  OUT' : ''}`,
     ...w.players.map((pl, i) => `P${i + 1} x${f1(pl.x / FP)} z${f1(pl.z / FP)}  ${d.heights[i]}px  ` +
       `${swingPhase(pl)}${pl.swing ? ` ${pl.swing.t} ${pl.swing.hand}` : ''}`),

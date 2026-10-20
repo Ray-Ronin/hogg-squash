@@ -2,8 +2,9 @@
 // Boot: wires the loop, the keyboard, the CPU, the world (all game logic is in js/sim/) and the renderer.
 // Default: 1 player (WASD + F HARD / G SOFT) against the CPU, the human serving first.
 // ?mode=2p: 2 players on one keyboard, P1 as above, P2 arrows + Numpad 0 (HARD) / Numpad . (SOFT).
-// Esc freezes (so does losing focus), ` toggles the debug overlay.
-// URL options: ?mode=2p versus, ?to=5|7|9|11 match length (default 9), ?seed=<n> seed for the 2P first server and
+// Esc freezes (so does losing focus), ` toggles the debug overlay, [ and ] change the level (1P; from the next rally).
+// URL options: ?mode=2p versus, ?level=1..9 difficulty (default 5: the CPU's skill and, in 1P, the game's pace; 2P
+// always plays at level 5's pace), ?to=5|7|9|11 match length (default 9), ?seed=<n> seed for the 2P first server and
 // the CPU's choices (default random),
 // ?h=<px> box height at the back, ?curve=old the S3 height curve (for comparing),
 // ?scale=int whole-number scaling only (default: fill the window),
@@ -14,6 +15,7 @@ import { createKeyboard } from './input/keyboard.js';
 import { DEFAULT_LAYOUTS, layoutCodes, readActions } from './input/actions.js';
 import { makeWorld, stepWorld } from './sim/world.js';
 import { makeCpu, cpuActions } from './sim/cpu.js';
+import { paramsFor, toLevel, LEVELS } from './sim/difficulty.js';
 import { MATCH_LENGTHS } from './sim/match.js';
 import { drawCourt } from './render/court.js';
 import { drawActors, heights } from './render/actors.js';
@@ -29,9 +31,10 @@ const seed = query.has('seed') ? Number(query.get('seed')) | 0 : crypto.getRando
 const SIZE = { backHeight: Number(query.get('h')) || undefined, curve: query.get('curve') === 'old' ? 'old' : 'smooth' };
 const SLOW = Math.max(1, Number(query.get('slow')) || 1);
 const TWO_PLAYER = query.get('mode') === '2p';
+const LEVEL = toLevel(query.get('level') ?? undefined);
 
 // --- state ---
-const world = makeWorld({ target, seed, cpu: [false, !TWO_PLAYER] });
+const world = makeWorld({ target, seed, params: paramsFor(LEVEL, TWO_PLAYER), cpu: [false, !TWO_PLAYER] });
 /** The CPU for each slot it plays (P2 in 1P), else null. */
 const cpus = world.cpu.map((on, i) => (on ? makeCpu(world, /** @type {0 | 1} */ (i)) : null));
 const effects = createEffects();
@@ -42,12 +45,31 @@ let lastEvent = null;
 let lastContact = null;
 let showDebug = false;
 let frozen = false;
+/** A level chosen with [ or ] during a rally, waiting for the next one (null: none). */
+let nextLevel = /** @type {number | null} */ (null);
+
+/** Play at this level from now: the world's pace and the CPUs' skill (they re-read it as a rally starts). @param {number} level */
+function applyLevel(level) {
+  world.params = paramsFor(level, TWO_PLAYER);
+  for (const c of cpus) if (c) c.rally = null;
+  nextLevel = null;
+}
+
+/** The debug key: step the level; it applies now if no serve has been struck yet, else at the next rally. @param {number} d */
+function stepLevel(d) {
+  if (TWO_PLAYER) return;                  // 2P always plays at level 5's pace
+  const from = nextLevel ?? world.params.level;
+  const to = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, LEVELS.indexOf(from) + d))];
+  if (world.phase === 'serve') applyLevel(to); else nextLevel = to;
+}
 
 // --- input ---
 const layouts = DEFAULT_LAYOUTS;
 const kb = createKeyboard(layoutCodes(layouts));
 kb.onPress('Escape', () => { frozen = !frozen; });
 kb.onPress('Backquote', () => { showDebug = !showDebug; });
+kb.onPress('BracketLeft', () => stepLevel(-1));
+kb.onPress('BracketRight', () => stepLevel(1));
 window.addEventListener('blur', () => { frozen = true; });
 document.addEventListener('visibilitychange', () => { if (document.hidden) frozen = true; });
 
@@ -59,6 +81,7 @@ function simStep() {
   const [a1, a2] = [0, 1].map(i => { const c = cpus[i]; return c ? cpuActions(c, world) : readActions(kb, layouts[i], presses); });
   const events = stepWorld(world, a1, a2);
   for (const e of events) {
+    if ((e.type === 'newRally' || e.type === 'rematch') && nextLevel !== null) applyLevel(nextLevel);
     if (e.type === 'ball') lastEvent = { ev: e.ev, frame: world.frame - 1 };
     else if (e.type === 'swing' || e.type === 'hit') lastContact = e;
   }
@@ -91,13 +114,14 @@ function render() {
   ctx.fillStyle = '#777';
   ctx.textAlign = 'center';
   ctx.fillText(TWO_PLAYER ? 'P1 WASD  F hard  G soft     P2 arrows  Num0 hard  Num. soft     Esc pause  ` debug'
-    : 'WASD move  F hard  G soft     vs CPU (?mode=2p for 2 players)     Esc pause  ` debug', WIDTH / 2, HEIGHT - 2);
+    : `WASD move  F hard  G soft     vs CPU level ${nextLevel ?? world.params.level} ([ ])     Esc pause  \` debug`,
+    WIDTH / 2, HEIGHT - 2);
   if (SLOW > 1) {
     ctx.textAlign = 'right';
     ctx.fillText(`SLOW ×${SLOW}`, WIDTH - 4, HEIGHT - 2);
   }
   ctx.textAlign = 'left';
-  if (showDebug) drawDebug(ctx, { stepsPerSec, world, heights, lastEvent, lastContact, shots: shotLog.shots, cpus });
+  if (showDebug) drawDebug(ctx, { stepsPerSec, world, heights, lastEvent, lastContact, shots: shotLog.shots, cpus, nextLevel });
   screen.present();
 }
 
@@ -105,6 +129,7 @@ function render() {
 if (query.has('dev')) {
   Object.assign(window, { hogg: {
     world, kb, render, shots: shotLog.shots, cpus,
+    get nextLevel() { return nextLevel; },
     /** @param {number} n */ step(n = 1) { for (let i = 0; i < n; i++) simStep(); render(); },
     get frozen() { return frozen; },
     get heights() { return [...heights]; },
