@@ -1,10 +1,12 @@
 // The world: determinism, serving, turns, scoring through a whole match (node:test, run by npm test).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FP, makeBall, step, classifyContact } from '../public/hogg-squash/js/squash-physics.js';
-import { makeWorld, stepWorld, landingSpot, TIMING, SERVE_SPOT } from '../public/hogg-squash/js/sim/world.js';
-import { serviceBox } from '../public/hogg-squash/js/sim/court-rules.js';
-import { makePlayer } from '../public/hogg-squash/js/sim/player.js';
+import { FP, makeBall, step, classifyContact, difficultyParams, SERVE } from '../public/hogg-squash/js/squash-physics.js';
+import {
+  makeWorld, stepWorld, landingSpot, TIMING, SERVE_SPOT, SERVE_AIM, serveTarget, serveAim, serveFlight, serveIsGood,
+} from '../public/hogg-squash/js/sim/world.js';
+import { serviceBox, LINES } from '../public/hogg-squash/js/sim/court-rules.js';
+import { makePlayer, PLAYER_LIMITS } from '../public/hogg-squash/js/sim/player.js';
 
 const NO_KEYS = Object.freeze({ up: false, down: false, left: false, right: false, hard: false, soft: false });
 const FREEZE = TIMING.CALLOUT + TIMING.POINT;
@@ -29,7 +31,29 @@ function until(w, type, script, max = 2000) {
 }
 
 /** The server presses HARD now. */
-const serveNow = w => (w.match.server === 0 ? [keys('hard'), NO_KEYS] : [NO_KEYS, keys('hard')]);
+const serveNow = (w, button = 'hard') => (w.match.server === 0 ? [keys(button), NO_KEYS] : [NO_KEYS, keys(button)]);
+
+/** Depth error allowed for an aimed serve: the first bounce falls on a whole frame (SERVE_AIM). */
+const DEPTH_TOLERANCE = 4;
+
+/**
+ * Follow a serve to its first bounce with the world's own stepping. Returns the front-wall height and the bounce.
+ * Fails if the rally ends first.
+ */
+function followServe(w) {
+  let wallY = null, first = null;
+  for (let i = 0; i < 200 && !first; i++) {
+    const e = stepWorld(w, NO_KEYS, NO_KEYS);
+    const fw = e.find(e => e.type === 'ball' && e.ev === 'frontWall');
+    if (fw && wallY === null) wallY = fw.y;
+    const f = e.find(e => e.type === 'ball' && e.ev === 'floor');
+    if (f && wallY !== null) first = f;
+    assert.ok(!e.some(e => e.type === 'ball' && e.ev === 'sideWall'), 'no side wall before the bounce');
+    assert.ok(!e.some(e => e.type === 'rally'), 'the serve is still live at its first bounce');
+  }
+  assert.ok(first, 'the serve bounced');
+  return { wallY, x: first.x, z: first.z };
+}
 
 test('determinism: the same scripted inputs give an identical world', () => {
   // both players chase the ball (keeping it on their right) and press at random from a small LCG
@@ -65,7 +89,7 @@ test('serve setup: server in the box match.js names, receiver in the opposite ba
   assert.equal(w.match.box, 'right');
   assert.equal(w.phase, 'serve');
   const ballX = w.ball.x / FP;
-  assert.equal(ballX, (box.xMin + box.xMax) / 2, 'the held ball is mid-box');
+  assert.equal(ballX, (box.xMin + SERVE_SPOT.BALL_DX + box.xMax) / 2, 'the held ball is in the middle of its reach');
   assert.equal(w.players[s].x / FP, ballX - SERVE_SPOT.BALL_DX);
   assert.ok(w.players[rcv].x < 0 && w.players[rcv].z / FP > box.zMax, 'receiver back left');
   // the server can't walk out of the box while holding the ball
@@ -98,7 +122,7 @@ test('an unreturned serve: point to the server, who keeps serving from the other
   assert.ok(w.ball.x < 0, 'serving from the left box');
 });
 
-test('the serve crosses the court: it first bounces in line with the opposite box, behind it', () => {
+test('the serve crosses the court: from the start spot it first bounces mid-way across the opposite back quarter', () => {
   const w = makeWorld({ seed: 3 });
   for (const [box, across] of [['right', 'left'], ['left', 'right']]) {
     assert.equal(w.match.box, box);
@@ -106,20 +130,80 @@ test('the serve crosses the court: it first bounces in line with the opposite bo
     stepWorld(w, ...serveNow(w));
     const mark = w.landing;
     assert.ok(mark, 'a landing marker');
-    assert.ok(Math.abs(mark.x - (target.xMin + target.xMax) / 2) < 1, `lands in line with the ${across} box (x ${mark.x})`);
+    const mid = (SERVE_AIM.X_NEAR + SERVE_AIM.X_FAR) / 2 * (across === 'left' ? -1 : 1);
+    assert.deepEqual(w.serveTarget, { x: mid, z: SERVE_AIM.Z_HARD }, 'aimed at the middle of the range, HARD depth');
+    assert.ok(Math.abs(mark.x - mid) <= SERVE_AIM.X_TOLERANCE, `lands mid-way across the ${across} quarter (x ${mark.x})`);
     assert.ok(mark.z > target.zMax, `behind the box (z ${mark.z})`);
     // the plain physics agrees, and the serve is good (no tin, no out)
-    let front = false, first = null;
-    for (let i = 0; i < 200 && !first; i++) {
-      const e = stepWorld(w, NO_KEYS, NO_KEYS);
-      if (e.some(e => e.type === 'ball' && e.ev === 'frontWall')) front = true;
-      const f = e.find(e => e.type === 'ball' && e.ev === 'floor');
-      if (f && front) first = f;
-      assert.ok(!e.some(e => e.type === 'rally'), 'the serve is still live at its first bounce');
-    }
+    const first = followServe(w);
     assert.deepEqual([first.x, first.z], [mark.x, mark.z]);
     until(w, 'rally');
     run(w, FREEZE);                                      // the unreturned serve wins; the server serves from the other box
+  }
+});
+
+test('the aimed serve: the spot in the box picks the place across, HARD lands deeper than SOFT, every serve is legal', () => {
+  const w = makeWorld({ seed: 3 });
+  for (const box of ['right', 'left']) {
+    assert.equal(w.match.box, box);
+    const s = w.match.server, area = serviceBox(box);
+    const xs = [Math.max(area.xMin, PLAYER_LIMITS.xMin), area.xMax - SERVE_SPOT.BALL_DX];   // the feet's reach
+    /** @type {Record<string, { x: number, z: number }>} */
+    const landed = {};
+    for (const px of xs) for (const pz of [area.zMin, area.zMax]) for (const button of ['hard', 'soft']) {
+      const saved = structuredClone(w);
+      w.players[s].x = px * FP;
+      w.players[s].z = pz * FP;
+      stepWorld(w, ...serveNow(w, button));
+      const t = w.serveTarget, mark = w.landing;
+      const where = `${box} box, feet ${px},${pz}, ${button}`;
+      assert.deepEqual(t, serveTarget(box, px + SERVE_SPOT.BALL_DX, pz, button), where);
+      assert.ok(Math.abs(mark.x - t.x) <= SERVE_AIM.X_TOLERANCE, `${where}: x ${mark.x} for ${t.x}`);
+      assert.ok(Math.abs(mark.z - t.z) <= DEPTH_TOLERANCE, `${where}: z ${mark.z} for ${t.z}`);
+      const f = followServe(w);
+      assert.deepEqual([f.x, f.z], [mark.x, mark.z], `${where}: the marker is where it bounces`);
+      assert.ok(f.wallY > LINES.SERVICE && f.wallY < LINES.FRONT_OUT, `${where}: front wall at ${f.wallY}`);
+      assert.ok(f.z > LINES.SHORT_Z && Math.sign(f.x) === (box === 'right' ? -1 : 1), `${where}: opposite back quarter`);
+      landed[`${px},${pz},${button}`] = f;
+      Object.assign(w, saved);
+    }
+    const [inner, outer] = box === 'right' ? xs : [xs[1], xs[0]];
+    for (const pz of [area.zMin, area.zMax]) {
+      for (const button of ['hard', 'soft']) {
+        const a = landed[`${inner},${pz},${button}`], b = landed[`${outer},${pz},${button}`];
+        assert.ok(Math.abs(a.x) < 40 && Math.abs(b.x) > 115, `inner → near the centre line (${a.x}), outer → near the wall (${b.x})`);
+      }
+      for (const px of xs) {
+        const h = landed[`${px},${pz},hard`], sf = landed[`${px},${pz},soft`];
+        assert.ok(h.z > sf.z + 15, `HARD deeper than SOFT (${h.z} vs ${sf.z})`);
+      }
+    }
+    for (const px of xs) for (const button of ['hard', 'soft']) {
+      assert.ok(landed[`${px},${area.zMax},${button}`].z > landed[`${px},${area.zMin},${button}`].z,
+        'the back of the box serves deeper than the front');
+    }
+    stepWorld(w, ...serveNow(w));
+    until(w, 'rally');
+    run(w, FREEZE);
+  }
+});
+
+test('the aimed serve holds at every arcade pace: on target and legal from anywhere in either box', () => {
+  for (let idx = 0; idx < 20; idx++) {
+    const d = difficultyParams(idx), p = { ...d, latMult: d.powerMult };
+    for (const side of ['right', 'left']) {
+      const reach = side === 'right' ? [90, 117, 144] : [-116, -94, -72];
+      for (const bx of reach) for (const bz of [103, 118, 133]) for (const button of ['hard', 'soft']) {
+        const where = `pace ${idx}, ${side} box, ball ${bx},${bz}, ${button}`;
+        const t = serveTarget(side, bx, bz, button);
+        const ball = makeBall({ x: bx * FP, y: SERVE_SPOT.BALL_Y * FP, z: bz * FP, vy: SERVE.vy[button === 'hard' ? 1 : 0] });
+        const aim = serveAim(ball, p, t);
+        assert.ok(aim, `${where}: solved`);
+        const f = serveFlight({ ...ball, ...aim }, p);
+        assert.ok(serveIsGood(f, t), `${where}: legal and on target across`);
+        assert.ok(Math.abs(f.z - t.z) <= DEPTH_TOLERANCE, `${where}: z ${f.z} for ${t.z}`);
+      }
+    }
   }
 });
 

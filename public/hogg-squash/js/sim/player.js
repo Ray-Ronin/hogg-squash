@@ -11,7 +11,7 @@
 //  - Presses during a swing or dive are ignored. Movement uses MOVE_SPEED while swinging.
 // Timings were measured in the MAME recordings (test/fixtures): every human swing kept the player planted for its
 // whole animation (contact 7 frames after the press, moving again about 18 frames after it), and every dive was a
-// special contact that left the player down for 143–153 frames. The art in A3 matches these constants.
+// special contact that left the player down for 143–153 frames (shortened to 115 at CP-B). The art in A3 matches these constants.
 import { FP, PLAYER, movePlayer, classifyContact, SHOT_TABLES, shotEntry, applyShot, aimFromTiming } from '../squash-physics.js';
 
 export const SWING = {
@@ -22,7 +22,7 @@ export const SWING = {
 
 export const DIVE = {
   CONTACT: 7,          // same look-ahead as a swing
-  RECOVERY: 136,       // frames from contact (included) until back up: 143 frames in all (≈ 2.5 s, as the arcade)
+  RECOVERY: 108,       // frames from contact (included) until back up: 115 frames in all (≈ 2.0 s; the arcade is 2.5 s, CP-B)
   MOVE_SPEED: 0,       // locked in place
 };
 

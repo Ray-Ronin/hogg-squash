@@ -109,7 +109,7 @@ for (const [dx, index, hand] of [[-54, 11, 'back'], [86, 10, 'fore']]) {
     assert.deepEqual(hits, [[DIVE.CONTACT, 'hit']], 'one hit, 7 frames after the press; presses ignored');
     assert.equal(events[DIVE.CONTACT - 1].index, index);
     assert.deepEqual([pl.x, pl.z], [x0, z0], `locked in place for all ${swingLength('dive')} frames`);
-    assert.equal(swingLength('dive'), 143);
+    assert.equal(swingLength('dive'), 115);
     assert.equal(pl.swing, null, 'up again');
     run(pl, ball, 1, () => keys('left'));
     assert.equal((x0 - pl.x) / FP, 2.5, 'and running');

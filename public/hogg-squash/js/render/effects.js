@@ -49,9 +49,9 @@ export function createEffects() {
      * @param {CanvasRenderingContext2D} ctx
      * @param {World} w
      * @param {'wall' | 'front'} layer  'wall' under the players and ball, 'front' over them
-     * @param {number} [backHeight]  ?h=, so the MISS label sits on the box
+     * @param {import('./actors.js').SizeOpts} [size]  ?h= and ?curve=, so the MISS label sits on the box
      */
-    draw(ctx, w, layer, backHeight) {
+    draw(ctx, w, layer, size) {
       list = list.filter(e => w.frame - e.start < life(e));
       for (const e of list) {
         const age = w.frame - e.start;
@@ -81,7 +81,7 @@ export function createEffects() {
         } else if (layer === 'front' && e.kind === 'miss') {
           const pl = w.players[e.side];
           const z = pl.z / FP, p = project(pl.x / FP, 0, z);
-          const y = Math.round(p.sy - heightAt(z, backHeight) - 6 - 6 * k);
+          const y = Math.round(p.sy - heightAt(z, size) - 6 - 6 * k);
           ctx.font = 'bold 10px monospace';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';

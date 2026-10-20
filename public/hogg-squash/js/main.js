@@ -3,7 +3,8 @@
 // 2 players on one keyboard: P1 WASD + F (HARD) / G (SOFT), P2 arrows + Numpad 0 (HARD) / Numpad . (SOFT).
 // Esc freezes (so does losing focus), ` toggles the debug overlay.
 // URL options: ?to=5|7|9|11 match length (default 9), ?seed=<n> first-server seed (default random),
-// ?h=<px> back-band box height, ?scale=int whole-number scaling only (default: fill the window),
+// ?h=<px> box height at the back, ?curve=old the S3 height curve (for comparing),
+// ?scale=int whole-number scaling only (default: fill the window),
 // ?slow=<n> slow motion (the sim runs n times slower), ?dev exposes the world as window.hogg for testing.
 import { startLoop, SIM_HZ } from './engine/loop.js';
 import { createScreen, WIDTH, HEIGHT } from './engine/screen.js';
@@ -21,7 +22,8 @@ const query = new URLSearchParams(location.search);
 const to = Number(query.get('to'));
 const target = MATCH_LENGTHS.includes(to) ? to : 9;
 const seed = query.has('seed') ? Number(query.get('seed')) | 0 : crypto.getRandomValues(new Uint32Array(1))[0] | 0;
-const BACK_HEIGHT = Number(query.get('h')) || undefined;
+/** @type {import('./render/actors.js').SizeOpts} */
+const SIZE = { backHeight: Number(query.get('h')) || undefined, curve: query.get('curve') === 'old' ? 'old' : 'smooth' };
 const SLOW = Math.max(1, Number(query.get('slow')) || 1);
 
 // --- state ---
@@ -73,9 +75,9 @@ function render() {
   }
 
   drawCourt(ctx);
-  effects.draw(ctx, world, 'wall', BACK_HEIGHT);
-  drawActors(ctx, world.ball, world.players, { landing: world.landing, backHeight: BACK_HEIGHT });
-  effects.draw(ctx, world, 'front', BACK_HEIGHT);
+  effects.draw(ctx, world, 'wall', SIZE);
+  drawActors(ctx, world.ball, world.players, { landing: world.landing, size: SIZE });
+  effects.draw(ctx, world, 'front', SIZE);
   drawHud(ctx, world, { paused: frozen });
   ctx.font = '10px monospace';
   ctx.textBaseline = 'bottom';

@@ -15,7 +15,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S3** Playable 2-player rally on one keyboard
 - [x] **S4** Hitting and ball feel
 - [x] **CP-B** Play-test 1 *(you)*: 2-player rallies
-- [ ] **S4b** CP-B fix-ups: aimed serve, 2 s dive, one smooth height curve
+- [x] **S4b** CP-B fix-ups: aimed serve, 2 s dive, one smooth height curve
 - [ ] **S5** CPU opponent: movement and hitting
 - [ ] **S6** Difficulty 1–9 and game pace
 - [ ] **CP-C** Play-test 2 *(you)*: vs CPU at levels 1, 5 and 9
@@ -1060,3 +1060,30 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Height:** the 68–100 px range is right, but the S3 curve is flat for the last 27 units at the front (z 12–39) and the last 24 at the back (z 155–179), and bends at z 100, so the box stops growing near both walls. S4b replaces it with one smooth curve: 100 × √(scale(z) ÷ scale(179)) from `project()`, measured now as 69.5 px at z 12, 76.8 at z 70, 81.5 at z 100, 87.3 at z 130, 93.1 at z 155 and 100 at z 179 (the S3 curve gives 68, 76, 84, 93, 100, 100). S4b also checks that rounding the width doesn't make an edge wobble, and adds `?curve=old` for comparing at CP-C. The owner leans towards one sprite scaled to fit, but wants to see real pixel art first, so A1 still compares the three methods, method 1 first; A2 and A3 now wait for A1's method, not CP-B's "three sizes".
   - **Pace:** the owner says today's pace is right for level 5. Today's pace is `defaultParams()` = arcade index 0 (speed 280, power 17, bounce −1, gravity 0x1F80), which is the *level 3* row of open question 1's table. So S6 re-anchors the pace columns (level 5 = this pace, level 9 = Hardest 4, levels 1–4 slower below it), and 2P keeps playing at exactly the CP-B pace.
   - **Effort for S4b:** `high` (the serve solver touches the rules and needs careful tests).
+- 2026-10-19, S4b: the three CP-B fix-ups. `squash-physics.js` unchanged; `npm test` golden/flight/shot/hit numbers exactly as the P0 baseline; unit tests 44 → 47.
+  - **Dive:** `DIVE.RECOVERY` 136 → 108, so a dive is 115 frames (contact on frame 7), 2.00 s.
+  - **Aimed serve** (`SERVE_AIM`, `serveTarget`, `serveAim` in `js/sim/world.js`): the held ball's place across its reach in the box picks the first bounce's |x|, 36 (centre-line edge) to 120 (side-wall edge); HARD aims at z 168, SOFT at 140, ±8 from the server's depth in the box. `serveAim` keeps the arcade's `SERVE.vy` per button, tries depth speeds 4–11 units/frame (1/64 steps), ranks them by how close the first bounce lands to the target depth, and takes the first whose sideways speed (`serveVx`) gives a legal serve on target. About 1–2 ms per serve.
+    - **Why depth isn't exact:** the first bounce happens on a whole frame, so as the depth speed changes, the landing depth moves in steps of a few units, not smoothly (a faster serve also hits the wall lower). A serve lands within 4 units of its depth target (worst 3.8 over all 20 arcade paces) and within 2 of its x. Varying the height speed wasn't needed.
+    - **Fixed on the way:** `serveVx` now counts a ball that touches a side wall before bouncing as "too far". Its bisection assumed the landing x keeps moving with the sideways speed, but off the side wall it comes back, so wide, slow SOFT serves landed up to 16 units short.
+    - **Server's start spot:** mid-reach in the box (was mid-box), so an untouched serve goes to the middle of its range from both boxes (x ∓78). Mid-box put the ball 1/3 across its reach in the right box but 4/5 in the left (the feet stop at x −134).
+    - **Landing spots at the CP-B pace**, right box (the left box mirrors it), feet x 72 = inner edge, 126 = outer edge:
+
+      | Server's spot | HARD: first bounce, wall height | SOFT: first bounce, wall height |
+      |---|---|---|
+      | inner, front of box (z 103) | x −36, z 161.7, wall 102 | x −36, z 132.0, wall 128 |
+      | inner, back of box (z 133) | x −36, z 175.1, wall 108 | x −36, z 147.0, wall 128 |
+      | mid (start spot, z 118) | x −78, z 166.8, wall 96 | x −78, z 140.3, wall 123 |
+      | outer, front of box (z 103) | x −120, z 161.7, wall 102 | x −120, z 132.0, wall 128 |
+      | outer, back of box (z 133) | x −120, z 175.1, wall 108 | x −120, z 147.0, wall 128 |
+
+      Depth speeds: HARD 8.6–11 units/frame (36.7 m/s off the racket at mid-box, 2.7–3.1 m up the front wall), SOFT 6.2–8.1 (20.8 m/s, 3.6 m up). HARD at mid-box and behind uses the top of the range (11), so it is a little faster than the arcade serve (9). The service line is at 63 and the out-line at 161, so every serve is well inside both.
+    - The debug overlay (`) shows where a serve from the current spot would be aimed (HARD and SOFT) and, once served, where it was aimed and where it will land.
+  - **Height** (`heightAt`, `exactHeightAt`, `boxEdges` in `js/render/actors.js`): 100 × √(scale(z) ÷ scale(179)) from `project()`: **70 px at z 12, 73 at z 39, 77 at z 70, 82 at z 100, 87 at z 130, 93 at z 155, 100 at z 179** (S3 curve: 68, 68, 76, 84, 93, 100, 100). Rounding the width first (as S3 did) made an edge step back and forth 4 times on a walk front to back near the centre line (x ±20, ±60); each edge is now rounded on its own from the unrounded size, and neither turns back. `?h=` still scales the curve; `?curve=old` shows the S3 curve. `effects.js` (the MISS label) and `main.js` take the size options.
+  - **Tests:** player (dive 115 frames); world (the start-spot serve, the aimed serve from the four corners of each box with both buttons: on target, the marker is where it bounces, legal, inner near the centre line, outer near the wall, HARD > 15 units deeper than SOFT, back of the box deeper than the front; and `serveAim` on target and legal at all 20 arcade paces from 9 spots per box, ≈1 s); actors (the curve's values, growing the whole way with no flat ends, ≤ 1 px per running frame, no edge turning back at 9 x positions, `?h=`, `?curve=old`).
+  - **Checked in the browser** (http://localhost:8787/hogg-squash/?dev&seed=3&slow=100000; the pane was hidden, so the real loop was stopped and `window.hogg.step` drove it with dispatched `KeyboardEvent`s; the auto-pause on a hidden window was dispatched off for the screenshots):
+    - eight serves, from the inner and outer edges at the front and back of both boxes, HARD and SOFT: each landed exactly on its marker and within the numbers above, and the screenshots show the ring near the centre line just behind the short line (inner, front, SOFT) against the far back corner by the side wall (outer, back, HARD);
+    - a real dive (DIVE BACK #10, found by placing the receiver): down and locked in place for 115 frames (2.00 s) with a run key held (the ball was held in the air after contact so the rally stayed live that long);
+    - walking from the back wall to the front: 100 px → 70 px, 1 px at a time, never growing, longest gap between steps 7 frames (at the front, where the curve is gentlest); `?curve=old` gives the old flat ends (100 behind z 155, 68 in front of z 39);
+    - no console errors.
+  - **Not checked in real time:** how the serves and the shrinking box look at full speed (the hidden pane gives no animation frames). Edge smoothness was checked by the unit test on `boxEdges`, the function `drawBox` uses, not by reading pixels.
+  - **For S5:** the CPU serves by walking to a spot in its box and pressing a button; `serveTarget(box, ballX, ballZ, button)` says where that will land. **For S6:** the every-pace serve test already runs over the 20 arcade paces; point it at `levelParams` once the table exists.

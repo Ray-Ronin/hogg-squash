@@ -1,6 +1,7 @@
 // @ts-check
 // The ball, its shadow, the landing marker and the two placeholder player boxes, drawn in depth order (far first).
-// Box height changes smoothly with the feet z, through the CP-A sizes (docs/decisions.md, "Camera and character size").
+// Box height follows one smooth curve with the feet z, half-strength perspective (docs/decisions.md, "Camera and
+// character size"); ?curve=old shows the S3 curve for comparison.
 // While swinging, a racket stub on the box shows the side of the swing (right = forehand, left = backhand) and moves
 // from raised (wind-up) through level (contact) to low (recovery). A diving box lies on the floor on the dive side.
 import { FP } from '../squash-physics.js';
@@ -14,35 +15,72 @@ const COLOURS = {
 };
 
 /**
- * Character height by feet depth: [feet z in game units, height in px], front to back. The CP-A sizes (68 / 84 /
- * 100 px) sit at the middle of their old bands (front z 8–70, middle 70–130, back 130–180). In between, the height
- * is interpolated in a straight line and rounded to a whole pixel, so it changes 1 px at a time (about every 3
- * frames when running in depth). In front of the first point and behind the last it stays at that size.
+ * Character height by feet depth (CP-B): one smooth curve over the whole court, half-strength perspective.
+ * height = BACK × √(scale(z) ÷ scale(BACK_Z)), where scale is project()'s pixels per metre at that depth: about 70 px
+ * at the front wall (z 12), 82 at mid-court and 100 at the back (z 179). It grows the whole way, with no flat ends and
+ * no bend, and is drawn rounded to a whole pixel (it changes 1 px at a time, at most 0.4 px per frame when running).
+ * OLD_POINTS is the S3 curve ([feet z, px], straight lines between, flat outside), kept for ?curve=old.
  */
 export const CHARACTER_HEIGHT = {
-  POINTS: /** @type {[number, number][]} */ ([[39, 68], [100, 84], [155, 100]]),
+  BACK: 100,            // px at BACK_Z
+  BACK_Z: 179,          // the deepest the feet go (PLAYER_LIMITS.zMax)
   WIDTH_RATIO: 0.36,    // box width / height
+  OLD_POINTS: /** @type {[number, number][]} */ ([[39, 68], [100, 84], [155, 100]]),
 };
+
+/**
+ * How the boxes are sized: backHeight overrides the height at the back (?h=; the curve keeps its shape), and
+ * curve 'old' picks the S3 curve (?curve=old).
+ * @typedef {{ backHeight?: number, curve?: 'smooth' | 'old' }} SizeOpts
+ */
 
 /** The placeholder dive: the box lies on the floor, this much of its standing size, shifted to the dive side. */
 const DIVE_BOX = { W: 0.8, H: 0.28, SHIFT: 0.35, LUNGE: 4 };   // LUNGE: frames after contact still in the swing colour
 
 /**
- * Character height in pixels for feet depth z.
+ * Character height in pixels for feet depth z, before rounding.
  * @param {number} z  game units
- * @param {number} [backHeight]  overrides the back height (?h=); the curve is scaled to match
- * @returns {number}  whole pixels
+ * @param {SizeOpts} [size]
+ * @returns {number}
  */
-export function heightAt(z, backHeight) {
-  const P = CHARACTER_HEIGHT.POINTS;
-  let h = P[0][1];
-  if (z >= P[P.length - 1][0]) h = P[P.length - 1][1];
-  else for (let i = 1; i < P.length; i++) {
-    const [z0, h0] = P[i - 1], [z1, h1] = P[i];
-    if (z < z1) { h = z <= z0 ? h0 : h0 + (h1 - h0) * (z - z0) / (z1 - z0); break; }
+export function exactHeightAt(z, size = {}) {
+  const C = CHARACTER_HEIGHT;
+  let h;
+  if (size.curve === 'old') {
+    const P = C.OLD_POINTS;
+    h = P[0][1];
+    if (z >= P[P.length - 1][0]) h = P[P.length - 1][1];
+    else for (let i = 1; i < P.length; i++) {
+      const [z0, h0] = P[i - 1], [z1, h1] = P[i];
+      if (z < z1) { h = z <= z0 ? h0 : h0 + (h1 - h0) * (z - z0) / (z1 - z0); break; }
+    }
+  } else {
+    h = C.BACK * Math.sqrt(project(0, 0, z).scale / project(0, 0, C.BACK_Z).scale);
   }
-  if (backHeight) h *= backHeight / P[P.length - 1][1];
-  return Math.round(h);
+  return size.backHeight ? h * size.backHeight / C.BACK : h;
+}
+
+/**
+ * Character height in whole pixels for feet depth z.
+ * @param {number} z  game units
+ * @param {SizeOpts} [size]
+ * @returns {number}
+ */
+export function heightAt(z, size) {
+  return Math.round(exactHeightAt(z, size));
+}
+
+/**
+ * A standing box's left and right edges on screen. Each edge is rounded on its own from the unrounded size, so as the
+ * player walks, both edges move smoothly: rounding the width first would let one edge step back and forth.
+ * @param {number} sx  feet centre, screen x
+ * @param {number} hExact  unrounded height (exactHeightAt)
+ * @returns {{ x: number, w: number }}
+ */
+export function boxEdges(sx, hExact) {
+  const half = hExact * CHARACTER_HEIGHT.WIDTH_RATIO / 2;
+  const x = Math.round(sx - half);
+  return { x, w: Math.round(sx + half) - x };
 }
 
 /** Each player's height at the last draw (for the debug overlay). @type {[number, number]} */
@@ -54,8 +92,7 @@ export const heights = [0, 0];
  * @param {CanvasRenderingContext2D} ctx
  * @param {{ x: number, y: number, z: number }} ball  16.16
  * @param {Player[]} players  P1 first
- * @param {{ landing: { x: number, z: number } | null, backHeight?: number }} opts
- *   backHeight overrides the height at the back (?h=); the other heights keep their ratio to it.
+ * @param {{ landing: { x: number, z: number } | null, size?: SizeOpts }} opts
  */
 export function drawActors(ctx, ball, players, opts) {
   const bx = ball.x / FP, by = Math.max(0, ball.y / FP), bz = ball.z / FP;
@@ -82,8 +119,9 @@ export function drawActors(ctx, ball, players, opts) {
   }];
   players.forEach((pl, i) => {
     const z = pl.z / FP;
-    const h = heights[i] = heightAt(z, opts.backHeight);
-    items.push({ z, draw: () => drawBox(ctx, pl, h, COLOURS.players[i]) });
+    const hExact = exactHeightAt(z, opts.size);
+    heights[i] = Math.round(hExact);
+    items.push({ z, draw: () => drawBox(ctx, pl, hExact, COLOURS.players[i]) });
   });
   items.sort((a, b) => a.z - b.z).forEach(it => it.draw());
 }
@@ -91,22 +129,22 @@ export function drawActors(ctx, ball, players, opts) {
 /**
  * @param {CanvasRenderingContext2D} ctx
  * @param {Player} pl
- * @param {number} h  pixels
+ * @param {number} hExact  unrounded height in pixels (the box is drawn Math.round(hExact) tall)
  * @param {{ box: string, swing: string }} c
  */
-function drawBox(ctx, pl, h, c) {
+function drawBox(ctx, pl, hExact, c) {
   const p = project(pl.x / FP, 0, pl.z / FP);
   const phase = swingPhase(pl);
   const s = pl.swing;
   const dir = s?.hand === 'back' ? -1 : 1;               // forehand on the right (+x), backhand on the left
-  let w = Math.round(h * CHARACTER_HEIGHT.WIDTH_RATIO), bh = h;
-  let cx = p.sx;
+  const h = Math.round(hExact);
+  let { x, w } = boxEdges(p.sx, hExact), bh = h;
   if (phase === 'dive') {
     w = Math.round(h * DIVE_BOX.W);
     bh = Math.round(h * DIVE_BOX.H);
-    cx += dir * h * DIVE_BOX.SHIFT;
+    x = Math.round(p.sx + dir * h * DIVE_BOX.SHIFT - w / 2);
   }
-  const x = Math.round(cx - w / 2), y = Math.round(p.sy) - bh;
+  const y = Math.round(p.sy) - bh;
   ctx.fillStyle = COLOURS.outline;
   ctx.fillRect(x, y, w, bh);
   const lunging = phase === 'dive' && s && s.t < DIVE.CONTACT + DIVE_BOX.LUNGE;

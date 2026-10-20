@@ -2,8 +2,10 @@
 // Debug overlay (toggled with the backquote key): sim rate, ball, players (height, swing phase), the rally and
 // match state, the last rally result, the last physics event and the last contact, and a log of the last 5 shots
 // (zone, contact index, button, aim, speed and front-wall height) to compare with squash-game-logic.md §9.
+// The serve line shows where a serve from here would be aimed (HARD and SOFT), then where it was aimed.
 import { FP } from '../squash-physics.js';
 import { swingPhase } from '../sim/player.js';
+import { serveTarget } from '../sim/world.js';
 import { UNITS_PER_M } from './projection.js';
 import { SIM_HZ } from '../engine/loop.js';
 
@@ -97,6 +99,10 @@ export function drawDebug(ctx, d) {
     : `P${c.side + 1} ${c.kind === 'dive' ? 'DIVE ' : ''}${c.button.toUpperCase()} flags ${hex(c.flags)} ${c.zone} idx ${c.index}` +
       (c.type === 'hit' ? ` aim ${c.aim} HIT` : c.reach ? ' (swinging)' : ' MISS');
   const res = w.result ? `${P(w.result.winner)} wins rally: ${w.result.reason}` : '-';
+  const xz = (/** @type {{ x: number, z: number } | null} */ t) => (t ? `x${f1(t.x)} z${f1(t.z)}` : '-');
+  const serve = w.phase === 'serve'
+    ? `serve aim  HARD ${xz(serveTarget(m.box, b.x / FP, b.z / FP, 'hard'))}  SOFT ${xz(serveTarget(m.box, b.x / FP, b.z / FP, 'soft'))}`
+    : `serve aimed ${xz(w.serveTarget)}   landing ${xz(w.landing)}`;
   const lines = [
     `sim ${d.stepsPerSec.toFixed(1)} steps/s   frame ${w.frame}   ${w.phase} ${w.timer}`,
     `ball x${f1(b.x / FP)} y${f1(b.y / FP)} z${f1(b.z / FP)}`,
@@ -106,6 +112,7 @@ export function drawDebug(ctx, d) {
     `rally turn ${P(r.turn)} striker ${P(r.striker)} needFront ${r.needFront ? 'y' : 'n'} bounces ${r.bounces}`,
     `match ${m.scores[0]}-${m.scores[1]} to ${m.target}  server ${P(m.server)} ${m.box}  winner ${P(m.winner)}`,
     `result ${res}`,
+    serve,
     `event ${d.lastEvent ? `${d.lastEvent.ev} @${d.lastEvent.frame}` : '-'}`,
     `contact ${contact}`,
     'shots (newest last)',
