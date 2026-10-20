@@ -16,7 +16,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S4** Hitting and ball feel
 - [x] **CP-B** Play-test 1 *(you)*: 2-player rallies
 - [x] **S4b** CP-B fix-ups: aimed serve, 2 s dive, one smooth height curve
-- [ ] **S5** CPU opponent: movement and hitting
+- [x] **S5** CPU opponent: movement and hitting
 - [ ] **S6** Difficulty 1–9 and game pace
 - [ ] **CP-C** Play-test 2 *(you)*: vs CPU at levels 1, 5 and 9
 - [ ] **S7** Gamepads
@@ -496,7 +496,7 @@ Go through "Done when", tick S5, add a Session log entry, and commit. Ask me bef
 **Starter prompt**
 ```text
 We're doing Session S6 of docs/plan.md: "Difficulty 1–9 and game pace".
-Read CLAUDE.md, docs/decisions.md, docs/research/squash-game-logic.md (§7 difficulty table) and docs/plan.md (rules, open questions 1–3, S6). Check S5 is ticked.
+Read CLAUDE.md, docs/decisions.md, docs/research/squash-game-logic.md (§7 difficulty table) and docs/plan.md (rules, open questions 1–3, S6, and the S5 Session log entry). Check S5 is ticked.
 Build S6's "In scope" list only, starting from the proposed table in the plan, re-anchored as open question 1 says (level 5 = the CP-B pace).
 Go through "Done when", tick S6, add a Session log entry, and commit. Ask me before pushing.
 ```
@@ -1087,3 +1087,23 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
     - no console errors.
   - **Not checked in real time:** how the serves and the shrinking box look at full speed (the hidden pane gives no animation frames). Edge smoothness was checked by the unit test on `boxEdges`, the function `drawBox` uses, not by reading pixels.
   - **For S5:** the CPU serves by walking to a spot in its box and pressing a button; `serveTarget(box, ballX, ballZ, button)` says where that will land. **For S6:** the every-pace serve test already runs over the 20 arcade paces; point it at `levelParams` once the table exists.
+- 2026-10-19, S5: the CPU opponent. The page now defaults to 1 player against the CPU (P2), the human serving first; `?mode=2p` gives versus. `squash-physics.js` unchanged; `npm test` golden/flight/shot/hit numbers exactly as the P0 baseline; unit tests 47 → 54; `npm run typecheck` clean.
+  - **New:** `js/sim/cpu.js` (`CPU` tunables, `makeCpu(world, side)`, `cpuActions(cpu, world)` → the same six actions as keys, `planContact`, `chooseButton`, `chooseServe`, `moveToward`, `runFrames`, `cpuRandom`), `test/cpu.test.js` (7 tests). **Changed:** `sim/world.js` (`makeWorld({ cpu: [p1, p2] })`; a CPU slot's player gets the arcade's CPU flag `CPU_FLAG` 0x40, so `applyShot` never aims it into a near side wall; vs CPU the human serves first, rematches too; `serverArea` exported), `main.js` (CPU actions replace P2's keys unless `?mode=2p`; key hint per mode; `hogg.cpus`), `render/hud.js` (the CPU's slot says CPU), `render/debug.js` (CPU lines and markers), `test/run-all.js`.
+  - **How it plays** (§6): when it becomes its turn it waits the reaction delay (16 frames at Normal/skill 0, from `params.cpuReaction`), then runs the predictor once and picks the earliest contact it can reach (2.5 units/frame across, 1.25 in depth, both at once) by the press frame, which is 7 frames before contact and after the ball has reached the front wall. If none is reachable it takes the one it misses by the least, and presses anyway on the planned frame (that's where its misses, stretches and dives come from). It stands 32 to the ball's left (a clean forehand), inside x −134…104, z 22…178 (the arcade's −147 is outside our player limits). After its shot it recovers to the T (x 0, z 96) plus a fresh error each rally: up to ±16 across and ±8 in depth (the error step, half in depth), never accumulated. If a swing misses and the ball is still its own, it plans again. It moves only while more than half a step away on each axis, so it can't step back and forth.
+  - **Rulings made in the code** (tunables in `CPU`, for CP-C):
+    - **Aim:** it stands up to 8 units in front of or behind the contact (random per shot, `AIM_JITTER`), so timing angles its shots (aim ≈ 3–5) instead of always hitting straight. Not from the ROM.
+    - **Highest contact it plans for:** y 56 (1.6 m; `CONTACT_Y_MAX`). Lower overheads are fine.
+    - **Button (`chooseButton`):** SOFT 60% for a contact in the front court (z ≤ 72), 40% when the opponent stands deep (z ≥ 130), else 15%; otherwise HARD.
+    - **Serve (`chooseServe`):** a random spot in its box and a random button (HARD 60%), kept if `serveTarget` says it lands at least 24 units across from the receiver (up to 4 tries, else the furthest). It walks there, stands still for 57 frames (1 s) and serves. Comparing running time instead favoured HARD (deeper) almost every time, and "furthest across" picked the side-wall edge almost every time; with this rule, 24 test serves (12 from each box) were HARD 17 / SOFT 7 and inner half 9 / outer half 15, first bouncing at |x| 39–52 or 92–120 (the receiver stands at 72).
+    - **Randomness:** a hash of the world's seed, the slot, the purpose and the frame (or rally number), so a game replays exactly from `?seed=`.
+  - **Measured headless** (Normal/skill 0, 12 CPU-against-CPU games to 11, 222 rallies): 13.0 hits a rally on average (median 8, longest 135); ended by not up 147, tin 64, down 8, out 3. Of its ~3300 planned contacts, 45% weren't fully reachable in time, but most of those were short by a few frames and still in reach. About 10% of its swings missed and 6% of its hits were dives. Against 743 fed balls (5 spots across × 3 depths × HARD/SOFT × 5 shot rows × 5 aims, the CPU starting at the T) it returned **92%**: all HARD front-court feeds, 82% of SOFT front-court ones (drops), 89–97% of the rest. 208 rallies ran in 0.36 s.
+  - **Checked in the browser** (http://localhost:8787/hogg-squash/?dev&slow=100000; the pane got no animation frames, so `hogg.step` drove the real loop step, and a scripted "human" P1, a second CPU brain with a 28-frame reaction and ±30 error, played through dispatched WASD/F/G `KeyboardEvent`s):
+    - two full games to 9 against the CPU: CPU won 9–5 (14 rallies, 6 of its 75 swings missed) and 9–6 (15 rallies, 6 of 78 missed). The human won points by the CPU's tin (3), down (1) and not reaching the ball (5);
+    - it runs to where the ball is going: a planned contact at x −106, z 149 had it standing at x −134 (the wall limit), z 154; it pressed on the planned frame and hit 7 frames later (SOFT BACK #0, aim 5);
+    - over the 9–6 game, 0 step-back-and-forth reversals and 0 frames outside the court; recoveries ended within 1.5 units of its home spot (once 30 units short, because the next ball came first); one traced recovery went from (−126, 151) to (1, 100) in 52 frames;
+    - its serve: SOFT from the back outer corner of the right box, standing still 57 frames, landing at x −113.2, z 145.3 on the aimed (−113, 145.3), with the receiver at x −72;
+    - a rematch (F) gave the serve to the human again, the CPU still flagged; `?mode=2p` has no CPU, labels P1/P2, P2 walks with the arrows and P1 serves with F;
+    - the debug overlay (`) shows each CPU's state, reaction countdown, home spot, plan (button, frames to the press, contact, stand spot, in time or late) or chosen serve, and draws the contact (cyan ring joined to the floor) and the stand or serve spot (cyan cross);
+    - no console errors.
+  - **Not checked in real time:** how the CPU feels at full speed, and a real person playing it (the pane gave 0 animation frames in 3 s, even when reported visible).
+  - **For CP-C:** two CPUs at this level can rally a long time (135 hits), and from the T it returns 92% of a spread of fed balls, so at level 5 it may feel strong. The knobs are the reaction delay and error step (S6's table) and `CPU` in `cpu.js`. **For S6:** `makeCpu` reads `cpuReaction` and `cpuErrorStep` from the world's params, so `levelParams` only has to supply them; `test/cpu.test.js`'s CPU-against-CPU helper is a starting point for "rallies get longer as the level rises".

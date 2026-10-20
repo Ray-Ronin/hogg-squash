@@ -10,6 +10,8 @@
 //    quarter. Both may move; the server stays inside the box.
 //  - rally: each step runs stepPlayer for P1 then P2 (a 'hit' calls rallyStrike), then stepBall. Only the player
 //    whose turn it is (canStrike) can make contact; anyone else's swing misses.
+// A slot the computer plays (makeWorld's `cpu`) gets its actions from cpu.js, like keys; here it only gets the arcade's
+// CPU flag on its player, and vs CPU the human serves first.
 import { FP, makeBall, difficultyParams, predict, SERVE } from '../squash-physics.js';
 import { serviceBox, LINES } from './court-rules.js';
 import { makeRally, canStrike, rallyStrike, stepBall } from './rally.js';
@@ -61,7 +63,8 @@ export const SERVE_AIM = {
 /**
  * @typedef {object} World
  * @property {ReturnType<typeof defaultParams>} params  physics params
- * @property {number} seed       picks the first server (2P: random from the seed)
+ * @property {number} seed       picks the first server (2P: random from the seed) and seeds the CPU's choices
+ * @property {[boolean, boolean]} cpu  which slots the computer plays (their players carry CPU_FLAG)
  * @property {number} matchNo    0 for the first match, +1 for each rematch
  * @property {number} frame      sim frame counter (also the shot RNG)
  * @property {Phase} phase
@@ -93,18 +96,32 @@ export function defaultParams() {
   return { ...d, latMult: d.powerMult };
 }
 
+/** The arcade's CPU bit in a player's flags: applyShot then never aims into a near side wall. */
+export const CPU_FLAG = 0x40;
+
 /** @param {Side} s @returns {Side} */
 const other = s => (s === 0 ? 1 : 0);
 
 /**
- * @param {{ target?: number, seed?: number, params?: ReturnType<typeof defaultParams> }} [o]
+ * A match's first server: vs CPU the human; 2P (or CPU against CPU) random from the seed.
+ * @param {[boolean, boolean]} cpu
+ * @param {number} seed
+ * @returns {Side}
+ */
+function matchServer(cpu, seed) {
+  return firstServer({ vsCpu: cpu[0] !== cpu[1], human: cpu[0] ? 1 : 0, seed });
+}
+
+/**
+ * @param {{ target?: number, seed?: number, params?: ReturnType<typeof defaultParams>, cpu?: [boolean, boolean] }} [o]
+ *   cpu: which slots the computer plays (default neither: 2P)
  * @returns {World}
  */
-export function makeWorld({ target = 9, seed = 0, params = defaultParams() } = {}) {
-  const server = firstServer({ vsCpu: false, seed });
+export function makeWorld({ target = 9, seed = 0, params = defaultParams(), cpu = [false, false] } = {}) {
+  const server = matchServer(cpu, seed);
   /** @type {World} */
   const w = {
-    params, seed, matchNo: 0, frame: 0, phase: 'serve', timer: 0,
+    params, seed, cpu: [cpu[0], cpu[1]], matchNo: 0, frame: 0, phase: 'serve', timer: 0,
     match: makeMatch({ target, server }), rally: makeRally(server), ball: makeBall(),
     players: [makePlayer(0, 0), makePlayer(0, 0)], landing: null, serveTarget: null, result: null,
   };
@@ -118,6 +135,7 @@ function setupServe(w) {
   const a = serverArea(m.box);                    // mid-reach, so an untouched serve goes to the middle of its range
   w.players[s] = makePlayer((a.xMin + a.xMax) / 2, (a.zMin + a.zMax) / 2);
   w.players[other(s)] = makePlayer(m.box === 'right' ? -SERVE_SPOT.RECEIVER_X : SERVE_SPOT.RECEIVER_X, SERVE_SPOT.RECEIVER_Z);
+  w.players.forEach((pl, i) => { if (w.cpu[i]) pl.flags1b |= CPU_FLAG; });
   w.rally = makeRally(s);
   w.phase = 'serve';
   w.timer = 0;
@@ -137,7 +155,7 @@ function holdBall(w) {
  * Where the server's feet may go in a service box: inside it, with the held ball inside it too.
  * @param {import('./court-rules.js').BoxSide} side
  */
-function serverArea(side) {
+export function serverArea(side) {
   const b = serviceBox(side);
   return { xMin: Math.max(b.xMin, PLAYER_LIMITS.xMin), xMax: b.xMax - SERVE_SPOT.BALL_DX, zMin: b.zMin, zMax: b.zMax };
 }
@@ -368,7 +386,7 @@ function stepPoint(w, events) {
 /** @param {World} w @param {WorldEvent[]} events */
 function rematch(w, events) {
   w.matchNo++;
-  const server = firstServer({ vsCpu: false, seed: w.seed + w.matchNo });
+  const server = matchServer(w.cpu, w.seed + w.matchNo);
   w.match = makeMatch({ target: w.match.target, server });
   setupServe(w);
   events.push({ type: 'rematch', server });

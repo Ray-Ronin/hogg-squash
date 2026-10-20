@@ -3,10 +3,12 @@
 // match state, the last rally result, the last physics event and the last contact, and a log of the last 5 shots
 // (zone, contact index, button, aim, speed and front-wall height) to compare with squash-game-logic.md §9.
 // The serve line shows where a serve from here would be aimed (HARD and SOFT), then where it was aimed.
+// Each CPU gets a line with its state and plan; its planned contact (a cyan ring at the ball, joined to the floor) and
+// where it means to stand (a cyan cross on the floor) are drawn on the court, and its serve spot while serving.
 import { FP } from '../squash-physics.js';
 import { swingPhase } from '../sim/player.js';
 import { serveTarget } from '../sim/world.js';
-import { UNITS_PER_M } from './projection.js';
+import { UNITS_PER_M, project } from './projection.js';
 import { SIM_HZ } from '../engine/loop.js';
 
 /**
@@ -27,6 +29,7 @@ import { SIM_HZ } from '../engine/loop.js';
  * @property {{ ev: string, frame: number } | null} lastEvent
  * @property {(import('../sim/player.js').SwingEvent & { side: number }) | null} lastContact
  * @property {Shot[]} shots     newest last
+ * @property {(import('../sim/cpu.js').Cpu | null)[]} [cpus]  the CPU for each slot it plays
  */
 
 /** Shots kept in the log. */
@@ -88,10 +91,55 @@ function shotLine(s) {
 }
 
 /**
+ * The CPU's state and plan, for the overlay.
+ * @param {import('../sim/cpu.js').Cpu} c
+ * @param {import('../sim/world.js').World} w
+ */
+function cpuLines(c, w) {
+  const p = c.plan, s = c.serve;
+  const head = `CPU P${c.side + 1} ${c.state}${c.state === 'react' ? ` ${c.delay}` : ''}  home x${f1(c.home.x)} z${f1(c.home.z)}` +
+    `  reaction ${c.reaction} error ${c.errorStep}`;
+  const plan = p
+    ? `  plan ${p.button.toUpperCase()} press in ${p.press - w.frame} at x${f1(p.ball.x)} y${f1(p.ball.y)} z${f1(p.ball.z)}` +
+      `  stand x${f1(p.stand.x)} z${f1(p.stand.z)}  ${p.late ? `${p.late} frames late` : 'in time'}`
+    : s && w.phase === 'serve' && w.match.server === c.side
+      ? `  serve ${s.button.toUpperCase()} from x${f1(s.x)} z${f1(s.z)} to x${f1(s.target.x)} z${f1(s.target.z)}  waited ${s.waited}`
+      : '  plan -';
+  return [head, plan];
+}
+
+/**
+ * The CPU's planned contact and stand spot (or its serve spot) on the court.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {import('../sim/cpu.js').Cpu} c
+ * @param {import('../sim/world.js').World} w
+ */
+function drawCpuPlan(ctx, c, w) {
+  const at = c.plan ? c.plan.stand : c.serve && w.phase === 'serve' && w.match.server === c.side ? c.serve : null;
+  ctx.strokeStyle = '#3ad6e0';
+  ctx.lineWidth = 1;
+  if (at) {
+    const q = project(at.x, 0, at.z);
+    ctx.beginPath();
+    ctx.moveTo(q.sx - 4, q.sy - 2); ctx.lineTo(q.sx + 4, q.sy + 2);
+    ctx.moveTo(q.sx - 4, q.sy + 2); ctx.lineTo(q.sx + 4, q.sy - 2);
+    ctx.stroke();
+  }
+  if (c.plan) {
+    const b = c.plan.ball, q = project(b.x, b.y, b.z), f = project(b.x, 0, b.z);
+    ctx.beginPath();
+    ctx.arc(q.sx, q.sy, 4, 0, Math.PI * 2);
+    ctx.moveTo(q.sx, q.sy + 4); ctx.lineTo(f.sx, f.sy);
+    ctx.stroke();
+  }
+}
+
+/**
  * @param {CanvasRenderingContext2D} ctx
  * @param {DebugInfo} d
  */
 export function drawDebug(ctx, d) {
+  for (const c of d.cpus ?? []) if (c) drawCpuPlan(ctx, c, d.world);
   const w = d.world, b = w.ball, r = w.rally, m = w.match;
   const mps = speedsMps(b, w.params.speed).total;
   const c = d.lastContact;
@@ -115,6 +163,7 @@ export function drawDebug(ctx, d) {
     serve,
     `event ${d.lastEvent ? `${d.lastEvent.ev} @${d.lastEvent.frame}` : '-'}`,
     `contact ${contact}`,
+    ...(d.cpus ?? []).flatMap(c => (c ? cpuLines(c, w) : [])),
     'shots (newest last)',
     ...d.shots.map(shotLine),
   ];

@@ -24,8 +24,8 @@ function wallText(ctx, text, y, font, colour) {
   ctx.fillText(text, Math.round(p.sx), Math.round(p.sy));
 }
 
-/** @param {number} side */
-const name = side => `P${side + 1}`;
+/** P1 / P2, or CPU for a slot the computer plays. @param {World} w @param {number} side */
+const name = (w, side) => (w.cpu[side] ? 'CPU' : `P${side + 1}`);
 
 /**
  * @param {CanvasRenderingContext2D} ctx
@@ -42,7 +42,7 @@ export function drawHud(ctx, w, opts) {
     ctx.textBaseline = 'top';
     ctx.fillStyle = COLOURS.players[side];
     ctx.font = 'bold 12px monospace';
-    ctx.fillText(name(side), cx, 24);
+    ctx.fillText(name(w, side), cx, 24);
     ctx.fillStyle = COLOURS.text;
     ctx.font = 'bold 32px monospace';
     ctx.fillText(String(m.scores[side]), cx, 40);
@@ -65,17 +65,17 @@ export function drawHud(ctx, w, opts) {
   if (w.phase === 'point' && w.result) {
     if (w.timer < TIMING.CALLOUT) {
       wallText(ctx, CALLOUTS[w.result.reason], 115, 'bold 28px monospace', COLOURS.wall);
-      wallText(ctx, `${name(w.result.winner)}'s point`, 88, '10px monospace', COLOURS.wallDim);
+      wallText(ctx, `${name(w, w.result.winner)}'s point`, 88, '10px monospace', COLOURS.wallDim);
     } else {
       wallText(ctx, 'POINT', 118, 'bold 24px monospace', COLOURS.wall);
       wallText(ctx, `${m.scores[0]} – ${m.scores[1]}`, 90, 'bold 20px monospace', COLOURS.wallDim);
     }
   } else if (w.phase === 'over' && m.winner !== null) {
     const win = m.scores[m.winner], lose = m.scores[m.winner === 0 ? 1 : 0];
-    wallText(ctx, `${name(m.winner)} WINS ${win}–${lose}`, 118, 'bold 22px monospace', COLOURS.wall);
+    wallText(ctx, `${name(w, m.winner)} WINS ${win}–${lose}`, 118, 'bold 22px monospace', COLOURS.wall);
     wallText(ctx, 'HARD to play again', 90, '10px monospace', COLOURS.wallDim);
   } else if (w.phase === 'serve') {
-    wallText(ctx, `${name(m.server)} to serve`, 90, '10px monospace', COLOURS.wallDim);
+    wallText(ctx, `${name(w, m.server)} to serve`, 90, '10px monospace', COLOURS.wallDim);
   }
 
   if (opts.paused) {
