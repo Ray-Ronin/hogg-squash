@@ -37,6 +37,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [ ] **CP-E** Play-test 4 *(you)*: the look
 - [ ] **S10** Screens, match flow and pause menu
 - [ ] **S11** Options: key remapping and key test
+- [ ] **S11b** Touch controls (mobile mode): on-screen buttons, Auto / On / Off setting
 - [ ] **S12** Polish and release prep
 - [ ] **CP-F** Release play-test and go-live *(you)*
 
@@ -67,7 +68,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
     | Suggested effort | Sessions |
     |---|---|
     | `high` | S1, S2, S3, S4, S4b, S5, S6b, S8: new foundations, the rules, or porting arcade logic, where mistakes are costly |
-    | `medium` | S6, S7, S9, S10, S11, S12, A1–A5: building on settled code or art work driven by the shared rules |
+    | `medium` | S6, S7, S9, S10, S11, S11b, S12, A1–A5: building on settled code or art work driven by the shared rules |
     | `medium` | Checkpoint planning sessions (CP-A … CP-E): editing this plan from your notes |
 
 ---
@@ -588,7 +589,9 @@ Go through "Done when", tick S6b, add a Session log entry, and commit. Ask me be
 - Chrome and Edge are the targets, with Firefox best effort.
 - `test/input.test.js`: maps a fake gamepad object to actions (dead zone, D-pad, buttons, press detection).
 
-**Not in scope:** remapping pads (only keys are remappable, in S11), menus, vibration.
+**Not in scope:** remapping pads (only keys are remappable, in S11), menus, vibration, touch controls (S11b).
+
+**Keep in mind for S11b:** gamepads go through `js/input/actions.js` like the keyboard, so the game never knows which device is in use. Touch buttons plug into the same actions later.
 
 **Depends on:** S6b.
 
@@ -969,6 +972,49 @@ Go through "Done when", tick S11, add a Session log entry, and commit. Ask me be
 
 ---
 
+## S11b: Touch controls (mobile mode)
+
+**Goal:** the game can be played on a phone or tablet with on-screen buttons, and those buttons never show up for someone playing on a computer.
+
+**In scope**
+- `js/input/touch.js`: on-screen controls drawn as HTML over the canvas (not inside it): a D-pad or thumb stick on the left for moving, HARD and SOFT buttons on the right.
+  - The buttons set the same actions as the keyboard and pads (`js/input/actions.js`), so nothing in `js/sim/` changes.
+  - Uses `touchstart`/`touchend` (or pointer events), not `click`, so moving and hitting work with two fingers at once.
+- **When the controls show (setting "Touch controls: Auto / On / Off", default Auto):**
+  - **Auto:** hidden at start. Shown on the first touch of the screen; hidden again when a key is pressed or a gamepad is used. `matchMedia('(pointer: coarse)')` may show them from the start on phones.
+  - **On:** always shown. **Off:** never shown.
+  - The setting lives on the S11 options screen and is saved in `localStorage` with the other options (try/catch, falls back to Auto).
+- Menus from S10 and S11 can be worked by tapping.
+- **Touch is 1P vs CPU only.** While the touch controls are showing, the 1P/2P screen offers 1P only (2P is hidden or greyed out with "2 players needs a keyboard or gamepads"). If a key or pad is used, 2P comes back.
+- **Mobile page setup:** `touch-action: none` on the game area and a viewport meta tag so the page doesn't scroll or zoom during play; a "Turn your phone sideways" message in portrait; the S12 fullscreen toggle works by tap.
+- `test/touch.test.js`: the Auto/On/Off logic (touch shows, key or pad hides, On/Off override), 2P unavailable while touch is showing, and saving/loading the setting with storage mocked.
+
+**Not in scope:** 2-player on a touchscreen (decided 2026-10-20: touch is 1P vs CPU only), remapping or moving the on-screen buttons, vibration, an app-store or installable (PWA) version.
+
+**Depends on:** S11.
+
+**Main files:** `js/input/touch.js`, `js/input/actions.js`, `js/ui/options.js`, `public/hogg-squash/index.html` (viewport tag, overlay markup), `test/touch.test.js`.
+
+**Done when…**
+- `npm test` passes.
+- On a phone: the controls appear, a full 1P match can be played from the title screen, and the page never scrolls or zooms.
+- On a computer: the controls never appear with Auto, even after a reload.
+- On and Off work, and the setting is still there after a reload.
+- With the touch controls showing, 2P can't be picked; after pressing a key, it can.
+
+**You check or decide at the end:** play a match on your own phone and say whether the button size and position feel right.
+
+**Starter prompt**
+```text
+We're doing Session S11b of docs/plan.md: "Touch controls (mobile mode)".
+Read CLAUDE.md, docs/decisions.md (Mobile and touch), docs/controls.md (Touch controls) and docs/plan.md (rules + S11b). Check S11 is ticked.
+Build S11b's "In scope" list only. Touch must set the same actions as the keyboard and pads; nothing in js/sim/ changes.
+I'll test on my phone, so tell me how to open the local build on it and what to try.
+Go through "Done when", tick S11b, add a Session log entry, and commit. Ask me before pushing.
+```
+
+---
+
 ## S12: Polish and release prep
 
 **Goal:** make v1 ready to share. Fix the CP-E list and tidy the rough edges. No new features.
@@ -979,12 +1025,12 @@ Go through "Done when", tick S11, add a Session log entry, and commit. Ask me be
 - A short "How to play" card on the title screen (HARD/SOFT; timing sets the angle; the landing marker).
 - Small effects: a flash on a point, and the celebrate/dejected animations if A3 made them.
 - **Caching:** check that a new deploy isn't stuck behind cached old JS modules. If it is, add `public/_headers` (Workers static assets) or version query strings on the module imports.
-- Check in Chrome, Edge and Firefox, at 60 Hz and at a high refresh rate if available.
+- Check in Chrome, Edge and Firefox, at 60 Hz and at a high refresh rate if available, plus a phone browser (touch controls from S11b).
 - Update `README.md` and the status line in `CLAUDE.md`.
 
 **Not in scope:** anything listed as "Not in v1" in `decisions.md` (tournament, more characters, audio, crowd, back wall, high scores).
 
-**Depends on:** S11.
+**Depends on:** S11b.
 
 **Main files:** various, plus `public/_headers` if needed, `README.md`, `CLAUDE.md`.
 
@@ -999,7 +1045,7 @@ Go through "Done when", tick S11, add a Session log entry, and commit. Ask me be
 **Starter prompt**
 ```text
 We're doing Session S12 of docs/plan.md: "Polish and release prep".
-Read CLAUDE.md, docs/decisions.md and docs/plan.md (rules, the CP-E notes in the Session log, S12). Check S11 is ticked.
+Read CLAUDE.md, docs/decisions.md and docs/plan.md (rules, the CP-E notes in the Session log, S12). Check S11b is ticked.
 Build S12's "In scope" list only. No new features.
 Go through "Done when", tick S12, add a Session log entry, and commit. Ask me before pushing.
 ```

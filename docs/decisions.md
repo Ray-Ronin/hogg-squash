@@ -13,6 +13,12 @@ Settled decisions. Newest at the bottom of each section. If something here confl
   (Determinism is still worth keeping: it makes testing, replays and the CPU's ball prediction reliable.)
 - Hosted as static files on Cloudflare Workers at roninray.com/hogg-squash/ (already set up).
 
+## Mobile and touch (2026-10-20)
+- **Phones and tablets are supported** with on-screen touch controls, built in S11b after the options screen.
+- **The touch controls never show up for someone on a computer.** Setting "Touch controls: Auto / On / Off", default **Auto**: hidden at start, shown on the first touch, hidden again when a key or gamepad is used. On and Off override it for odd cases (e.g. a touchscreen laptop).
+- Touch sets the same actions as the keyboard and pads; the simulation never knows the device.
+- **Touch is 1P vs CPU only.** Two players on one touchscreen is too cramped, so 2P needs a keyboard or gamepads.
+
 ## Build tooling (2026-10-18)
 - **No build step for now.** Plain JS ES modules served directly. Revisit Vite later if we want TypeScript, npm packages, or minified and cache-busted bundles.
 - **Plain JavaScript with `// @ts-check` + JSDoc types** (type checking in the editor, no build).

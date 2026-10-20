@@ -29,6 +29,15 @@ The input layer turns keyboard keys or gamepad buttons into these actions, so th
 - Mixing is allowed: P1 on the keyboard and P2 on a gamepad, or the reverse.
 - Handle unplugging mid-match: pause and show "Controller disconnected".
 
+## Touch controls: phones and tablets (decided 2026-10-20, built in S11b)
+- On-screen buttons over the canvas: move on the left (D-pad or thumb stick), **HARD** and **SOFT** on the right. Menus work by tapping.
+- **Shown only when someone is playing by touch.** Setting "Touch controls: Auto / On / Off" (default Auto):
+  - **Auto:** hidden at start, shown on the first touch, hidden again on a key press or gamepad input. Screen size and user-agent guesses aren't used, because touchscreen laptops and tablets with keyboards fool them.
+  - **On / Off:** always or never shown.
+- Read `touchstart`/`touchend` (not `click`) so two fingers work at once, and set `touch-action: none` so the page doesn't scroll or zoom.
+- **1P vs CPU only on touch.** 2P needs a keyboard or gamepads.
+- The game is 640×360 (landscape), so portrait phones get a "Turn your phone sideways" message.
+
 ## Menu navigation and pause
 - Arrows/WASD + Enter/Space, or the D-pad + A.
 - **Esc pauses** (and Start on a gamepad).
