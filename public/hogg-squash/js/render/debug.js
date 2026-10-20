@@ -3,8 +3,9 @@
 // match state, the last rally result, the last physics event and the last contact, and a log of the last 5 shots
 // (zone, contact index, button, aim, speed and front-wall height) to compare with squash-game-logic.md §9.
 // The serve line shows where a serve from here would be aimed (HARD and SOFT), then where it was aimed.
-// Each CPU gets a line with its state and plan; its planned contact (a cyan ring at the ball, joined to the floor) and
-// where it means to stand (a cyan cross on the floor) are drawn on the court, and its serve spot while serving.
+// Each CPU gets lines with its state, its level's shot quality and its plan (with this shot's timing error); its
+// planned contact (a cyan ring at the ball, joined to the floor) and where it means to stand (a cyan cross on the
+// floor) are drawn on the court, and its serve spot while serving.
 import { FP } from '../squash-physics.js';
 import { swingPhase } from '../sim/player.js';
 import { serveTarget } from '../sim/world.js';
@@ -100,13 +101,15 @@ function cpuLines(c, w) {
   const p = c.plan, s = c.serve;
   const head = `CPU P${c.side + 1} ${c.state}${c.state === 'react' ? ` ${c.delay}` : ''}  home x${f1(c.home.x)} z${f1(c.home.z)}` +
     `  reaction ${c.reaction} error ${c.errorStep} sense ${c.sense}`;
+  const quality = `  shots: timing ±${c.timing}  aim jitter ±${c.aimJitter}  soft ×${c.softScale}  volleys ${c.volley ? 'yes' : 'no'}`;
+  const off = (/** @type {number} */ t) => (t === 0 ? 'on time' : `${Math.abs(t)} ${t < 0 ? 'early' : 'late'}`);
   const plan = p
-    ? `  plan ${p.button.toUpperCase()} press in ${p.press - w.frame} at x${f1(p.ball.x)} y${f1(p.ball.y)} z${f1(p.ball.z)}` +
+    ? `  plan ${p.button.toUpperCase()} press in ${p.press - w.frame} (${off(p.timing)}) at x${f1(p.ball.x)} y${f1(p.ball.y)} z${f1(p.ball.z)}` +
       `  stand x${f1(p.stand.x)} z${f1(p.stand.z)}  ${p.late ? `${p.late} frames late` : 'in time'}`
     : s && w.phase === 'serve' && w.match.server === c.side
       ? `  serve ${s.button.toUpperCase()} from x${f1(s.x)} z${f1(s.z)} to x${f1(s.target.x)} z${f1(s.target.z)}  waited ${s.waited}`
       : '  plan -';
-  return [head, plan];
+  return [head, quality, plan];
 }
 
 /**

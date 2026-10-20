@@ -7,7 +7,9 @@
 // Normal/skill 0), level 9 is the arcade's hardest row (Hardest/skill 4), and levels 1–4 carry on below level 5 in the
 // same even steps. Level 1 is below anything in the arcade (power 15, bounce +1 are extrapolated).
 // 1P plays the chosen level's pace; 2P versus always plays level 5's (paramsFor).
-// The final table is recorded in docs/decisions.md ("CPU difficulty"). Tunables for CP-C.
+// The final table is recorded in docs/decisions.md ("CPU difficulty"). Tunables.
+// CP-C found the levels felt alike and level 1 too strong, so S6b slowed the low levels' reaction and added the
+// shot-quality columns (timing, aim jitter, SOFT scale, volleys): level 9 is the CPU as it was, level 1 a clumsy one.
 
 /** Levels, 1 = easiest. */
 export const LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -24,15 +26,24 @@ export const DEFAULT_LEVEL = 5;
  *  - cpuReaction:  frames the CPU waits before it moves to a ball
  *  - cpuErrorStep: size of the CPU's positioning error (game units)
  *  - cpuSense:     0…1, how much the CPU's HARD/SOFT choice reads where the opponent stands (chooseButton)
+ *  - cpuTiming:    the CPU presses up to this many frames early or late (a fresh error each shot)
+ *  - cpuAimJitter: it stands up to this far in front of or behind the contact, so timing angles its shots (0 = square)
+ *  - cpuSoftScale: scales its plain SOFT chances (fewer drops at the low levels); the shot sense works on top
+ *  - cpuVolley:    1 = it takes the earliest contact it can reach (volleys too); 0 = it lets the ball bounce and
+ *                  takes it at a comfortable height when it can
  */
 export const LEVEL_TABLE = {
   speed:        [256, 262, 268, 274, 280, 286, 292, 298, 304],
   gravity:      [0x1dc0, 0x1e30, 0x1ea0, 0x1f10, 0x1f80, 0x1ff0, 0x2060, 0x20d0, 0x2140],
   powerMult:    [15, 16, 16, 17, 17, 18, 18, 19, 19],
   bounceOffset: [1, 0, 0, -1, -1, -2, -2, -3, -3],
-  cpuReaction:  [24, 20, 16, 12, 8, 6, 4, 2, 1],
+  cpuReaction:  [36, 31, 27, 23, 17, 14, 10, 6, 1],
   cpuErrorStep: [24, 20, 16, 16, 12, 10, 6, 4, 2],
   cpuSense:     [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1],
+  cpuTiming:    [4, 4, 3, 3, 2, 2, 1, 1, 0],
+  cpuAimJitter: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+  cpuSoftScale: [0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.85, 0.9, 1],
+  cpuVolley:    [0, 0, 0, 0, 0, 1, 1, 1, 1],
 };
 
 /**
@@ -47,6 +58,10 @@ export const LEVEL_TABLE = {
  * @property {number} cpuReaction   frames
  * @property {number} cpuErrorStep  game units
  * @property {number} cpuSense      0…1
+ * @property {number} cpuTiming     frames, ±
+ * @property {number} cpuAimJitter  game units, ±
+ * @property {number} cpuSoftScale  0…1
+ * @property {number} cpuVolley     0 or 1
  */
 
 /**
@@ -70,6 +85,7 @@ export function levelParams(level) {
     level: i + 1, speed: t.speed[i], gravity: t.gravity[i], bounceOffset: t.bounceOffset[i],
     powerMult: t.powerMult[i], latMult: t.powerMult[i],
     cpuReaction: t.cpuReaction[i], cpuErrorStep: t.cpuErrorStep[i], cpuSense: t.cpuSense[i],
+    cpuTiming: t.cpuTiming[i], cpuAimJitter: t.cpuAimJitter[i], cpuSoftScale: t.cpuSoftScale[i], cpuVolley: t.cpuVolley[i],
   };
 }
 

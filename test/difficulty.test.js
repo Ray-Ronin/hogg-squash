@@ -1,11 +1,14 @@
-// Difficulty levels 1–9: the table, ball flights at every level's pace, the aimed serve at every level, and
-// CPU-against-CPU rallies getting longer as the level rises (node:test, run by npm test).
+// Difficulty levels 1–9: the table, ball flights at every level's pace, the aimed serve at every level, CPU-against-CPU
+// rallies by level, a beginner-like reference player's share of points against each level, the CPU's shot quality by
+// level, and the front-court SOFT drop (node:test, run by npm test).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FP, makeBall, applyShot, shotEntry, predict, difficultyParams, SHOT_TABLES, SERVE } from '../public/hogg-squash/js/squash-physics.js';
 import { LEVELS, LEVEL_TABLE, DEFAULT_LEVEL, levelParams, paramsFor, toLevel } from '../public/hogg-squash/js/sim/difficulty.js';
 import { makeWorld, stepWorld, defaultParams, serveTarget, serveAim, serveFlight, serveIsGood, SERVE_SPOT } from '../public/hogg-squash/js/sim/world.js';
 import { makeCpu, cpuActions } from '../public/hogg-squash/js/sim/cpu.js';
+import { shotFor } from '../public/hogg-squash/js/sim/player.js';
+import { makeRef, refActions } from './reference-player.js';
 import { LINES } from '../public/hogg-squash/js/sim/court-rules.js';
 
 /** The pace columns of a params object. */
@@ -15,7 +18,8 @@ const arcade = idx => { const d = difficultyParams(idx); return { ...d, latMult:
 
 test('the table: nine levels, every column monotonic, level 5 = the CP-B pace, level 9 = Hardest 4', () => {
   assert.deepEqual(LEVELS, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  const rising = ['speed', 'gravity', 'powerMult', 'cpuSense'], falling = ['bounceOffset', 'cpuReaction', 'cpuErrorStep'];
+  const rising = ['speed', 'gravity', 'powerMult', 'cpuSense', 'cpuAimJitter', 'cpuSoftScale', 'cpuVolley'];
+  const falling = ['bounceOffset', 'cpuReaction', 'cpuErrorStep', 'cpuTiming'];
   for (const k of [...rising, ...falling]) {
     const col = LEVEL_TABLE[k];
     assert.equal(col.length, 9, k);
@@ -28,9 +32,14 @@ test('the table: nine levels, every column monotonic, level 5 = the CP-B pace, l
   assert.deepEqual(pace(levelParams(5)), pace(arcade(0)), 'level 5 plays at arcade Normal/skill 0, the CP-B pace');
   assert.deepEqual(pace(levelParams(9)), pace(arcade(19)), 'level 9 plays at arcade Hardest/skill 4');
   assert.deepEqual([levelParams(9).cpuReaction, levelParams(9).cpuErrorStep], [1, 2], 'level 9 CPU = Hardest 4');
-  // the CPU columns as proposed in docs/plan.md (open question 1)
-  assert.deepEqual(LEVEL_TABLE.cpuReaction, [24, 20, 16, 12, 8, 6, 4, 2, 1]);
-  assert.deepEqual(LEVEL_TABLE.cpuErrorStep, [24, 20, 16, 16, 12, 10, 6, 4, 2]);
+  // level 9's shot quality is the CPU as it was before S6b: on time, ±8 aim jitter, every SOFT chance, volleys
+  const q9 = levelParams(9);
+  assert.deepEqual([q9.cpuTiming, q9.cpuAimJitter, q9.cpuSoftScale, q9.cpuVolley], [0, 8, 1, 1]);
+  // level 1: slow (0.63 s), mistimed by up to 4 frames, square, few drops, no volleys; volleys from level 6
+  const q1 = levelParams(1);
+  assert.deepEqual([q1.cpuReaction, q1.cpuTiming, q1.cpuAimJitter, q1.cpuSoftScale, q1.cpuVolley], [36, 4, 0, 0.3, 0]);
+  assert.deepEqual(LEVEL_TABLE.cpuVolley.map(v => v > 0), LEVELS.map(l => l >= 6));
+  assert.deepEqual(LEVEL_TABLE.cpuErrorStep, [24, 20, 16, 16, 12, 10, 6, 4, 2], 'the error step as proposed in docs/plan.md');
   // the speed steps evenly through all nine levels, and gravity too
   for (let i = 1; i < 9; i++) {
     assert.equal(LEVEL_TABLE.speed[i] - LEVEL_TABLE.speed[i - 1], 6);
@@ -138,9 +147,110 @@ function hitsPerRally(level, rallies) {
   return hits / n;
 }
 
-test('CPU against CPU, rallies get longer as the level rises', () => {
+// S6b replaced "longer at every level": with the shot-quality columns, CPU-against-CPU rallies step with the pace
+// columns (power and bounce change every second level), so a level can rally a little shorter than the one below.
+// Levels in threes still get longer, and level 9 still rallies over twice as long as level 1.
+test('CPU against CPU, rallies get longer as the levels rise (in threes)', () => {
   const h = LEVELS.map(l => hitsPerRally(l, 400));
   const shown = h.map((v, i) => `${i + 1}: ${v.toFixed(1)}`).join(', ');
-  for (let i = 1; i < 9; i++) assert.ok(h[i] > h[i - 1], `level ${i + 1} rallies longer than level ${i} (${shown})`);
+  const three = [0, 3, 6].map(i => mean(h.slice(i, i + 3)));
+  assert.ok(three[0] < three[1] && three[1] < three[2], `levels 1–3 < 4–6 < 7–9 (${shown})`);
   assert.ok(h[8] > 2 * h[0], `level 9 rallies over twice level 1's (${shown})`);
+});
+
+/**
+ * The reference player (a beginner: test/reference-player.js) as P1 against the CPU at one level, over the first
+ * `rallies` rallies of games to 11 (fixed seeds). Returns its points and the CPU's shot-quality counts.
+ */
+function againstRef(level, rallies) {
+  const s = { rallies: 0, ref: 0, swings: 0, missed: 0, stretched: 0, hits: 0, soft: 0, volleys: 0, onTime: 0, offStraight: 0, angled: 0 };
+  for (let seed = 0; s.rallies < rallies; seed++) {
+    const w = makeWorld({ target: 11, seed, params: levelParams(level), cpu: [false, true] });
+    const ref = makeRef(w, 0), cpu = makeCpu(w, 1);
+    while (w.phase !== 'over' && s.rallies < rallies) {
+      const bounced = w.rally.bounces > 0;
+      for (const e of stepWorld(w, refActions(ref, w), cpuActions(cpu, w))) {
+        if (e.type === 'rally') { s.rallies++; if (e.winner === 0) s.ref++; }
+        if (e.type === 'swing' && e.side === 1) { s.swings++; if (!e.reach) s.missed++; else if (e.flags & 2) s.stretched++; }
+        if (e.type !== 'hit' || e.side !== 1) continue;
+        s.hits++;
+        if (e.button === 'soft') s.soft++;
+        if (!bounced) s.volleys++;
+        if (e.aim <= 2 || e.aim >= 6) s.angled++;
+        // placement: its well-timed shots (reached in time, pressed on the planned frame) off straight (aim 4)
+        if (cpu.plan && cpu.plan.late === 0 && cpu.plan.timing === 0) { s.onTime++; if (e.aim !== 4) s.offStraight++; }
+      }
+    }
+  }
+  return s;
+}
+
+const pct = (a, b) => `${(100 * a / b).toFixed(1)}%`;
+
+test('a beginner-like reference player wins most points at level 1, about half at level 5, few at level 9', () => {
+  const [l1, l5, l9] = [1, 5, 9].map(l => againstRef(l, 600));
+  const share = s => s.ref / s.rallies;
+  const shown = `level 1 ${pct(l1.ref, l1.rallies)}, 5 ${pct(l5.ref, l5.rallies)}, 9 ${pct(l9.ref, l9.rallies)}`;
+  assert.ok(share(l1) >= 0.6, `≥ 60% at level 1 (${shown})`);
+  assert.ok(share(l5) >= 0.35 && share(l5) <= 0.55, `35–55% at level 5 (${shown})`);
+  assert.ok(share(l9) <= 0.2, `≤ 20% at level 9 (${shown})`);
+  assert.ok(share(l1) > share(l5) && share(l5) > share(l9), shown);
+});
+
+test('the CPU hits worse at level 1 than at level 9: more misses and stretches, fewer placed angles, drops and volleys', () => {
+  const [a, b] = [1, 9].map(l => againstRef(l, 600));
+  const show = s => `missed ${pct(s.missed, s.swings)} stretched ${pct(s.stretched, s.swings)}, off straight when well timed ` +
+    `${pct(s.offStraight, s.onTime)} (all shots angled ${pct(s.angled, s.hits)}), SOFT ${pct(s.soft, s.hits)}, volleys ${pct(s.volleys, s.hits)}`;
+  const shown = `level 1: ${show(a)}; level 9: ${show(b)}`;
+  assert.ok((a.missed + a.stretched) / a.swings > 2 * (b.missed + b.stretched) / b.swings, `misses and stretches (${shown})`);
+  assert.ok(a.offStraight / a.onTime < b.offStraight / b.onTime / 4, `placed angles (${shown})`);
+  assert.ok(a.soft / a.hits < b.soft / b.hits / 2, `SOFTs (${shown})`);
+  assert.ok(a.volleys / a.hits < b.volleys / b.hits / 2, `volleys (${shown})`);
+});
+
+/**
+ * SOFT shots from the front court: every front-court contact type a drop is played from (not the overheads, 8–9) from
+ * a spread of contacts up to y 30 (depth, height, across, aim, the shot's random factor, and the incoming ball's
+ * speed toward the back), with `entry` giving the shot. Each good drop's second-bounce depth, and how many were lost
+ * (into the tin, or down before the front wall).
+ */
+function drops(p, entry) {
+  const out = { lost: 0, tin: 0, n: 0, second: /** @type {{ z: number, vz: number }[]} */ ([]) };
+  for (const index of [0, 1, 2, 3, 4, 5, 6, 7, 10, 11]) for (const z of [20, 35, 50, 65, 72]) for (const y of [0, 8, 15, 22, 30])
+    for (const x of [-100, 0, 100]) for (const aim of [0, 4, 7]) for (const rng of [0, 6, 14]) for (const vz of [1, 3, 5]) {
+      const ball = makeBall({ x: x * FP, y: y * FP, z: z * FP, vz: vz * FP, vy: -FP });
+      applyShot(ball, entry(index), aim, { z: (z + 4) * FP, flags1b: 0 }, rng, p);
+      const path = predict(ball, p, 400);
+      let wallY = null, floors = 0, second = null;
+      for (let k = 0; k < path.length && second === null; k++) {
+        const at = k ? path[k - 1] : ball;
+        if (path[k].ev === 'frontWall' && wallY === null) wallY = at.y / FP;
+        else if (path[k].ev === 'floor') { if (wallY === null) break; if (++floors === 2) second = at.z / FP; }
+      }
+      out.n++;
+      if (wallY === null || wallY <= LINES.TIN) { out.lost++; if (wallY !== null) out.tin++; continue; }
+      out.second.push({ z: second ?? path[path.length - 1].z / FP, vz });   // a ball that dies rolling: where it stops
+    }
+  return out;
+}
+
+// Measured in S6b (POWER_MAX 32, LIFT_MAX 1280): off a ball coming at up to 3 units/frame every drop's second bounce is
+// in front of the short line; off a fast one (5 units/frame: a drive, played short) 94–100% are, the deepest at z 112.
+// Tins fall from about 22% to 8%, but about 14% now fall short of the front wall instead (from the back of the front
+// court, about a quarter), so all lost together stay about as the arcade's (21–25%; level 1 is 1.4 points over).
+test('SOFT from the front court is a short drop at every level: second bounce before the short line, fewer tins', () => {
+  for (const l of LEVELS) {
+    const p = levelParams(l);
+    const now = drops(p, i => shotFor('FRONT', 'soft', i)), arcade = drops(p, i => shotEntry(SHOT_TABLES.FRONT.soft[i]));
+    const deep = list => list.filter(s => s.z >= LINES.SHORT_Z);
+    const slow = now.second.filter(s => s.vz <= 3), fast = now.second.filter(s => s.vz > 3);
+    const at = `level ${l}: past the short line ${deep(now.second).length}/${now.second.length} (the arcade's ` +
+      `${deep(arcade.second).length}/${arcade.second.length}), deepest ${Math.max(...now.second.map(s => s.z)).toFixed(0)}, ` +
+      `tin ${pct(now.tin, now.n)} (the arcade's ${pct(arcade.tin, arcade.n)}), all lost ${pct(now.lost, now.n)} (the arcade's ${pct(arcade.lost, arcade.n)})`;
+    assert.equal(deep(slow).length, 0, `with the ball coming at up to 3 units/frame, every one (${at})`);
+    assert.ok(deep(fast).length <= fast.length * 0.07, `off a fast ball (5 units/frame), 93% (${at})`);
+    assert.ok(now.second.every(s => s.z < LINES.BOX_BACK_Z), `none past the service boxes (${at})`);
+    assert.ok(now.tin <= arcade.tin / 2, `at most half the arcade's tins (${at})`);
+    assert.ok(now.lost <= arcade.lost + now.n * 0.02, `all lost (tin, or down before the wall) within 2 points of the arcade's (${at})`);
+  }
 });

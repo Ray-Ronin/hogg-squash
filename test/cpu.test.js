@@ -8,6 +8,7 @@ import { makePlayer, PLAYER_LIMITS, SWING } from '../public/hogg-squash/js/sim/p
 import { makeRally } from '../public/hogg-squash/js/sim/rally.js';
 import { LINES } from '../public/hogg-squash/js/sim/court-rules.js';
 import { CPU, makeCpu, cpuActions, planContact, runFrames } from '../public/hogg-squash/js/sim/cpu.js';
+import { levelParams } from '../public/hogg-squash/js/sim/difficulty.js';
 
 const NO_KEYS = Object.freeze({ up: false, down: false, left: false, right: false, hard: false, soft: false });
 const REASONS = ['tin', 'out', 'down', 'notUp'];
@@ -75,10 +76,10 @@ test('200 CPU-against-CPU rallies: deterministic, each ends with a valid reason,
 
 /**
  * A world in mid-rally: P1 (a still human) has just struck `ball`, and it's the CPU's (P2's) ball.
- * The CPU starts at (x, z) with no positioning error.
+ * The CPU starts at (x, z) with no positioning error. Level 5 unless `params` says otherwise.
  */
-function fedRally(ball, seed, x = CPU.T_X, z = CPU.T_Z) {
-  const w = makeWorld({ seed, cpu: [false, true] });
+function fedRally(ball, seed, x = CPU.T_X, z = CPU.T_Z, params = levelParams(5)) {
+  const w = makeWorld({ seed, cpu: [false, true], params });
   w.ball = ball;
   w.phase = 'rally';
   w.rally = makeRally(0);
@@ -120,8 +121,9 @@ test('fed balls: the CPU returns most of them, but not all', () => {
   assert.ok(share > 0.8 && share < 0.98, `returns most but not all (${returned}/${fed} = ${(share * 100).toFixed(1)}%)`);
 });
 
+// at level 9, which presses on the planned frame (no timing error) and volleys; the timing error is tested below
 test('a planned return: waits the reaction delay, runs to the side of the contact, presses SWING.CONTACT frames ahead', () => {
-  const { w, cpu } = fedRally(makeBall(), 5);
+  const { w, cpu } = fedRally(makeBall(), 5, CPU.T_X, CPU.T_Z, levelParams(9));
   w.ball = fedBall(-60, 20, 150, 'hard', 1, 4, 3, w);
   const start = w.frame;
   const states = [];
@@ -139,6 +141,7 @@ test('a planned return: waits the reaction delay, runs to the side of the contac
   assert.equal(plan.late, 0, 'this one is reachable');
   assert.ok(swing, 'it swings');
   assert.equal(swing.frame, plan.press, 'on the planned frame');
+  assert.equal(plan.timing, 0, 'on the planned frame at level 9');
   assert.ok(swing.act[plan.button], `with the planned button (${plan.button})`);
   assert.ok(hit, 'and hits');
   assert.equal(hit.frame, plan.press + SWING.CONTACT, 'contact on the planned frame');
@@ -253,4 +256,46 @@ test('modes: vs CPU the human serves first (rematch too) and the CPU slot is fla
   const ev = stepWorld(w, { ...NO_KEYS, hard: true }, NO_KEYS);
   assert.deepEqual(ev, [{ type: 'rematch', server: 0 }], 'the human serves first again');
   assert.equal(w.players[1].flags1b & CPU_FLAG, CPU_FLAG, 'still flagged after the rematch');
+});
+
+test('the timing error: up to ±params.cpuTiming frames off the planned press, fresh each shot, never in the past', () => {
+  for (const level of [1, 5, 9]) {
+    const seen = new Set();
+    for (let seed = 0; seed < 60; seed++) {
+      const { w } = fedRally(makeBall(), seed, CPU.T_X, CPU.T_Z, levelParams(level));
+      w.ball = fedBall(-60, 20, 150, 'hard', 1, 4, 3, w);
+      w.frame = 1000 + seed;                                           // a different shot each time
+      const plan = planContact(w, 1);
+      assert.ok(Math.abs(plan.timing) <= w.params.cpuTiming, `level ${level}: ${plan.timing}`);
+      assert.ok(plan.press >= w.frame);
+      assert.equal(plan.contact - SWING.CONTACT + plan.timing, plan.press, 'the press is the planned one plus the error');
+      seen.add(plan.timing);
+    }
+    assert.equal(seen.size, 2 * levelParams(level).cpuTiming + 1, `level ${level}: every error from −N to +N seen (${[...seen]})`);
+  }
+});
+
+test('after the bounce, without volleys (below level 6) the CPU waits for a comfortable height; with them it takes the earliest', () => {
+  // the planner looks past the bounce only once the ball has bounced (see planContact), so feed a deep drive and plan
+  // just after its first bounce, with the CPU waiting deep enough to reach it either way. Level 5's params, square (no
+  // aim jitter), with the volley column off (as at levels 1–5) and on (as at 6–9)
+  let later = 0, n = 0;
+  for (const x of [-60, 0, 60]) for (const index of [0, 1, 2]) for (const aim of [2, 4, 6]) {
+    const plans = {};
+    for (const level of [5, 6]) {
+      const params = { ...levelParams(5), cpuAimJitter: 0, cpuVolley: level === 6 ? 1 : 0 };
+      const { w } = fedRally(makeBall(), 7, 20, 150, params);
+      w.ball = fedBall(x, 20, 150, 'hard', index, aim, 3, w);
+      while (!w.rally.result && w.rally.bounces === 0) stepWorld(w, NO_KEYS, NO_KEYS);
+      if (w.rally.result) break;
+      plans[level] = planContact(w, 1);
+    }
+    const [p5, p6] = [plans[5], plans[6]];
+    if (!p5 || !p6 || p5.late || p6.late) continue;
+    n++;
+    assert.ok(p5.contact >= p6.contact, 'without volleys never earlier');
+    assert.ok(Math.abs(p5.ball.y - CPU.COMFORT_Y) <= Math.abs(p6.ball.y - CPU.COMFORT_Y), 'without volleys nearer waist height');
+    if (p5.contact > p6.contact) later++;
+  }
+  assert.ok(n >= 10 && later >= n / 2, `without volleys it waits for the ball in ${later} of ${n}`);
 });

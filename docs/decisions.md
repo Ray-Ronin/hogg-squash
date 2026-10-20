@@ -54,6 +54,9 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **A swing plants the player** for its whole 18 frames (≈0.31 s), as in the arcade. Confirmed: it feels fine.
 - **Dives** happen on the classifier's special band (just beyond a stretch), as in the arcade. Confirmed. **Time on the ground: 2 s** (115 frames in all), shorter than the arcade's 2.5 s. Built in S4b (`DIVE.RECOVERY` 108).
 - **SOFT from the front court is a short drop (2026-10-20, CP-C).** It ran deep: some of the arcade's front-court SOFT rows are hit at twice the drop's power, so the ball takes its second bounce near the back wall. For the human and the CPU, a front-court SOFT gets a capped power and lift (in `js/sim/`, not the physics file), so its second bounce is in front of the short line. This departs from the arcade's tables on purpose. Built in S6b.
+  - **As built (S6b):** `DROP` and `shotFor` in `js/sim/player.js`: a FRONT-zone SOFT plays at **power ≤ 32** and **lift ≤ 1280** (the arcade's rows are 80–160 and 3072–6144). 1280 ÷ 32 launches it at about the angle of the arcade's row #0 (3072 ÷ 80), at 40% of its power. The plan's defaults (64 / 3072) still left 25–40% of drops past the short line. **Overheads (contact types 8–9, the ball above y 48) keep the arcade's entry**: they are hit downward, and at a drop's power 40–56% went into the tin.
+  - Measured over a spread of front-court contacts up to y 30 at all nine levels (depth 20–72, across, aim, the shot's random factor, the incoming ball at 1–5 units/frame): **off a ball coming at up to 3 units/frame every drop's second bounce is in front of the short line; off a fast one (5) 94–100% are**, the deepest at z 112 (the arcade's rows: about 70% past it, up to z 189). **Tins fall from about 22% to 8%, but about 14% now fall short of the front wall** (from the back of the front court, about a quarter), so all lost together stay about as before (21–25%). A cap that grows with the distance from the wall (24 → 48) loses fewer (14%) but puts 4–5% past the short line; not used.
+  - **MID-court SOFT is unchanged:** its second bounce is past the short line 61% of the time (mean z 113–116, up to 189), about where it was struck from. Changed only if it also feels too deep when played after S6b.
 - **Serves and the 2 s dive confirmed at CP-C (2026-10-20).** No change.
 - **Court line heights approved (2026-10-18, after S2):** tin **17**, front-wall out-line **161**, side-wall out-line sloping from **161** at the front wall to **75** at the back (the top of the back glass), in game units. The lines count against the ball. They live in `js/sim/court-rules.js` (`LINES`).
 
@@ -63,7 +66,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - The arcade has 20 internal difficulty steps (4 DIP settings × 5 hidden skill levels), and they are **not** in a clean easy→hard order. The plan must map 1–9 onto a smooth, monotonic curve built from those values (see `research/squash-game-logic.md`, "Difficulty index").
 - Note: in the arcade, difficulty changes **game pace too** (ball speed, gravity, shot power, bounce), not just how well the CPU plays. Default for the plan: keep that for 1P, and use one fixed mid-level pace for 2P versus.
 - **Level 5's pace is the CP-B pace (2026-10-19).** The pace played at CP-B (arcade Normal skill 0: speed 280, power 17, bounce −1, gravity 0x1F80) is right for level 5, and 2P versus uses it. The plan's proposed table put this pace at level 3, so S6 re-anchors the pace columns around it.
-- **The table as built (2026-10-19, S6)** (`LEVEL_TABLE` in `js/sim/difficulty.js`; tuned at CP-C). 1P plays the chosen level for both the pace and the CPU; 2P always plays level 5's pace. `?level=1..9` picks it (default 5) until the menus (S10).
+- **The table as built (2026-10-19, S6)** (`LEVEL_TABLE` in `js/sim/difficulty.js`; tuned at CP-C). *The CPU reaction column changed in S6b, which also added shot-quality columns: see "The CPU columns as built" below. The pace columns here still hold.* 1P plays the chosen level for both the pace and the CPU; 2P always plays level 5's pace. `?level=1..9` picks it (default 5) until the menus (S10).
 
   | Level | Like arcade… | Game speed | Gravity | Power mult | Bounce offset | CPU reaction (frames) | CPU error step | CPU shot sense |
   |---|---|---|---|---|---|---|---|---|
@@ -85,6 +88,24 @@ Settled decisions. Newest at the bottom of each section. If something here confl
   - **how well the CPU hits scales with the level**: press-timing error, no angled shots, fewer drops and no volleys at the low levels, growing to today's CPU at level 9;
   - the pace columns stay as above. Widen them only if the levels still feel too close after S6b.
   - The 2P pace stays level 5's.
+- **The CPU columns as built (2026-10-20, S6b)** (`LEVEL_TABLE` in `js/sim/difficulty.js`; the pace columns are unchanged). Level 9 is the CPU as it was; level 1 a slow, clumsy one.
+
+  | Level | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+  |---|---|---|---|---|---|---|---|---|---|
+  | CPU reaction (frames) | 36 | 31 | 27 | 23 | 17 | 14 | 10 | 6 | 1 |
+  | CPU error step | 24 | 20 | 16 | 16 | 12 | 10 | 6 | 4 | 2 |
+  | CPU shot sense | 0 | 0.125 | 0.25 | 0.375 | 0.5 | 0.625 | 0.75 | 0.875 | 1 |
+  | Timing error (± frames) | 4 | 4 | 3 | 3 | 2 | 2 | 1 | 1 | 0 |
+  | Aim jitter (± units) | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+  | SOFT scale | 0.3 | 0.4 | 0.5 | 0.6 | 0.7 | 0.75 | 0.85 | 0.9 | 1 |
+  | Volleys | no | no | no | no | no | yes | yes | yes | yes |
+
+  - **Timing error:** the CPU presses up to ±N frames off its planned press, fresh each shot (deterministic). It changes the aim as a human's timing does, and can make a stretch or a miss.
+  - **Aim jitter:** how far in front of or behind the contact it may stand, so timing angles its shots; 0 = square, straight back.
+  - **SOFT scale:** multiplies the plain SOFT chances in `chooseButton`; the shot sense works on top, so level 9 is unchanged.
+  - **Volleys:** without them it lets the ball bounce and takes it nearest waist height (`COMFORT_Y` 20) when it can reach that, instead of the earliest contact. (The CPU's search only looks past the bounce once the ball has bounced, e.g. after a slow reaction; see the S6b Session log.)
+  - **Changed from the CP-C proposal:** reaction 36, 30, 24, 18, 12, 8, 5, 3, 1 became 36, 31, 27, 23, 17, 14, 10, 6, 1, and the timing error 4, 3, 3, 2, 2, 1, 1, 0, 0 became 4, 4, 3, 3, 2, 2, 1, 1, 0. The proposal stepped the timing on the same levels as the pace columns (power and bounce change at levels 2, 4, 6 and 8), which made big jumps between some levels and small ones between others, and left level 5 slightly too strong.
+  - **Measured** against a beginner-like reference player (`test/reference-player.js`: 15-frame reaction, runs to the landing marker, ±3 frames of timing, ±16 units of position; it wins 34% of points against the S6 level 1, close to the owner's 4–9): it wins **78, 71, 67, 54, 43, 29, 14, 10 and 5%** of points at levels 1–9 (1000 rallies each). The plan's targets were ≥ 60% at level 1, 35–55% at 5 and ≤ 20% at 9.
 
 ## Character (2026-10-18)
 - v1 character: an **adult player in red and black** (Hogg colours).

@@ -12,6 +12,8 @@
 // Timings were measured in the MAME recordings (test/fixtures): every human swing kept the player planted for its
 // whole animation (contact 7 frames after the press, moving again about 18 frames after it), and every dive was a
 // special contact that left the player down for 143–153 frames (shortened to 115 at CP-B). The art in A3 matches these constants.
+// SOFT from the front court is a short drop (CP-C): shotFor caps its power and lift (DROP). This departs from the
+// arcade's tables on purpose; SHOT_TABLES and the physics file stay as they are.
 import { FP, PLAYER, movePlayer, classifyContact, SHOT_TABLES, shotEntry, applyShot, aimFromTiming } from '../squash-physics.js';
 
 export const SWING = {
@@ -25,6 +27,26 @@ export const DIVE = {
   RECOVERY: 108,       // frames from contact (included) until back up: 115 frames in all (≈ 2.0 s; the arcade is 2.5 s, CP-B)
   MOVE_SPEED: 0,       // locked in place
 };
+
+/**
+ * A SOFT struck in the FRONT zone is a short drop (CP-C). Some of the arcade's front-court SOFT rows are hit at twice
+ * the drop's power, so the ball ran on to its second bounce near the back wall. shotFor caps their depth power and
+ * lift (SHOT_TABLES itself is untouched: the golden tests replay it). Lift ÷ power sets the launch angle: 1280 ÷ 32 is
+ * about the arcade's row #0 (3072 ÷ 80), at 40% of its power. Measured in S6b: the second bounce lands in front of the
+ * short line (nearly all off a fast ball), but more drops fall short of the front wall (docs/decisions.md, "Hitting").
+ * Tunables.
+ */
+export const DROP = {
+  POWER_MAX: 32,       // depth power (the arcade's front-court SOFT rows are 80–160)
+  LIFT_MAX: 1280,      // lift (the rows are 3072–6144)
+};
+
+/**
+ * Contact types 8–9 (overheads: the ball above y 48) keep the arcade's entry. They are hit downward (negative lift),
+ * and at a drop's power the ball falls into the tin before it reaches the wall (measured in S6b: 40–56% of them, none
+ * with the arcade's entry).
+ */
+const OVERHEAD = [8, 9];
 
 /** Classifier flag for the dive band ("special": volley/lunge, contact types 10–11). */
 export const DIVE_FLAG = 0x10;
@@ -79,6 +101,20 @@ export function makePlayer(x, z) {
   return { x: x * FP, z: z * FP, flags1b: 0, swing: null };
 }
 
+/**
+ * The shot-table entry a contact plays: the arcade's, except that a SOFT in the FRONT zone is capped to a short drop
+ * (DROP), overheads apart.
+ * @param {'FRONT' | 'MID' | 'BACK'} zone
+ * @param {'hard' | 'soft'} button
+ * @param {number} index  contact type 0..11
+ * @returns {import('../squash-physics.js').ShotEntry}
+ */
+export function shotFor(zone, button, index) {
+  const e = shotEntry(SHOT_TABLES[zone][button][index]);
+  if (zone !== 'FRONT' || button !== 'soft' || OVERHEAD.includes(index)) return e;
+  return { lift: Math.min(e.lift, DROP.LIFT_MAX), side: e.side, power: Math.min(e.power, DROP.POWER_MAX) };
+}
+
 /** @param {'swing' | 'dive'} kind */
 const timing = kind => (kind === 'dive' ? DIVE : SWING);
 
@@ -124,7 +160,7 @@ export function stepPlayer(pl, act, ball, p, frame, turn = { isP1: true, turnIsP
     if (s.t === T.CONTACT && s.contact) {
       const c = s.contact;
       const aim = aimFromTiming(ball.z, pl.z);
-      const entry = shotEntry(SHOT_TABLES[c.zone][s.button][c.index]);
+      const entry = shotFor(c.zone, s.button, c.index);
       applyShot(ball, entry, aim, { z: pl.z, flags1b: c.flags, isCpu: !!(pl.flags1b & 0x40) }, frame, p);
       s.hit = true;
       event = { type: 'hit', kind: s.kind, button: s.button, flags: c.flags, zone: c.zone, index: c.index, reach: true,

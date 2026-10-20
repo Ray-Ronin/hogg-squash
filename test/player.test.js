@@ -1,8 +1,9 @@
-// The swing state machine: contact timing, misses, dives, overheads and the movement lock (node:test, run by npm test).
+// The swing state machine: contact timing, misses, dives, overheads, the movement lock and the front-court drop (node:test,
+// run by npm test).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FP, makeBall, step, applyShot, shotEntry, SHOT_TABLES, aimFromTiming } from '../public/hogg-squash/js/squash-physics.js';
-import { makePlayer, stepPlayer, swingPhase, swingLength, SWING, DIVE, PLAYER_LIMITS } from '../public/hogg-squash/js/sim/player.js';
+import { makePlayer, stepPlayer, swingPhase, swingLength, shotFor, SWING, DIVE, DROP, PLAYER_LIMITS } from '../public/hogg-squash/js/sim/player.js';
 import { defaultParams } from '../public/hogg-squash/js/sim/world.js';
 
 const P = defaultParams();
@@ -142,4 +143,25 @@ test('court limits: the feet stay inside PLAYER_LIMITS', () => {
   assert.deepEqual([pl.x / FP, pl.z / FP], [PLAYER_LIMITS.xMin, PLAYER_LIMITS.zMin]);
   run(pl, ball, 200, () => keys('right', 'down'));
   assert.deepEqual([pl.x / FP, pl.z / FP], [PLAYER_LIMITS.xMax, PLAYER_LIMITS.zMax]);
+});
+
+test('SOFT from the front court plays a capped drop (CP-C); HARD, other zones and overheads play the arcade\'s entry', () => {
+  for (const zone of ['FRONT', 'MID', 'BACK']) for (const button of ['hard', 'soft']) for (let i = 0; i < 12; i++) {
+    const arcade = shotEntry(SHOT_TABLES[zone][button][i]), e = shotFor(zone, button, i);
+    if (zone === 'FRONT' && button === 'soft' && i !== 8 && i !== 9) {
+      assert.deepEqual(e, { lift: Math.min(arcade.lift, DROP.LIFT_MAX), side: arcade.side, power: Math.min(arcade.power, DROP.POWER_MAX) });
+      assert.ok(e.power < arcade.power, `FRONT soft #${i} is slower than the arcade's`);
+    } else assert.deepEqual(e, arcade, `${zone} ${button} #${i} as the arcade`);
+  }
+  // in play: a swing at a ball in the front court plays shotFor's entry
+  for (const button of ['hard', 'soft']) {
+    const pl = makePlayer(0, 50), ball = makeBall({ x: 30 * FP, y: 12 * FP, z: 40 * FP, vz: 1.2 * FP });
+    const [press] = run(pl, ball, 1, () => keys(button));
+    assert.equal(press.zone, 'FRONT');
+    run(pl, ball, SWING.CONTACT - 1, () => NO_KEYS, MY_TURN, 1);
+    const expect = applyShot(makeBall({ ...ball }), shotFor('FRONT', button, press.index), aimFromTiming(ball.z, pl.z),
+      { z: pl.z, flags1b: press.flags }, SWING.CONTACT, P);
+    const [hit] = run(pl, ball, 1, () => NO_KEYS, MY_TURN, SWING.CONTACT);
+    assert.deepEqual([hit.ball.vx, hit.ball.vy, hit.ball.vz], [expect.vx, expect.vy, expect.vz], button);
+  }
 });
