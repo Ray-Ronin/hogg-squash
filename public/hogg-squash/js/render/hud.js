@@ -80,7 +80,7 @@ export function drawHud(ctx, w, opts) {
 
   if (opts.paused) {
     wallText(ctx, 'PAUSED', 130, 'bold 22px monospace', '#000');
-    wallText(ctx, 'Esc to carry on', 106, '10px monospace', '#000');
+    wallText(ctx, 'Esc or Start to carry on', 106, '10px monospace', '#000');
   }
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';

@@ -26,7 +26,7 @@ The input layer turns keyboard keys or gamepad buttons into these actions, so th
 - Uses the browser **Gamepad API**, polled once per frame (`navigator.getGamepads()`).
 - **A browser only reports a gamepad after a button on it has been pressed** (a privacy rule). So the menu should say "Press any button on your controller", then assign that pad to the next free player slot.
 - Xbox and PlayStation controllers report the browser's *standard* layout in Chrome and Edge. Firefox is less consistent. Default mapping: **left stick or D-pad = move, A/Cross = HARD, B/Circle or X/Square = SOFT, Start = pause**.
-- Mixing is allowed: P1 on the keyboard and P2 on a gamepad, or the reverse.
+- Mixing is allowed: P1 on the keyboard and P2 on a gamepad, or the reverse. (Built in S7: a player's keys keep working after their pad joins, and left/right on a pad in the controller overlay changes sides.)
 - Handle unplugging mid-match: pause and show "Controller disconnected".
 
 ## Touch controls: phones and tablets (decided 2026-10-20, built in S11b)

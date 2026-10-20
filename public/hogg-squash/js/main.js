@@ -1,8 +1,10 @@
 // @ts-check
-// Boot: wires the loop, the keyboard, the CPU, the world (all game logic is in js/sim/) and the renderer.
+// Boot: wires the loop, the keyboard and gamepads, the CPU, the world (all game logic is in js/sim/) and the renderer.
 // Default: 1 player (WASD + F HARD / G SOFT) against the CPU, the human serving first.
 // ?mode=2p: 2 players on one keyboard, P1 as above, P2 arrows + Numpad 0 (HARD) / Numpad . (SOFT).
-// Esc freezes (so does losing focus), ` toggles the debug overlay, [ and ] change the level (1P; from the next rally).
+// Gamepads: any button on a pad joins it to the next player without one (P1 first) and shows the controller overlay;
+// the keys keep working alongside. Unplugging a pad that plays waits on "Controller disconnected".
+// Esc or Start freezes (so does losing focus), ` toggles the debug overlay, [ and ] change the level (1P; from the next rally).
 // URL options: ?mode=2p versus, ?level=1..9 difficulty (default 5: the CPU's skill and, in 1P, the game's pace; 2P
 // always plays at level 5's pace), ?to=5|7|9|11 match length (default 9), ?seed=<n> seed for the 2P first server and
 // the CPU's choices (default random),
@@ -12,7 +14,9 @@
 import { startLoop, SIM_HZ } from './engine/loop.js';
 import { createScreen, WIDTH, HEIGHT } from './engine/screen.js';
 import { createKeyboard } from './input/keyboard.js';
-import { DEFAULT_LAYOUTS, layoutCodes, readActions } from './input/actions.js';
+import { DEFAULT_LAYOUTS, layoutCodes, readActions, padActions, combineActions, makeSeats, seatOf, joinPad, dropPad,
+  forgetLost, swapSeats } from './input/actions.js';
+import { createPads, padName } from './input/gamepad.js';
 import { makeWorld, stepWorld } from './sim/world.js';
 import { makeCpu, cpuActions } from './sim/cpu.js';
 import { paramsFor, toLevel, LEVELS } from './sim/difficulty.js';
@@ -22,6 +26,7 @@ import { drawActors, heights } from './render/actors.js';
 import { createEffects } from './render/effects.js';
 import { drawHud } from './render/hud.js';
 import { drawDebug, createShotLog } from './render/debug.js';
+import { drawPadOverlay } from './render/pads.js';
 
 const query = new URLSearchParams(location.search);
 const to = Number(query.get('to'));
@@ -66,7 +71,26 @@ function stepLevel(d) {
 // --- input ---
 const layouts = DEFAULT_LAYOUTS;
 const kb = createKeyboard(layoutCodes(layouts));
-kb.onPress('Escape', () => { frozen = !frozen; });
+const pads = createPads();
+/** Which pad plays which human (null: the CPU's slot). */
+const seats = makeSeats(world.cpu);
+/** The browser's name for each pad seen. @type {Map<number, string>} */
+const padIds = new Map();
+/** The controller overlay is up after a pad joins, until A / Start / Enter. */
+let joining = false;
+/** A playing pad was unplugged: wait until one replaces it (or Enter carries on with the keyboard). */
+const lost = () => seats.some(s => s?.lost);
+/** The game waits: frozen, or an overlay is up. */
+const stopped = () => frozen || joining || lost();
+
+/** Enter / Space, or A / Start on a pad that plays: close the overlay (or carry on without the unplugged pad). */
+function confirmOverlay() {
+  if (lost()) forgetLost(seats);
+  else joining = false;
+}
+kb.onPress('Escape', () => { if (joining) joining = false; else if (!lost()) frozen = !frozen; });
+kb.onPress('Enter', confirmOverlay);
+kb.onPress('Space', confirmOverlay);
 kb.onPress('Backquote', () => { showDebug = !showDebug; });
 kb.onPress('BracketLeft', () => stepLevel(-1));
 kb.onPress('BracketRight', () => stepLevel(1));
@@ -74,11 +98,47 @@ window.addEventListener('blur', () => { frozen = true; });
 document.addEventListener('visibilitychange', () => { if (document.hidden) frozen = true; });
 
 // --- sim step (57.4 Hz, or slower with ?slow) ---
+/**
+ * Poll the pads (once per step, frozen or not): unplugged pads, joins, Start, and the overlay's buttons.
+ * @returns {(import('./input/gamepad.js').PadInput | null)[]} each slot's pad this step
+ */
+function pollPads() {
+  const { pads: list, gone } = pads.poll();
+  for (const i of gone) { padIds.delete(i); dropPad(seats, i); }
+  /** @type {(import('./input/gamepad.js').PadInput | null)[]} */
+  const bySlot = [null, null];
+  for (const p of list) {
+    padIds.set(p.index, p.id);
+    let slot = seatOf(seats, p.index);
+    if (slot < 0) {
+      // the button that joins a pad does nothing else; a pad replacing an unplugged one carries straight on
+      const wasLost = lost();
+      if (p.any && joinPad(seats, p.index) >= 0 && !wasLost) joining = true;
+      continue;
+    }
+    if (joining) {
+      if (p.pressed.hard || p.pressed.start) joining = false;
+      else if ((slot === 0 && p.pressed.right) || (slot === 1 && p.pressed.left)) {
+        if (swapSeats(seats, slot)) slot = 1 - slot;
+      }
+    } else if (p.pressed.start && !lost()) frozen = !frozen;
+    bySlot[slot] = p;
+  }
+  return bySlot;
+}
+
 let stepCount = 0;
 function simStep() {
+  const wasStopped = stopped();
   const presses = kb.takePresses();       // sampled once per step; presses made while frozen are dropped
-  if (frozen) return;
-  const [a1, a2] = [0, 1].map(i => { const c = cpus[i]; return c ? cpuActions(c, world) : readActions(kb, layouts[i], presses); });
+  const padNow = pollPads();
+  if (wasStopped || stopped()) return;    // a button that closes the overlay or unfreezes doesn't also play
+  const [a1, a2] = [0, 1].map(i => {
+    const c = cpus[i];
+    if (c) return cpuActions(c, world);
+    const keys = readActions(kb, layouts[i], presses), pad = padNow[i];
+    return pad ? combineActions(keys, padActions(pad)) : keys;
+  });
   const events = stepWorld(world, a1, a2);
   for (const e of events) {
     if ((e.type === 'newRally' || e.type === 'rematch') && nextLevel !== null) applyLevel(nextLevel);
@@ -108,11 +168,13 @@ function render() {
   effects.draw(ctx, world, 'wall', SIZE);
   drawActors(ctx, world.ball, world.players, { landing: world.landing, size: SIZE });
   effects.draw(ctx, world, 'front', SIZE);
-  drawHud(ctx, world, { paused: frozen });
+  drawHud(ctx, world, { paused: frozen && !joining && !lost() });
   ctx.font = '10px monospace';
   ctx.textBaseline = 'bottom';
   ctx.fillStyle = '#777';
   ctx.textAlign = 'center';
+  ctx.fillText(seats.some(s => s?.pad === null) ? 'Controller: press any button to join     A hard  B/X soft  Start pause'
+    : 'Controllers: A hard  B/X soft  Start pause', WIDTH / 2, HEIGHT - 14);
   ctx.fillText(TWO_PLAYER ? 'P1 WASD  F hard  G soft     P2 arrows  Num0 hard  Num. soft     Esc pause  ` debug'
     : `WASD move  F hard  G soft     vs CPU level ${nextLevel ?? world.params.level} ([ ])     Esc pause  \` debug`,
     WIDTH / 2, HEIGHT - 2);
@@ -121,6 +183,10 @@ function render() {
     ctx.fillText(`SLOW ×${SLOW}`, WIDTH - 4, HEIGHT - 2);
   }
   ctx.textAlign = 'left';
+  if (joining || lost()) {
+    drawPadOverlay(ctx, { kind: lost() ? 'lost' : 'join', seats, keys: ['WASD F G', 'arrows Num0 Num.'],
+      name: i => padName(padIds.get(i) ?? '') });
+  }
   if (showDebug) drawDebug(ctx, { stepsPerSec, world, heights, lastEvent, lastContact, shots: shotLog.shots, cpus, nextLevel });
   screen.present();
 }
@@ -128,7 +194,8 @@ function render() {
 // testing hook: run whole sim steps (keyboard → actions → world, as the loop does) and draw, without waiting for frames
 if (query.has('dev')) {
   Object.assign(window, { hogg: {
-    world, kb, render, shots: shotLog.shots, cpus,
+    world, kb, render, shots: shotLog.shots, cpus, seats,
+    get joining() { return joining; },
     get nextLevel() { return nextLevel; },
     /** @param {number} n */ step(n = 1) { for (let i = 0; i < n; i++) simStep(); render(); },
     get frozen() { return frozen; },
