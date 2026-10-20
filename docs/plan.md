@@ -54,7 +54,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
    - `npm test` passes, and so does `npm run typecheck` (added after S2);
    - every "Done when" item has been checked, and you say which ones were checked in the browser and which only by tests;
    - tick the session's line in the status list and add a few lines to the **Session log** at the bottom of this file (what changed, any numbers measured, anything left for later);
-   - commit with the message `Sx: <session name>`.
+   - commit with the message `Sx: <session name>`, ending with a plain-English `Build-log:` line for https://roninray.com/build/ (see "Commit messages" in `CLAUDE.md`).
 9. **Never push without asking.** A push to `main` deploys to https://roninray.com/hogg-squash/. At the end, ask whether to push.
 10. **Git:** if `git` isn't on the PATH, use GitHub Desktop's copy: `C:\Users\ronin\AppData\Local\GitHubDesktop\app-3.6.7\resources\app\git\cmd\git.exe` (the version folder changes when GitHub Desktop updates).
 11. **Hand-off:** the last thing every session does, after committing, is write the owner a ready-to-paste prompt for the **next unticked line**, and suggest an effort level for it.
