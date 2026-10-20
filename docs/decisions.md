@@ -99,11 +99,13 @@ Settled decisions. Newest at the bottom of each section. If something here confl
   | Aim jitter (± units) | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
   | SOFT scale | 0.3 | 0.4 | 0.5 | 0.6 | 0.7 | 0.75 | 0.85 | 0.9 | 1 |
   | Volleys | no | no | no | no | no | yes | yes | yes | yes |
+  | Reach (share of a human's) | 0.95 | 0.955 | 0.96 | 0.965 | 0.97 | 0.975 | 0.98 | 0.985 | 0.99 |
 
   - **Timing error:** the CPU presses up to ±N frames off its planned press, fresh each shot (deterministic). It changes the aim as a human's timing does, and can make a stretch or a miss.
   - **Aim jitter:** how far in front of or behind the contact it may stand, so timing angles its shots; 0 = square, straight back.
   - **SOFT scale:** multiplies the plain SOFT chances in `chooseButton`; the shot sense works on top, so level 9 is unchanged.
   - **Volleys:** without them it lets the ball bounce and takes it nearest waist height (`COMFORT_Y` 20) when it can reach that, instead of the earliest contact. (The CPU's search only looks past the bounce once the ball has bounced, e.g. after a slow reaction; see the S6b Session log.)
+  - **Reach (2026-10-20, after S6b, the owner's call):** every CPU's hit zones (clean, stretch, dive, out of reach) are smaller than a human's, by 5% at level 1 down to 1% at level 9 ("all the bots have too much range"). A CPU's press is classified as if the ball 7 frames ahead were further from its feet by 1 ÷ reach, with the arcade's own classifier (`shrinkReach` in `js/sim/player.js`), so a ball on a band's edge drops to the next band out. The human's zones are the arcade's. At these sizes it is a small change (level 1 loses about 3 units of forehand reach); the reference player's share moved from 78 to 79% at level 1 and 43 to 45% at level 5. Bigger cuts are a one-column change.
   - **Changed from the CP-C proposal:** reaction 36, 30, 24, 18, 12, 8, 5, 3, 1 became 36, 31, 27, 23, 17, 14, 10, 6, 1, and the timing error 4, 3, 3, 2, 2, 1, 1, 0, 0 became 4, 4, 3, 3, 2, 2, 1, 1, 0. The proposal stepped the timing on the same levels as the pace columns (power and bounce change at levels 2, 4, 6 and 8), which made big jumps between some levels and small ones between others, and left level 5 slightly too strong.
   - **Measured** against a beginner-like reference player (`test/reference-player.js`: 15-frame reaction, runs to the landing marker, ±3 frames of timing, ±16 units of position; it wins 34% of points against the S6 level 1, close to the owner's 4–9): it wins **78, 71, 67, 54, 43, 29, 14, 10 and 5%** of points at levels 1–9 (1000 rallies each). The plan's targets were ≥ 60% at level 1, 35–55% at 5 and ≤ 20% at 9.
 

@@ -165,3 +165,20 @@ test('SOFT from the front court plays a capped drop (CP-C); HARD, other zones an
     assert.deepEqual([hit.ball.vx, hit.ball.vy, hit.ball.vz], [expect.vx, expect.vy, expect.vz], button);
   }
 });
+
+test('a CPU\'s reach is smaller by params.cpuReach: a ball a human hits clean is a stretch for it, and so on outwards', () => {
+  const press = (dx, cpu, reach) => {
+    const { pl, ball } = setup(dx);
+    if (cpu) pl.flags1b = 0x40;
+    return stepPlayer(pl, keys('hard'), ball, { ...P, cpuReach: reach }, 0, MY_TURN);
+  };
+  // the forehand bands for a human: clean below 52, stretch to 76, dive to 96, then out of reach
+  const band = e => (!e.reach ? 'out' : e.kind === 'dive' ? 'dive' : e.flags & 2 ? 'stretch' : 'clean');
+  for (const [dx, human, cpu95] of [[30, 'clean', 'clean'], [50, 'clean', 'stretch'], [74, 'stretch', 'dive'], [93, 'dive', 'out']]) {
+    assert.equal(band(press(dx, false, 0.95)), human, `human at ${dx}`);
+    assert.equal(band(press(dx, true, 1)), human, `CPU with full reach at ${dx}`);
+    assert.equal(band(press(dx, true, 0.95)), cpu95, `CPU at 95% reach at ${dx}`);
+  }
+  // the shot table zone is the real one
+  assert.equal(press(50, true, 0.95).zone, press(50, false, 1).zone);
+});

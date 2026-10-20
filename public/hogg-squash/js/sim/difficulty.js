@@ -31,6 +31,8 @@ export const DEFAULT_LEVEL = 5;
  *  - cpuSoftScale: scales its plain SOFT chances (fewer drops at the low levels); the shot sense works on top
  *  - cpuVolley:    1 = it takes the earliest contact it can reach (volleys too); 0 = it lets the ball bounce and
  *                  takes it at a comfortable height when it can
+ *  - cpuReach:     the CPU's hit zones (clean, stretch, dive) as a share of a human's: 5% smaller at level 1, 1% at
+ *                  level 9 (player.js, shrinkReach)
  */
 export const LEVEL_TABLE = {
   speed:        [256, 262, 268, 274, 280, 286, 292, 298, 304],
@@ -44,6 +46,7 @@ export const LEVEL_TABLE = {
   cpuAimJitter: [0, 1, 2, 3, 4, 5, 6, 7, 8],
   cpuSoftScale: [0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.85, 0.9, 1],
   cpuVolley:    [0, 0, 0, 0, 0, 1, 1, 1, 1],
+  cpuReach:     [0.95, 0.955, 0.96, 0.965, 0.97, 0.975, 0.98, 0.985, 0.99],
 };
 
 /**
@@ -62,6 +65,7 @@ export const LEVEL_TABLE = {
  * @property {number} cpuAimJitter  game units, ±
  * @property {number} cpuSoftScale  0…1
  * @property {number} cpuVolley     0 or 1
+ * @property {number} cpuReach      0…1
  */
 
 /**
@@ -86,6 +90,7 @@ export function levelParams(level) {
     powerMult: t.powerMult[i], latMult: t.powerMult[i],
     cpuReaction: t.cpuReaction[i], cpuErrorStep: t.cpuErrorStep[i], cpuSense: t.cpuSense[i],
     cpuTiming: t.cpuTiming[i], cpuAimJitter: t.cpuAimJitter[i], cpuSoftScale: t.cpuSoftScale[i], cpuVolley: t.cpuVolley[i],
+    cpuReach: t.cpuReach[i],
   };
 }
 

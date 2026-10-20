@@ -18,7 +18,7 @@ const arcade = idx => { const d = difficultyParams(idx); return { ...d, latMult:
 
 test('the table: nine levels, every column monotonic, level 5 = the CP-B pace, level 9 = Hardest 4', () => {
   assert.deepEqual(LEVELS, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  const rising = ['speed', 'gravity', 'powerMult', 'cpuSense', 'cpuAimJitter', 'cpuSoftScale', 'cpuVolley'];
+  const rising = ['speed', 'gravity', 'powerMult', 'cpuSense', 'cpuAimJitter', 'cpuSoftScale', 'cpuVolley', 'cpuReach'];
   const falling = ['bounceOffset', 'cpuReaction', 'cpuErrorStep', 'cpuTiming'];
   for (const k of [...rising, ...falling]) {
     const col = LEVEL_TABLE[k];

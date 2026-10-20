@@ -115,6 +115,26 @@ export function shotFor(zone, button, index) {
   return { lift: Math.min(e.lift, DROP.LIFT_MAX), side: e.side, power: Math.min(e.power, DROP.POWER_MAX) };
 }
 
+/**
+ * A CPU's smaller reach (params.cpuReach, below 1). Its contact is classified as if the ball 7 frames ahead were
+ * further from its feet by 1 ÷ reach, across and in depth, so every band of the arcade's classifier (clean, stretch,
+ * dive, out of reach) shrinks around it by that share. The arcade's classifier does the work: it is run again on a
+ * still ball at the scaled spot (game speed 0, so the 7 look-ahead frames don't move it). The shot table zone stays
+ * the real one.
+ * @param {Contact} c  the contact as classified for the real ball
+ * @param {Player} pl
+ * @param {any} p
+ * @param {{ isP1: boolean, turnIsP1: boolean }} opts
+ * @param {number} reach  0…1
+ * @returns {Contact}
+ */
+function shrinkReach(c, pl, p, opts, reach) {
+  const g = c.ghost;
+  const at = { ...g, x: Math.round(pl.x + (g.x - pl.x) / reach), z: Math.round(pl.z + (g.z - pl.z) / reach), vx: 0, vy: 0, vz: 0 };
+  const s = classifyContact(at, pl, { ...p, speed: 0 }, opts);
+  return { ...s, zone: c.zone, ghost: g };
+}
+
 /** @param {'swing' | 'dive'} kind */
 const timing = kind => (kind === 'dive' ? DIVE : SWING);
 
@@ -168,7 +188,9 @@ export function stepPlayer(pl, act, ball, p, frame, turn = { isP1: true, turnIsP
     }
   } else if (act.hard || act.soft) {
     const button = act.hard ? 'hard' : 'soft';
-    const c = classifyContact(ball, pl, p, { isP1: turn.isP1, turnIsP1: turn.turnIsP1 });
+    const opts = { isP1: turn.isP1, turnIsP1: turn.turnIsP1 };
+    const c0 = classifyContact(ball, pl, p, opts);
+    const c = pl.flags1b & 0x40 && p.cpuReach < 1 ? shrinkReach(c0, pl, p, opts, p.cpuReach) : c0;
     const reach = turn.mayStrike && !(c.flags & 0x20);
     const kind = reach && (c.flags & DIVE_FLAG) ? 'dive' : 'swing';
     pl.swing = { kind, t: 0, button, hand: c.flags & 4 ? 'back' : 'fore', contact: reach ? c : null, hit: false };
