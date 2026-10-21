@@ -1,5 +1,5 @@
 // @ts-check
-// Debug overlay (toggled with the backquote key): sim rate, ball, players (height, swing phase), the rally and
+// Debug overlay (toggled with the backquote key): sim rate, ball, players (height, swing phase, animation), the rally and
 // match state, the last rally result, the last physics event and the last contact, and a log of the last 5 shots
 // (zone, contact index, button, aim, speed and front-wall height) to compare with squash-game-logic.md §9.
 // The serve line shows where a serve from here would be aimed (HARD and SOFT), then where it was aimed.
@@ -32,6 +32,7 @@ import { SIM_HZ } from '../engine/loop.js';
  * @property {Shot[]} shots     newest last
  * @property {(import('../sim/cpu.js').Cpu | null)[]} [cpus]  the CPU for each slot it plays
  * @property {number | null} [nextLevel]  a level waiting for the next rally
+ * @property {string[]} [anims]  each player's animation, e.g. "forehand 3/8" ("<" = mirrored)
  */
 
 /** Shots kept in the log. */
@@ -162,7 +163,7 @@ export function drawDebug(ctx, d) {
       `  power ${w.params.powerMult} bounce ${w.params.bounceOffset}`,
     `speed ${mps.toFixed(1)} m/s  bounces ${b.bounces}${b.out ? '  OUT' : ''}`,
     ...w.players.map((pl, i) => `P${i + 1} x${f1(pl.x / FP)} z${f1(pl.z / FP)}  ${d.heights[i]}px  ` +
-      `${swingPhase(pl)}${pl.swing ? ` ${pl.swing.t} ${pl.swing.hand}` : ''}`),
+      `${swingPhase(pl)}${pl.swing ? ` ${pl.swing.t} ${pl.swing.hand}` : ''}${d.anims ? `  ${d.anims[i]}` : ''}`),
     `rally turn ${P(r.turn)} striker ${P(r.striker)} needFront ${r.needFront ? 'y' : 'n'} bounces ${r.bounces}`,
     `match ${m.scores[0]}-${m.scores[1]} to ${m.target}  server ${P(m.server)} ${m.box}  winner ${P(m.winner)}`,
     `result ${res}`,

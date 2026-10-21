@@ -11,6 +11,8 @@
 // ?h=<px> box height at the back, ?curve=old the S3 height curve (for comparing),
 // ?scale=int whole-number scaling only (default: fill the window),
 // ?slow=<n> slow motion (the sim runs n times slower), ?dev exposes the world as window.hogg for testing.
+// The players are the animated sprites (assets/player-100.png + .json, loaded before the game starts; P2 / the CPU in
+// the swapped kit). \ or ?boxes shows the placeholder boxes instead (debug); they're also the fallback if loading fails.
 import { startLoop, SIM_HZ } from './engine/loop.js';
 import { createScreen, WIDTH, HEIGHT } from './engine/screen.js';
 import { createKeyboard } from './input/keyboard.js';
@@ -23,6 +25,8 @@ import { paramsFor, toLevel, LEVELS } from './sim/difficulty.js';
 import { MATCH_LENGTHS } from './sim/match.js';
 import { drawCourt } from './render/court.js';
 import { drawActors, heights } from './render/actors.js';
+import { loadAssets } from './engine/assets.js';
+import { parseSheet, buildAtlas, createAnimator, stepAnimator, frameAt, KIT_SWAP } from './render/sprites.js';
 import { createEffects } from './render/effects.js';
 import { drawHud } from './render/hud.js';
 import { drawDebug, createShotLog } from './render/debug.js';
@@ -43,6 +47,9 @@ const world = makeWorld({ target, seed, params: paramsFor(LEVEL, TWO_PLAYER), cp
 /** The CPU for each slot it plays (P2 in 1P), else null. */
 const cpus = world.cpu.map((on, i) => (on ? makeCpu(world, /** @type {0 | 1} */ (i)) : null));
 const effects = createEffects();
+/** The character sprites, once loaded (null: boxes). @type {import('./render/actors.js').Sprites | null} */
+let sprites = null;
+let showBoxes = query.has('boxes');
 const shotLog = createShotLog();
 /** @type {{ ev: string, frame: number } | null} */
 let lastEvent = null;
@@ -92,6 +99,7 @@ kb.onPress('Escape', () => { if (joining) joining = false; else if (!lost()) fro
 kb.onPress('Enter', confirmOverlay);
 kb.onPress('Space', confirmOverlay);
 kb.onPress('Backquote', () => { showDebug = !showDebug; });
+kb.onPress('Backslash', () => { showBoxes = !showBoxes; });
 kb.onPress('BracketLeft', () => stepLevel(-1));
 kb.onPress('BracketRight', () => stepLevel(1));
 window.addEventListener('blur', () => { frozen = true; });
@@ -145,6 +153,11 @@ function simStep() {
     if (e.type === 'ball') lastEvent = { ev: e.ev, frame: world.frame - 1 };
     else if (e.type === 'swing' || e.type === 'hit') lastContact = e;
   }
+  if (sprites) {
+    const sp = sprites;
+    sp.anims.forEach((a, i) =>
+      stepAnimator(a, sp.sheet, world.players[i], events.some(e => e.type === 'serve' && e.side === i)));
+  }
   effects.add(events, world);
   shotLog.add(events, world);
   stepCount++;
@@ -166,7 +179,7 @@ function render() {
 
   drawCourt(ctx);
   effects.draw(ctx, world, 'wall', SIZE);
-  drawActors(ctx, world.ball, world.players, { landing: world.landing, size: SIZE });
+  drawActors(ctx, world.ball, world.players, { landing: world.landing, size: SIZE, sprites: showBoxes ? null : sprites });
   effects.draw(ctx, world, 'front', SIZE);
   drawHud(ctx, world, { paused: frozen && !joining && !lost() });
   ctx.font = '10px monospace';
@@ -187,7 +200,10 @@ function render() {
     drawPadOverlay(ctx, { kind: lost() ? 'lost' : 'join', seats, keys: ['WASD F G', 'arrows Num0 Num.'],
       name: i => padName(padIds.get(i) ?? '') });
   }
-  if (showDebug) drawDebug(ctx, { stepsPerSec, world, heights, lastEvent, lastContact, shots: shotLog.shots, cpus, nextLevel });
+  if (showDebug) {
+    drawDebug(ctx, { stepsPerSec, world, heights, lastEvent, lastContact, shots: shotLog.shots, cpus, nextLevel,
+      anims: animNames() });
+  }
   screen.present();
 }
 
@@ -195,6 +211,10 @@ function render() {
 if (query.has('dev')) {
   Object.assign(window, { hogg: {
     world, kb, render, shots: shotLog.shots, cpus, seats,
+    get sprites() { return sprites; },
+    get anims() { return animNames(); },
+    get boxes() { return showBoxes; },
+    set boxes(v) { showBoxes = v; },
     get joining() { return joining; },
     get nextLevel() { return nextLevel; },
     /** @param {number} n */ step(n = 1) { for (let i = 0; i < n; i++) simStep(); render(); },
@@ -204,5 +224,47 @@ if (query.has('dev')) {
     set debug(v) { showDebug = v; },
   } });
 }
+
+/** Each player's animation as "tag frame/frames" (mirrored: "<"), for the debug overlay. */
+function animNames() {
+  const sp = sprites;
+  if (!sp) return ['boxes', 'boxes'];
+  return sp.anims.map(a => {
+    const tag = sp.sheet.tags[a.tag];
+    return `${a.mirror ? '<' : ''}${a.tag} ${frameAt(tag, a.t)}/${tag.count}`;
+  });
+}
+
+// --- loading: the sprites first (a "Loading" screen meanwhile), then the game; without them it plays with boxes ---
+const assets = loadAssets({
+  sheet: { kind: 'json', url: 'assets/player-100.json' },
+  image: { kind: 'image', url: 'assets/player-100.png' },
+});
+let loading = true;
+(function drawLoading() {
+  if (!loading) return;
+  ctx.fillStyle = '#16161a';
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#bbb';
+  ctx.fillText(`Loading… ${assets.state.done}/${assets.state.total}`, WIDTH / 2, HEIGHT / 2);
+  ctx.textAlign = 'left';
+  screen.present();
+  requestAnimationFrame(drawLoading);
+})();
+try {
+  const a = await assets.ready;
+  const sheet = parseSheet(a.sheet);
+  sprites = {
+    sheet,
+    atlases: [buildAtlas(a.image, sheet), buildAtlas(a.image, sheet, KIT_SWAP)],
+    anims: [createAnimator(), createAnimator()],
+  };
+} catch (e) {
+  console.warn('Hogg Squash: the character sprites did not load, so the players are drawn as boxes.', e);
+}
+loading = false;
 
 startLoop({ step: simStep, render, hz: SIM_HZ / SLOW });

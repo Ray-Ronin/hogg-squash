@@ -1,12 +1,15 @@
 // @ts-check
-// The ball, its shadow, the landing marker and the two placeholder player boxes, drawn in depth order (far first).
-// Box height follows one smooth curve with the feet z, half-strength perspective (docs/decisions.md, "Camera and
+// The ball, its shadow, the landing marker and the two players, drawn in depth order (far first). The players are the
+// animated sprites (sprites.js), P2 in the swapped kit; the S1–S7 placeholder boxes stay behind a debug toggle, and
+// are drawn if the sprites failed to load.
+// Character height follows one smooth curve with the feet z, half-strength perspective (docs/decisions.md, "Camera and
 // character size"); ?curve=old shows the S3 curve for comparison.
-// While swinging, a racket stub on the box shows the side of the swing (right = forehand, left = backhand) and moves
-// from raised (wind-up) through level (contact) to low (recovery). A diving box lies on the floor on the dive side.
+// Boxes: while swinging, a racket stub on the box shows the side of the swing (right = forehand, left = backhand) and
+// moves from raised (wind-up) through level (contact) to low (recovery). A diving box lies on the floor on the dive side.
 import { FP } from '../squash-physics.js';
 import { SWING, DIVE, swingPhase } from '../sim/player.js';
 import { project, UNITS_PER_M } from './projection.js';
+import { drawSprite } from './sprites.js';
 
 const BALL_RADIUS_M = 0.05;           // drawn larger than a real ball (0.02 m) so it reads at 640×360
 const COLOURS = {
@@ -89,10 +92,17 @@ export const heights = [0, 0];
 /** @typedef {import('../sim/player.js').Player} Player */
 
 /**
+ * The character sprites: the sheet, each player's kit atlas and animation (P1 first).
+ * @typedef {{ sheet: import('./sprites.js').Sheet, atlases: import('./sprites.js').Atlas[],
+ *   anims: import('./sprites.js').Animator[] }} Sprites
+ */
+
+/**
  * @param {CanvasRenderingContext2D} ctx
  * @param {{ x: number, y: number, z: number }} ball  16.16
  * @param {Player[]} players  P1 first
- * @param {{ landing: { x: number, z: number } | null, size?: SizeOpts }} opts
+ * @param {{ landing: { x: number, z: number } | null, size?: SizeOpts, sprites?: Sprites | null }} opts
+ *   sprites: null or missing draws the placeholder boxes
  */
 export function drawActors(ctx, ball, players, opts) {
   const bx = ball.x / FP, by = Math.max(0, ball.y / FP), bz = ball.z / FP;
@@ -121,7 +131,11 @@ export function drawActors(ctx, ball, players, opts) {
     const z = pl.z / FP;
     const hExact = exactHeightAt(z, opts.size);
     heights[i] = Math.round(hExact);
-    items.push({ z, draw: () => drawBox(ctx, pl, hExact, COLOURS.players[i]) });
+    const sp = opts.sprites;
+    items.push({ z, draw: sp ? () => {
+      const p = project(pl.x / FP, 0, z);
+      drawSprite(ctx, sp.sheet, sp.atlases[i], sp.anims[i], p.sx, p.sy, heights[i]);
+    } : () => drawBox(ctx, pl, hExact, COLOURS.players[i]) });
   });
   items.sort((a, b) => a.z - b.z).forEach(it => it.draw());
 }
