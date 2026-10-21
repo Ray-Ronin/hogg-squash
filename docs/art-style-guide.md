@@ -46,6 +46,18 @@ Viewed from behind, like the arcade.
 
 **Height and sizes (decided in A1):** on screen the character is **70 px tall at the front wall to 100 px at the back** (`heightAt` in `js/render/actors.js`). The art is drawn and cleaned **at 100 px only** (head to soles; the racket may stick out above), and the game scales it to the exact height at draw time **with smoothing on** (`docs/decisions.md`, "Sprites: one 100 px sheet, scaled smoothly"). So each animation is one sheet, `player-100.png` + `.json`, with a `feet` slice whose pivot is the ground point between the feet.
 
+**The sheet as built in A2** (`public/hogg-squash/assets/player-100.png` + `.json`, from `art/character/player.aseprite`; rebuild with `art/tools/a2-build.lua`, export with `art/tools/a2-export.sh`): indexed (palette-locked), 62×115 px frames in rows of 8, Aseprite JSON array with `frameTags` and the `feet` slice (pivot at x 27, y 113 in the frame). Every frame is at A1's scale (×100/123), with the soles on the same line.
+
+| Tag | Frames | Timing | Notes |
+|---|---|---|---|
+| `ready` | 8 | 125 ms each, loop | a small knee bounce |
+| `run_side` | 7 | 75 ms each, loop | runs to the right, facing the front wall; the game mirrors it for left |
+| `run_up` | 7 | 75 ms each, loop | toward the front wall |
+| `run_down` | 7 | 75 ms each, loop | backpedalling, still facing the front wall |
+| `serve` | 6 | 40, 40, 42, 64, 64, 64 ms, once | the sim's swing: contact on frame 4 at 122 ms, back to `ready` at 314 ms |
+
+The runners stand up straighter than the crouched ready pose, so their heads are 4–10 px higher at the same scale. That is the pose, not a size change.
+
 The v1 character is an **adult player in red and black**. The CPU and P2 in versus use the same character, **palette-swapped** (different shirt colour). No second character needed.
 
 Also needed: the ball + shadow, landing marker, front-wall impact ring, the court (front wall, side walls, floor and lines, tin; **no back wall or crowd in v1**), score panel, a bitmap font, POINT / OUT / FAULT / GAME text, and simple menu screens.

@@ -50,7 +50,8 @@ end
 local sizes = {}
 for _, h in ipairs({ 100, 84, 68 }) do
   sizes[h] = clean(h)
-  saveAseprite(sizes[h], R .. (h == 100 and "art/character/player.aseprite" or ("art/character/player-" .. h .. ".aseprite")))
+  -- A2 took over art/character/player.aseprite (a2-build.lua), so the A1 100 px test sprite goes to player-a1.aseprite.
+  saveAseprite(sizes[h], R .. (h == 100 and "art/character/player-a1.aseprite" or ("art/character/player-" .. h .. ".aseprite")))
 end
 
 ----------------------------------------------------------------- previews

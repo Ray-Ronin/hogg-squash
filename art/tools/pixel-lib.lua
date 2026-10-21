@@ -78,6 +78,74 @@ function M.areaResize(g, h)
   return out
 end
 
+-- One cell of a horizontal spritesheet as an uncropped pixel grid, alpha thresholded at 128 (A2).
+-- Keeping the whole cell keeps every frame of an animation on the same ground line and centre.
+function M.loadCell(img, i, cw, ch)
+  local pc = app.pixelColor
+  local g = { w = cw, h = ch, px = {} }
+  for y = 0, ch - 1 do
+    g.px[y] = {}
+    for x = 0, cw - 1 do
+      local v = img:getPixel(i * cw + x, y)
+      local a = pc.rgbaA(v) >= 128 and 255 or 0
+      g.px[y][x] = { pc.rgbaR(v), pc.rgbaG(v), pc.rgbaB(v), a }
+    end
+  end
+  return g
+end
+
+-- Opaque bounds of a pixel grid (alpha > 0).
+function M.gridBounds(g)
+  local minx, miny, maxx, maxy = g.w, g.h, -1, -1
+  for y = 0, g.h - 1 do for x = 0, g.w - 1 do
+    if g.px[y][x][4] > 0 then
+      minx = math.min(minx, x); maxx = math.max(maxx, x)
+      miny = math.min(miny, y); maxy = math.max(maxy, y)
+    end
+  end end
+  return minx, miny, maxx, maxy
+end
+
+-- Area-average resize by an exact factor s (< 1), the same for every frame (A2). Output is
+-- ceil(w * s) × ceil(h * s); premultiplied alpha, like areaResize.
+function M.areaScale(g, s)
+  local w, h = math.ceil(g.w * s), math.ceil(g.h * s)
+  local k = 1 / s
+  local out = { w = w, h = h, px = {} }
+  for ty = 0, h - 1 do
+    out.px[ty] = {}
+    local y0, y1 = ty * k, math.min(g.h, (ty + 1) * k)
+    for tx = 0, w - 1 do
+      local x0, x1 = tx * k, math.min(g.w, (tx + 1) * k)
+      local r, gg, b, a, area = 0, 0, 0, 0, 0
+      for yy = math.floor(y0), math.min(g.h - 1, math.ceil(y1) - 1) do
+        local wy = math.min(y1, yy + 1) - math.max(y0, yy)
+        for xx = math.floor(x0), math.min(g.w - 1, math.ceil(x1) - 1) do
+          local wx = math.min(x1, xx + 1) - math.max(x0, xx)
+          local p = g.px[yy][xx]
+          local wgt = wx * wy
+          local al = p[4] / 255
+          r = r + p[1] * al * wgt; gg = gg + p[2] * al * wgt; b = b + p[3] * al * wgt
+          a = a + al * wgt; area = area + wgt
+        end
+      end
+      if a > 0 then out.px[ty][tx] = { r / a, gg / a, b / a, a / area }
+      else out.px[ty][tx] = { 0, 0, 0, 0 } end
+    end
+  end
+  return out
+end
+
+-- cleanAt's pipeline at a fixed scale instead of a fixed height (A2: every frame at the same scale).
+function M.cleanScaled(pal, src, s)
+  local q = M.quantize(pal, M.areaScale(src, s), 0.5, M.characterColours(pal))
+  M.despeckle(q)
+  M.smoothLone(q, { [M.paletteIndex(pal, "outline")] = true })
+  M.outline(q, M.paletteIndex(pal, "outline"))
+  M.despeckle(q)
+  return q
+end
+
 -- Nearest palette entry by "redmean" weighted RGB distance.
 -- `allow` (optional) is a set of usable indices.
 function M.nearest(pal, r, g, b, allow)
