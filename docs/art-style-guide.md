@@ -18,6 +18,19 @@ a whole-number upscale with no smoothing, then a smooth shrink to fit, so pixels
 - Court: white walls, red lines, light wood floor (like the Hogg courts). Bright and readable. The **ball must stand out from every background** (walls and floor), with a dark shadow under it on the floor.
 - Players: a darker outline (or selective outlining) so they read against the floor.
 
+**The palette (A1, 2026-10-20):** `art/palette/hogg-squash.gpl`, 36 colours (hex values in `theme.md`). Load it in Aseprite and keep sprites in indexed mode on it. Characters use only the neutrals, reds, skin and hair; wood, glass, effects and the Mission colours are for the court and UI. New colours go into the `.gpl` file (up to 48), never ad hoc.
+
+**Kit swap (P2 / CPU, white and black):** recolour these palette entries, and nothing else:
+
+| P1 (Hogg red) | → P2 / CPU (white) |
+|---|---|
+| red 1 `#4a0610` | grey 1 `#5a5962` |
+| red 2 `#7a0a14` | grey 2 `#8a8a94` |
+| tin `#a50d26` | grey 3 `#b4b4bc` |
+| Hogg red `#c8102e` | white kit shade `#e6e6ea` |
+| kit red `#e8202a` | front wall `#f4f4f0` |
+| red highlight `#ff5a52` | white `#ffffff` |
+
 ## 3. Sprites needed for v1 (one character)
 Viewed from behind, like the arcade.
 
@@ -31,6 +44,8 @@ Viewed from behind, like the arcade.
 | Dive + get up | dive reach plus recovery lockout |
 | Celebrate / dejected | optional for v1 |
 
+**Height and sizes (decided in A1):** on screen the character is **70 px tall at the front wall to 100 px at the back** (`heightAt` in `js/render/actors.js`). The art is drawn and cleaned **at 100 px only** (head to soles; the racket may stick out above), and the game scales it to the exact height at draw time **with smoothing on** (`docs/decisions.md`, "Sprites: one 100 px sheet, scaled smoothly"). So each animation is one sheet, `player-100.png` + `.json`, with a `feet` slice whose pivot is the ground point between the feet.
+
 The v1 character is an **adult player in red and black**. The CPU and P2 in versus use the same character, **palette-swapped** (different shirt colour). No second character needed.
 
 Also needed: the ball + shadow, landing marker, front-wall impact ring, the court (front wall, side walls, floor and lines, tin; **no back wall or crowd in v1**), score panel, a bitmap font, POINT / OUT / FAULT / GAME text, and simple menu screens.
@@ -41,9 +56,12 @@ Also needed: the ball + shadow, landing marker, front-wall impact ring, the cour
 3. One `.aseprite` file per character, with **tags** for each animation and a **slice or pivot** marking the feet (ground contact point).
 4. Export: **spritesheet PNG + JSON (array, with tags)**. Both Phaser and a plain-Canvas loader can read this.
 5. Source `.aseprite` files go in the repo (e.g. `art/`); exported PNG/JSON go in `public/hogg-squash/assets/`.
+6. **Scripted cleanup (A1):** `art/tools/pixel-lib.lua` does the first pass from a SpriteCook still to a clean sprite at an exact height: crop, area-average downscale, alpha cut at 50%, nearest palette colour (character colours only), 1 px outline, stray-pixel removal. `art/tools/a1-build.lua` shows how it's used. Hand fixes come after it.
+7. **Style reference:** SpriteCook concept 4 from A1 (asset `db1eb2a8-7816-44de-b78a-ee5810bd5790`) is the reference for every later character generation; pass it as `reference_asset_id` or `style_asset_ids`.
 
 **SpriteCook account (checked 2026-10-18):** free tier, **0 credits**. Still images cost roughly **5–25 credits each** depending on model and quality (e.g. GPT 2.5 Flare: 5 low / 8 medium / 25 high at 1K; it supports pixel art and transparency). Animations cost more. Credits are needed before any generation.
+**Update (2026-10-20, A1):** the account is now on the Apprentice tier (800 credits when A1 started). A1 spent 32 (`art/spritecook-manifest.md`). Flare bills a non-square 1K image as 2K and adds 8 credits per reference image.
 
 ## 5. Still to settle (in the build)
-- Character height on screen in pixels: this sets everything else. Fix it with one test sprite before drawing a full set. (At 640×360 a player around 90–120 px tall is a reasonable starting guess, to be confirmed against the court view.)
+- (Decided: character height 70–100 px on the smooth curve, art at 100 px, scaled smoothly; see §3.)
 - (Decided: no back wall and no crowd drawn in v1.)

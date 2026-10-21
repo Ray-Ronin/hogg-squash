@@ -21,8 +21,8 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **CP-C** Play-test 2 *(you)*: vs CPU at levels 1, 5 and 9
 - [x] **S6b** CP-C fix-ups: a gentler CPU at low levels, shot quality by level, short SOFT drops
 - [x] **S7** Gamepads
-- [ ] 💳 Approve SpriteCook spend for A1 *(you)*
-- [ ] **A1** Art: palette and style test sprite
+- [x] 💳 Approve SpriteCook spend for A1 *(you)*
+- [x] **A1** Art: palette and style test sprite
 - [ ] 💳 Approve SpriteCook spend for A2 *(you)*
 - [ ] **A2** Art: character animations, part 1 (ready, run, serve)
 - [ ] 💳 Approve SpriteCook spend for A3 *(you)*
@@ -630,8 +630,9 @@ These apply to A1–A5:
   - export as spritesheet PNG + JSON (array, with tags and slices) to `public/hogg-squash/assets/`.
 - Source `.aseprite` files go in `art/`.
 - **Needs:** the SpriteCook connector signed in and credits on the account (the account had 0 credits on 2026-10-18), plus Aseprite and its connection.
-- **Three sizes (CP-A):** every character animation is generated once at 100 px. It is then downscaled to 84 and 68 px in Aseprite and cleaned up again at each size, with no extra SpriteCook credits. Each size is its own sheet (`player-100`, `player-84`, `player-68`, each a `.png` + `.json`) with identical tags, frame counts, durations and `feet` slice. This takes about three times the cleanup work of one size.
-- **Smooth height (after S3):** in the game the character's height now changes smoothly with depth (68 → 100 px), not in three steps. A1 tries three ways for the sprites to follow it and the owner picks one: scaling the 100 px art at draw time, exporting many sizes (about every 2–4 px) downscaled automatically, or scaling the nearest of the three hand-cleaned sizes (see `docs/decisions.md`). A2 and A3 then export whatever A1 picked. The "Three sizes" rule above applies until then, and is replaced if A1 picks otherwise.
+- **One size, scaled smoothly (A1, 2026-10-20; replaces "Three sizes" and "Smooth height" below):** every character animation is made and cleaned **at 100 px only**, one sheet `player-100.png` + `.json` (tags, durations, `feet` slice). The game scales it to `heightAt(z)` at draw time with smoothing on (method 1b; `docs/decisions.md`, "Sprites: one 100 px sheet, scaled smoothly"). No 84 or 68 px sheets. Style reference for every character generation: A1's concept 4 (`art/spritecook-manifest.md`). First-pass cleanup: `art/tools/pixel-lib.lua`.
+- *(Superseded by A1)* **Three sizes (CP-A):** every character animation is generated once at 100 px. It is then downscaled to 84 and 68 px in Aseprite and cleaned up again at each size, with no extra SpriteCook credits. Each size is its own sheet (`player-100`, `player-84`, `player-68`, each a `.png` + `.json`) with identical tags, frame counts, durations and `feet` slice. This takes about three times the cleanup work of one size.
+- *(Settled by A1)* **Smooth height (after S3):** in the game the character's height now changes smoothly with depth (68 → 100 px), not in three steps. A1 tries three ways for the sprites to follow it and the owner picks one: scaling the 100 px art at draw time, exporting many sizes (about every 2–4 px) downscaled automatically, or scaling the nearest of the three hand-cleaned sizes (see `docs/decisions.md`). A2 and A3 then export whatever A1 picked. The "Three sizes" rule above applies until then, and is replaced if A1 picks otherwise.
 - **After CP-B:** the 68–100 px range is confirmed, and since S4b the height follows one smooth curve (`heightAt`: ≈70 px at the front wall to 100 at the back, no flat ends). The owner leans towards **one sprite, scaled to fit** (method 1, the least art work), but wants to see real pixel art first, so A1 still shows all three methods, method 1 first.
 - **Order:** A1–A3 only touch art files, so they can be run earlier, in parallel with S2–S7, if you like. A1 can run any time after CP-A. A2 and A3 wait for A1's method (CP-B has confirmed the range). A3 also needs the swing and dive timings (S4, and S4b's 2 s dive).
 
@@ -678,18 +679,18 @@ No game code changes. Never use ROM/MAME/Gaelco images as references. Finish wit
 **In scope**
 - After the spend gate, animate from the A1 base in SpriteCook: ready/idle, run sideways (one direction, mirrored for the other), run toward the front wall, run toward the back, and serve.
 - Aseprite cleanup as in the shared rules. Tags: `ready`, `run_side`, `run_up`, `run_down`, `serve`. Add a `feet` slice. Set frame timings.
-- Downscale to 84 and 68 px and clean each size (shared rules, "Three sizes"), or export what A1 picked instead (for method 1, only the 100 px sheet).
-- Export `public/hogg-squash/assets/player-100.png` + `player-100.json`, and the same for `-84` and `-68`.
+- 100 px only (A1 picked one sheet, scaled smoothly in the game): no 84 or 68 px sizes.
+- Export `public/hogg-squash/assets/player-100.png` + `player-100.json`.
 
 **Not in scope:** swings and dive (A3), game code.
 
 **Depends on:** A1 (the smooth-height method), CP-B (range confirmed), and the 💳 approval line above it.
 
-**Main files:** `art/character/player.aseprite`, `public/hogg-squash/assets/player-{100,84,68}.png`, `public/hogg-squash/assets/player-{100,84,68}.json`, `art/spritecook-manifest.md`.
+**Main files:** `art/character/player.aseprite`, `public/hogg-squash/assets/player-100.png`, `public/hogg-squash/assets/player-100.json`, `art/spritecook-manifest.md`.
 
 **Done when…**
-- Each tag loops cleanly in Aseprite's preview with no height jumps or foot sliding, at every size.
-- Each size's JSON contains the same tags, frame counts and durations, and the `feet` slice.
+- Each tag loops cleanly in Aseprite's preview with no height jumps or foot sliding.
+- The JSON contains every tag with its frame durations, and the `feet` slice.
 - The manifest is updated, and `npm test` passes.
 
 **You check or decide at the end:** approve the run and serve animations.
@@ -697,7 +698,7 @@ No game code changes. Never use ROM/MAME/Gaelco images as references. Finish wit
 **Starter prompt**
 ```text
 We're doing Session A2 of docs/plan.md: "Art: character animations, part 1 (ready, run, serve)".
-Read CLAUDE.md, docs/decisions.md ("Camera and character size"), docs/art-style-guide.md and docs/plan.md ("Art sessions: shared rules" + A2), plus art/spritecook-manifest.md from A1. Check A1 and CP-B are ticked (CP-B confirmed the 68–100 px range; A1 picked how the sizes are made, so export the sheets A1's choice needs).
+Read CLAUDE.md, docs/decisions.md ("Camera and character size"), docs/art-style-guide.md and docs/plan.md ("Art sessions: shared rules" + A2), plus art/spritecook-manifest.md from A1. Check A1 and CP-B are ticked. A1 settled the sizes: one 100 px sheet only (the game scales it smoothly), with concept 4 as the style reference and art/tools/pixel-lib.lua for the first cleanup pass.
 First check my SpriteCook balance and list the planned generations with estimated credits, then STOP and wait for my OK.
 No game code changes. Finish with "Done when", tick A2, add a Session log entry, and commit. Ask me before pushing.
 ```
@@ -709,17 +710,17 @@ No game code changes. Finish with "Done when", tick A2, add a Session log entry,
 **In scope**
 - After the spend gate, animate in SpriteCook: forehand, backhand, overhead, and dive (left and right) + get-up. Celebrate and dejected only if the budget allows.
 - **Timing:** read the swing constants in `js/sim/player.js` (from S4). The contact frame must start 7 sim frames (≈122 ms) after the swing begins, and the recovery must last as long as the sim's recovery. Mark the contact frame (frame user data `contact`, or a `contact` tag). As built in S4 and S4b (check `SWING` and `DIVE`): a swing is 18 frames in all (contact on frame 7, ≈0.31 s), and a dive is 115 frames (contact on frame 7, then about 1.9 s lying down and getting up; 2 s in all, set at CP-B).
-- Cleanup, tags, `feet` slice, at every size A1's method needs (all three for the shared rules' "Three sizes"; only 100 px for method 1). Re-export `player-{100,84,68}.png` / `.json` with all tags.
+- Cleanup, tags, `feet` slice, at 100 px only (A1's method). Re-export `player-100.png` / `.json` with all tags.
 
 **Not in scope:** game code, court art.
 
 **Depends on:** A2, S4b (the 2 s dive), and the 💳 approval line above it.
 
-**Main files:** `art/character/player.aseprite`, `public/hogg-squash/assets/player-{100,84,68}.png`, `public/hogg-squash/assets/player-{100,84,68}.json`, `art/spritecook-manifest.md`.
+**Main files:** `art/character/player.aseprite`, `public/hogg-squash/assets/player-100.png`, `public/hogg-squash/assets/player-100.json`, `art/spritecook-manifest.md`.
 
 **Done when…**
-- In Aseprite, each swing's contact frame is at 122 ms ± one frame and its total length matches the sim, at every size.
-- All tags are in every size's JSON. The manifest is updated, and `npm test` passes.
+- In Aseprite, each swing's contact frame is at 122 ms ± one frame and its total length matches the sim.
+- All tags are in the JSON. The manifest is updated, and `npm test` passes.
 
 **You check or decide at the end:** approve the swings and the dive.
 
@@ -740,10 +741,10 @@ No game code changes. Finish with "Done when", tick A3, add a Session log entry,
 **In scope**
 - `js/engine/assets.js`: loads images and JSON, with a simple loading state.
 - `js/render/sprites.js`: reads Aseprite JSON (frames, durations, tags, slices/pivot) and runs a per-player animation player. Animation is chosen from sim state (ready, run direction, swing type, dive, serve, recovery). Animation time counts in sim frames, so the contact frame lines up with the hit.
-- Palette swap done once at load: an offscreen canvas recolours each of the three sheets from a colour→colour table.
-- Sprites drawn at the smooth height from `heightAt` in `js/render/actors.js`, by the method A1 picked. They're positioned at the projected feet point, in depth order. A change of size keeps the current tag and frame, so the animation doesn't restart.
+- Palette swap done once at load: an offscreen canvas recolours the 100 px sheet from a colour→colour table (the six reds → whites in `docs/art-style-guide.md` §2).
+- Sprites drawn at the smooth height from `heightAt` in `js/render/actors.js`, by A1's method: the 100 px frame scaled to that height with `imageSmoothingEnabled = true` and `imageSmoothingQuality = 'high'`, for the player sprites only (smoothing off again for everything else). Place the `feet` pivot on the projected feet point. They're positioned at the projected feet point, in depth order. A change of size keeps the current tag and frame, so the animation doesn't restart.
 - Placeholder boxes kept behind a debug toggle.
-- `test/sprites.test.js`: parses all three exported `player-*.json` files and checks that every expected tag exists in each, that frame counts and durations match across sizes, and that the contact frame timing matches the sim constants.
+- `test/sprites.test.js`: parses `player-100.json` and checks that every expected tag exists, that it has the `feet` slice, and that the contact frame timing matches the sim constants.
 
 **Not in scope:** court, ball and HUD art (S9), menus.
 
@@ -1255,3 +1256,13 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Checked in the browser** (http://localhost:8787/hogg-squash/?dev, with `navigator.getGamepads` faked and `hogg.step` driving the loop): 2P on two pads (join order, swap both ways, A closes without serving, the stick moves P1, A serves), Start from either pad pauses and unpauses and the sim stops between, unplug → overlay and the game waits, replug alone does nothing, replug + B carries on, unplug + Enter carries on with the keyboard; 1P: a pad joins P1, a second pad is turned away, Start closes the overlay, D-pad + B serve and a point is played; no console errors.
   - **Checked by the owner with two real Xbox controllers** (Chrome or Edge): both joined and worked; stick and D-pad both fine (dead zone neither stiff nor loose); 2P on two pads; keyboard + pad both ways; Start pauses; unplugging shows "Controller disconnected". The buttons felt right. **Not checked with real hardware:** PlayStation pads, Firefox, and replugging + a press to carry on (the owner reported the disconnect notice; carrying on was checked with faked pads).
   - **For S10:** the overlay (`render/pads.js`) and the join/swap/confirm handling in `main.js`'s `pollPads` are the parts the assignment screen replaces; the seat functions in `actions.js` can stay. **For S11b:** a touch source plugs into `combineActions` beside the keys and the pad; `PadInput.any` and pad movement are what "a gamepad was used" should read for hiding the touch controls.
+- 2026-10-20, A1: palette and style test sprite. No game code changed; `npm test` 9/9 and `npm run typecheck` clean, as before.
+  - **Spend:** 32 of the 64 approved credits (one GPT 2.5 Flare round, medium, 1K square, 4 variations, no reference images). The optional refine round wasn't needed. Account: Apprentice tier, 768 credits left. Everything is in `art/spritecook-manifest.md`.
+  - **Base:** the owner picked concept 4 (asset `db1eb2a8-…`): red shirt with black side panels, black shorts with red stripes. It is the style reference for A2 and A3.
+  - **Palette:** `art/palette/hogg-squash.gpl`, 36 colours (Hogg red `#c8102e`, kit red `#e8202a`; full list in `docs/theme.md`). Characters use only the neutrals, reds, skin and hair.
+  - **Sprite:** the concept's 2859 colours, soft edges and 123 px height became a clean 100 px sprite (57 px wide) through a scripted pass, `art/tools/pixel-lib.lua`: crop, area-average downscale, alpha cut at 50%, nearest palette colour, 1 px outline, stray pixels removed. `art/tools/a1-build.lua` rebuilds every A1 output from the concept. `art/character/player.aseprite` (indexed, tag `ready`, `feet` slice with its pivot between the feet), plus `player-84` and `player-68` for the test only.
+  - **Kit swap:** P2 / CPU in white and black, six reds → whites (table in `docs/art-style-guide.md` §2). Approved by the owner.
+  - **Smooth height:** the ready frame at every height on `heightAt` (100 → 70 px) four ways, in `art/mockups/a1-smooth-height-strips.png` and `a1-smooth-height.gif`: 1 nearest-neighbour from 100 px, 1b the same smoothed, 2 an automatic cleanup every 2 px, 3 the nearest larger of three cleaned sizes. **The owner picked 1b** ("it looks the smoothest"): one 100 px sheet, scaled at draw time with smoothing on. Recorded in `docs/decisions.md` and `docs/art-style-guide.md`; the shared art rules, A2, A3 and S8 now use one `player-100` sheet.
+  - **Mockup:** `art/mockups/a1-court-mockup.png`, on the game's own court (`drawCourt` rendered at 640×360 in the browser, kept as `a1-court-base.png`), with players at the back (97 px), middle (82 px, swapped kit) and front (71 px), placed with `project()` and `heightAt()`. The mockup uses nearest-neighbour scaling (method 1), made before the pick; the 1b look is in the GIF.
+  - **Checked:** all "Done when" items. The owner saw and approved the palette, the sprite at the three sizes and the swapped kit, and picked the method; credits are within the approval; `npm test` passes and the page is unchanged (no files under `public/` changed).
+  - **For S8:** with smoothing on, the player sprite's colours blend at in-between sizes, so don't palette-check rendered frames. Turn smoothing back off after drawing the players. **For A2/A3:** run each SpriteCook frame through `pixel-lib.lua` at the same scale (the A1 concept was 123 px tall, so ×100/123), then fix by hand, so every frame keeps the same height.

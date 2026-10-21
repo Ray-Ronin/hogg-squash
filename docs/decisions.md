@@ -40,6 +40,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **Internal resolution: 640×360** (16:9). Scales cleanly to 1280×720 (2×), 1920×1080 (3×), 2560×1440 (4×).
 - **The game fills the window (2026-10-18, after S3).** Instead of only whole-number scales with a border, the screen scales to fill the window with sharp-bilinear scaling (a whole-number upscale with no smoothing, then a smooth shrink to fit). Exact sizes (2×, 3×, 4×, so 1920×1080 fullscreen too) skip the smoothing and stay pixel-exact. `?scale=int` keeps the old whole-number-only behaviour. The page background matches the court's margin colour, so there's no visible box. **Confirmed at CP-B (2026-10-19):** sharp enough in a normal window, so it stays the default.
 - **Tools:** Aseprite (drawing, cleanup, animation, export) and **SpriteCook** (AI generation of concepts, base sprites and animations). See `art-style-guide.md` §4.
+- **Shared palette (2026-10-20, A1):** 36 colours in `art/palette/hogg-squash.gpl` (room to grow to 48). Hogg red is `#c8102e` (the court lines), the kit red `#e8202a`. Every sprite, court piece and UI element is locked to it. The colours are listed in `theme.md`.
 
 ## Theme (2026-10-18)
 - The game is themed on **Hogg Middle School** (Houston ISD), whose squash courts are used by **Mission Success** (Mission Squash Academy). The school's **colours and logos can be used**. See `theme.md`.
@@ -118,6 +119,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 ## Character (2026-10-18)
 - v1 character: an **adult player in red and black** (Hogg colours).
 - The CPU opponent and P2 in versus use the same character, **palette-swapped** to a different kit.
+- **Look and kits (2026-10-20, A1):** the base is SpriteCook concept 4 (`art/spritecook-manifest.md`): red shirt with black side panels, black shorts with red stripes, white socks and shoes. **P2 / CPU wear white and black:** the kit's reds become whites and greys, the black stays (the table is in `art-style-guide.md` §2).
 
 ## Court look (2026-10-18)
 - Like the Hogg courts: **white walls, red lines, light wood floor**. No court photos are needed.
@@ -138,15 +140,19 @@ Settled decisions. Newest at the bottom of each section. If something here confl
   - These are starting values. S3 draws the placeholder boxes this way, and CP-B confirms the sizes and edges (or drops to two sizes).
   - Art is generated once at 100 px. The smaller sizes are downscaled and cleaned in Aseprite (no extra SpriteCook credits). Every size has the same tags, frame counts and timings.
 - **Smooth height, not steps (2026-10-18, after S3).** Played in S3, the sizes were right, but the jump between bands was jarring. The placeholder boxes now change height smoothly with the feet z, 1 px at a time, through **68 px at z 39, 84 px at z 100 and 100 px at z 155** (the middle of each old band), holding 68 in front and 100 behind (`CHARACTER_HEIGHT` and `heightAt` in `js/render/actors.js`). There are no bands or hysteresis any more.
-  - **Still open, settled in A1: how the sprites get smooth sizes.** Pixel art can't be resized freely without some cost, so A1 tries the options on the test sprite and the owner picks:
+  - **Settled in A1 (method 1, smoothed; see "Sprites: one 100 px sheet, scaled smoothly" below): how the sprites get smooth sizes.** Pixel art can't be resized freely without some cost, so A1 tries the options on the test sprite and the owner picks:
     1. scale the 100 px art at draw time to the exact height (no extra art work; pixels go slightly uneven or soft while the size changes);
     2. export many sizes, about every 2–4 px, downscaled automatically in Aseprite with only light cleanup;
     3. keep a few hand-cleaned sizes (100 / 84 / 68) and scale the nearest one at draw time for the heights in between.
-  - Until A1 decides, the three hand-cleaned sizes below stay the art plan.
+  - A1 replaced the three hand-cleaned sizes above with one 100 px sheet.
 - **One smooth curve over the whole court (2026-10-19, CP-B).** The 68–100 px range is right, but the S3 curve didn't look natural: it stops growing near both walls and bends at mid-court. It is replaced (in S4b) by one smooth curve with no flat ends: height = 100 × √(perspective scale at z ÷ scale at the back), about 70 px at the front wall, 82 at mid-court and 100 at the back. That's half-strength perspective.
   - **As built (S4b):** `heightAt` in `js/render/actors.js`: **70 px at z 12, 73 at z 39, 77 at z 70, 82 at z 100, 87 at z 130, 93 at z 155, 100 at z 179**, rounded to whole pixels (at most 0.4 px of change per running frame). The box's left and right edges are each rounded from the unrounded size, so neither edge steps back and forth as the player walks (rounding the width first did, by 1 px, near the centre). `?curve=old` shows the S3 curve for comparison.
   - **For the sprites, the owner leans towards one sprite scaled to fit** (method 1 above), but wants to see real pixel art first. A1 still shows all three methods and the owner picks there.
 - **The S4b height curve is confirmed (2026-10-20, CP-C):** it looks natural, with no difference visible against the old one while moving.
+- **Sprites: one 100 px sheet, scaled smoothly (2026-10-20, A1).** The owner compared the A1 test sprite done four ways (nearest-neighbour scaling of the 100 px art, the same with smoothing, an automatic cleanup every 2 px, and three hand-cleaned sizes) and picked **the 100 px art scaled at draw time with smoothing on** ("method 1b": it looks the smoothest while the size changes).
+  - The character art is made and cleaned **at 100 px only**: one sheet per kit (`player-100.png` + `.json`). No 84 or 68 px sheets (the A1 ones in `art/character/` were only for the test).
+  - At draw time the game scales the sheet to `heightAt(z)` with `imageSmoothingEnabled = true` (quality `high`) for the player sprites only, and turns smoothing off again for everything else. At the back wall (100 px) it is drawn 1:1, pixel-exact; nearer the front the edges are slightly soft. Smoothing blends colours, so in-between sizes aren't locked to the palette; that's accepted.
+  - The swapped kit is recoloured once at load from the 100 px sheet, then scaled the same way.
 - **Ball feel and test feed:** the ball feels like the arcade, and the S1 feed (back to about the short line) is fine. No change.
 
 ## Screens (2026-10-18)

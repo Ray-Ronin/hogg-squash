@@ -1,0 +1,51 @@
+GIMP Palette
+Name: Hogg Squash
+Columns: 8
+#
+# The shared palette for every Hogg Squash sprite, court piece and UI element (A1, 2026-10-20).
+# 36 colours. Sprites are locked to it in Aseprite. Add new colours here (up to 48), never ad hoc.
+#
+# Neutrals and outline
+ 11  10  13	outline
+ 22  22  26	margin (page and court margin)
+ 37  36  41	black kit
+ 58  57  64	black kit light
+ 90  89  98	grey 1
+138 138 148	grey 2
+180 180 188	grey 3
+217 217 211	side wall
+230 230 234	white kit shade
+244 244 240	front wall
+255 255 255	white
+# Hogg red
+ 74   6  16	red 1 (deepest)
+122  10  20	red 2
+165  13  38	tin
+200  16  46	Hogg red (court lines)
+232  32  42	kit red
+255  90  82	red highlight
+# Skin
+ 62  34  22	skin 1 (deepest)
+107  58  36	skin 2
+156  82  50	skin 3
+196 106  64	skin 4
+232 139  88	skin 5
+247 173 124	skin 6 (highlight)
+# Hair
+ 30  20  16	hair dark
+ 59  38  28	hair
+# Wood floor
+143 106  62	wood 1
+180 138  86	wood 2
+207 167 114	wood 3
+223 189 140	floor
+236 211 168	wood highlight
+# Glass
+111 135 148	glass shade
+159 180 192	glass
+# Effects
+212 168  58	flash shade
+255 236 140	flash
+# Mission Success nod (wall boards)
+245 130  32	Mission orange
+  0 161 154	Mission teal
