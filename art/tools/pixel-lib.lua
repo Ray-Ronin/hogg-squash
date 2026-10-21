@@ -204,6 +204,40 @@ function M.despeckle(q)
   for _, p in ipairs(drop) do q.px[p[2]][p[1]] = 0 end
 end
 
+-- Drop 8-connected opaque islands smaller than `min` pixels (A3: the stray ball and blur flecks the generator
+-- leaves near the racket). The largest island always stays.
+function M.dropIslands(q, min)
+  local seen, islands, big = {}, {}, 0
+  for y = 0, q.h - 1 do seen[y] = {} end
+  for y = 0, q.h - 1 do for x = 0, q.w - 1 do
+    if q.px[y][x] ~= 0 and not seen[y][x] then
+      local list, stack = {}, { { x, y } }
+      seen[y][x] = true
+      while #stack > 0 do
+        local p = table.remove(stack)
+        list[#list + 1] = p
+        for dy = -1, 1 do for dx = -1, 1 do
+          local nx, ny = p[1] + dx, p[2] + dy
+          if at(q, nx, ny) ~= 0 and not seen[ny][nx] then
+            seen[ny][nx] = true
+            stack[#stack + 1] = { nx, ny }
+          end
+        end end
+      end
+      islands[#islands + 1] = list
+      big = math.max(big, #list)
+    end
+  end end
+  local dropped = 0
+  for _, list in ipairs(islands) do
+    if #list < min and #list < big then
+      for _, p in ipairs(list) do q.px[p[2]][p[1]] = 0 end
+      dropped = dropped + #list
+    end
+  end
+  return dropped
+end
+
 -- Recolour lone pixels whose four side neighbours share one other opaque colour (colour noise).
 function M.smoothLone(q, keep)
   local fix = {}

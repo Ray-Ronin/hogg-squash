@@ -46,7 +46,9 @@ Viewed from behind, like the arcade.
 
 **Height and sizes (decided in A1):** on screen the character is **70 px tall at the front wall to 100 px at the back** (`heightAt` in `js/render/actors.js`). The art is drawn and cleaned **at 100 px only** (head to soles; the racket may stick out above), and the game scales it to the exact height at draw time **with smoothing on** (`docs/decisions.md`, "Sprites: one 100 px sheet, scaled smoothly"). So each animation is one sheet, `player-100.png` + `.json`, with a `feet` slice whose pivot is the ground point between the feet.
 
-**The sheet as built in A2** (`public/hogg-squash/assets/player-100.png` + `.json`, from `art/character/player.aseprite`; rebuild with `art/tools/a2-build.lua`, export with `art/tools/a2-export.sh`): indexed (palette-locked), 62×115 px frames in rows of 8, Aseprite JSON array with `frameTags` and the `feet` slice (pivot at x 27, y 113 in the frame). Every frame is at A1's scale (×100/123), with the soles on the same line.
+**The sheet as built in A2 and A3** (`public/hogg-squash/assets/player-100.png` + `.json`, from `art/character/player.aseprite`; rebuild with `art/tools/a2-build.lua` (hand fixes in `a2-fixes.lua`), export with `art/tools/a2-export.sh`): indexed (palette-locked), 73 frames of 150×150 px in rows of 8, Aseprite JSON array with `frameTags` and the `feet` slice (pivot at x 73, y 148 in the frame). Every frame is at A1's scale (×100/123), with the soles on the same line. The frames grew in A3 because the dive lies across 148 px and the overhead's racket reaches 48 px above the head. In A2 they were 62×115 with the pivot at x 27, y 113; A2's frames are pixel-for-pixel the same relative to the pivot.
+
+Tags that play once have `"repeat": "1"`; tags with a contact frame have `"data": "contact=<n>"`, where n is the 0-based frame within the tag (the same number as in the frame name, e.g. `forehand 3`). Mirror a tag about the `feet` pivot (x → 2 × 73 − x), not the frame centre.
 
 | Tag | Frames | Timing | Notes |
 |---|---|---|---|
@@ -55,8 +57,12 @@ Viewed from behind, like the arcade.
 | `run_up` | 7 | 75 ms each, loop | toward the front wall |
 | `run_down` | 7 | 75 ms each, loop | backpedalling, still facing the front wall |
 | `serve` | 6 | 40, 40, 42, 64, 64, 64 ms, once | the sim's swing: contact on frame 4 at 122 ms, back to `ready` at 314 ms |
+| `forehand` | 8 | 40, 40, 42, then 39, 38, 38, 38, 39 ms, once | racket back high on the right, contact on frame 4 (122 ms) with the racket out to the right at shoulder height, follow-through across to the left; done at 314 ms (`SWING`) |
+| `backhand` | 8 | as `forehand` | racket taken back behind the head to the left, contact on frame 4 (122 ms) with the racket on the left at shoulder height, follow-through out to the right; done at 314 ms |
+| `overhead` | 8 | as `forehand` | racket dropped behind the back, contact on frame 4 (122 ms) with the racket straight up; in frames 5–7 the follow-through passes in front of the body, so the racket is mostly hidden for about 115 ms |
+| `dive` | 14 | 40, 40, 42, 100, 6 × ≈230, 4 × 100 ms, once | dives to the right (mirror it for left): lunge, full stretch on contact (frame 4, 122 ms), lies flat 1.4 s with the racket on the floor, springs back up; done at 2003 ms (`DIVE`, 115 sim frames) |
 
-The runners stand up straighter than the crouched ready pose, so their heads are 4–10 px higher at the same scale. That is the pose, not a size change.
+The runners stand up straighter than the crouched ready pose, so their heads are 4–10 px higher at the same scale. That is the pose, not a size change. Mirrored, `run_side` and `dive` hold the racket in the left hand.
 
 The v1 character is an **adult player in red and black**. The CPU and P2 in versus use the same character, **palette-swapped** (different shirt colour). No second character needed.
 
