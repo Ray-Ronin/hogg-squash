@@ -43,16 +43,17 @@ import { loadAssets } from './engine/assets.js';
 import { parseSheet, buildAtlas, createAnimator, stepAnimator, frameAt, KIT_SWAP } from './render/sprites.js';
 import { createEffects } from './render/effects.js';
 import { drawHud, loadLogo, LOGO } from './render/hud.js';
-import { useFont } from './render/text.js';
+import { useFont, drawText, lineHeight } from './render/text.js';
 import { useUi } from './render/ui.js';
 import { useFx } from './render/fx.js';
 import { drawDebug, createShotLog } from './render/debug.js';
-import { makeUi, navigate, matchOver, autoPause, assignInMatch, DEFAULT_SETTINGS } from './ui/screens.js';
+import { makeUi, navigate, matchOver, autoPause, assignInMatch, showsMatch, DEFAULT_SETTINGS } from './ui/screens.js';
 import { drawTitle, useTitle } from './ui/title.js';
 import { drawSetup } from './ui/setup.js';
 import { drawAssign } from './ui/assign.js';
 import { drawPause } from './ui/pause.js';
 import { drawResult } from './ui/result.js';
+import { VERSION } from './version.js';
 
 const query = new URLSearchParams(location.search);
 const to = Number(query.get('to'));
@@ -341,6 +342,9 @@ function render() {
         anims: animNames() });
     }
   }
+  // the version, small in the bottom-right corner: dark on the title's maple floor, grey on the match's margin
+  drawText(ctx, showsMatch(ui) ? 'small-grey' : 'small-dark', `v${VERSION}`, WIDTH - 4, HEIGHT - lineHeight('small') - 1,
+    'right');
   screen.present();
 }
 

@@ -182,3 +182,18 @@ test('the font has every character the screens draw, and the lines fit', () => {
     }
   }
 });
+
+test('the version: 0.<session>.<fix> as in package.json, in the font, clear of the footer line', async () => {
+  const { VERSION } = await import('../public/hogg-squash/js/version.js');
+  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  assert.equal(VERSION, pkg.version, 'js/version.js and package.json agree');
+  assert.match(VERSION, /^\d+\.\d+\.\d+$/);
+  const fonts = parseFonts(JSON.parse(fs.readFileSync('public/hogg-squash/assets/font.json', 'utf8')));
+  const text = `v${VERSION}`;
+  for (const font of ['small-grey', 'small-dark']) {
+    for (const ch of text) assert.ok(glyphFor(fonts[font], ch), `${font} has ${ch}`);
+  }
+  // drawn right-aligned at x 636 on the footer's row; the footer is centred on x 320 (its longest form)
+  const footer = measureWith(fonts, 'small-grey', 'Esc pause     Controllers: A hard  B/X soft  Start pause  (any button joins)');
+  assert.ok(320 + footer / 2 + 8 <= 636 - measureWith(fonts, 'small-grey', 'v10.99.99'), 'a long version still clears the footer');
+});

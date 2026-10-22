@@ -137,7 +137,8 @@ export function drawHud(ctx, w, opts) {
     lines.forEach((l, i) => drawText(ctx, i === 0 ? 'small' : 'small-grey', l, cx, LAYOUT.KEYS_Y + i * 11, 'center'));
   }
   drawText(ctx, 'small-grey', opts.footer, WIDTH / 2, HEIGHT - lineHeight('small') - 1, 'center');
-  if (opts.slow > 1) drawText(ctx, 'small-red', `SLOW x${opts.slow}`, WIDTH - 4, HEIGHT - lineHeight('small') - 1, 'right');
+  // bottom-left: the bottom-right corner holds the version (main.js)
+  if (opts.slow > 1) drawText(ctx, 'small-red', `SLOW x${opts.slow}`, 4, HEIGHT - lineHeight('small') - 1);
 
   // front wall
   const cx = WIDTH / 2;

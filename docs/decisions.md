@@ -184,6 +184,12 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **Pause menu on Esc** (and Start on a gamepad). Pause also triggers automatically when the window loses focus or leaves fullscreen.
 - **Options screen:** key remapping and a key test.
 
+## Version numbers (2026-10-22, the owner's call)
+- **`0.<session>.<fix>`**, shown small in the bottom-right corner of every screen (`js/version.js`; `package.json` matches).
+- The middle number is always the last finished session: S10 is **0.10.0**, S11 is 0.11.0, S12 is 0.12.0.
+- A **b session** or any smaller update after a session bumps the last number: S11b is 0.11.1, a fix after S10 is 0.10.1.
+- **1.0.0 is the full release** (CP-F).
+
 ## Art production (2026-10-18)
 - **Claude does the Aseprite cleanup** of SpriteCook output, through the Aseprite connection.
 - **SpriteCook credits:** the owner will upgrade the account when generation is needed. Ask before spending.

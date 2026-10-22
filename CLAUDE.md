@@ -13,6 +13,10 @@ Read `docs/decisions.md` first, then `docs/plan.md` (its rules, your session, an
 - **No build step (yet).** This was decided on purpose. Write plain JavaScript ES modules that run directly from `public/`. Don't add Vite, TypeScript compilation or npm runtime dependencies without asking.
 - ES modules don't load from `file://`. Test locally with a static server (`npx wrangler dev`, or `python -m http.server` inside `public/`).
 
+## Version number
+- `public/hogg-squash/js/version.js` holds the version shown in the game's bottom-right corner; `package.json`'s `version` must match (a test checks).
+- `0.<session>.<fix>`: a session sets the middle number to its own (S11 → 0.11.0); a b session or smaller update bumps the last (0.11.1). 1.0.0 is the full release. See `docs/decisions.md`, "Version numbers".
+
 ## Commit messages (the public build log)
 - https://roninray.com/build/ lists every commit in this repo. Its summaries come from a `Build-log:` line in each commit message, so **every commit gets one**, not only session commits.
 - Put it in the trailer block at the very end of the message, on one line, directly above `Co-Authored-By:` (no blank line between them).
