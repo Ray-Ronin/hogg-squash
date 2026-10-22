@@ -14,7 +14,7 @@
 // menu items work by tapping. They show on the first touch and hide on a key press or pad use (no setting); 2P can't
 // be picked while they show. A portrait phone is told to turn sideways (and pauses).
 // The title's GO TO HOME goes back to the website's start page.
-// Debug keys: ` toggles the debug overlay, [ and ] change the level (1P; from the next rally), ' steps the court view:
+// Debug keys: ` toggles the debug overlay, ' steps the court view:
 // the painted court, the code court (with the code ball and effects), and the painted court with the code's lines
 // over it in cyan, for checking that they match.
 // URL options (debug shortcuts): ?mode=2p, ?level=1..9 or ?to=5|7|9|11 skips the menus and starts that match at once
@@ -41,7 +41,7 @@ import { createTouchControls, makeTouchState, touchShowing, noteTouch, noteKeyOr
 import { browserStore, loadLayouts, saveLayouts, helpLines, seatLabel } from './input/keymap.js';
 import { makeWorld, stepWorld } from './sim/world.js';
 import { makeCpu, cpuActions } from './sim/cpu.js';
-import { paramsFor, toLevel, LEVELS } from './sim/difficulty.js';
+import { paramsFor, toLevel } from './sim/difficulty.js';
 import { MATCH_LENGTHS } from './sim/match.js';
 import { useCamera } from './render/projection.js';
 import { drawCourt, useCourt, COURT_VIEWS } from './render/court.js';
@@ -105,8 +105,6 @@ let showDebug = false;
 let courtView = PAINTED_FITS ? (COURT_VIEWS.find(v => v === query.get('court')) ?? 'art') : 'code';
 /** The ball and effects follow the court view: the art, except on the code court. */
 const artOn = () => courtView !== 'code';
-/** A level chosen with [ or ] during a rally, waiting for the next one (null: none). */
-let nextLevel = /** @type {number | null} */ (null);
 /** Steps since the match was won (the result screen comes up after RESULT_DELAY). */
 let overSteps = 0;
 
@@ -129,7 +127,6 @@ function newMatch(s) {
   cpus = world.cpu.map((on, i) => (on ? makeCpu(world, /** @type {0 | 1} */ (i)) : null));
   effects = createEffects();
   if (sprites) sprites.anims = [createAnimator(), createAnimator()];
-  nextLevel = null;
   overSteps = 0;
   lastEvent = null;
   lastContact = null;
@@ -138,21 +135,6 @@ function newMatch(s) {
   for (const p of kept) joinPad(seats, p);
 }
 newMatch(nextSeed++);
-
-/** Play at this level from now: the world's pace and the CPUs' skill (they re-read it as a rally starts). @param {number} level */
-function applyLevel(level) {
-  world.params = paramsFor(level, !world.cpu[1]);
-  for (const c of cpus) if (c) c.rally = null;
-  nextLevel = null;
-}
-
-/** The debug key: step the level; it applies now if no serve has been struck yet, else at the next rally. @param {number} d */
-function stepLevel(d) {
-  if (!world.cpu[1]) return;               // 2P always plays at level 5's pace
-  const from = nextLevel ?? world.params.level;
-  const to = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, LEVELS.indexOf(from) + d))];
-  if (world.phase === 'serve') applyLevel(to); else nextLevel = to;
-}
 
 /**
  * One menu move, and what it asks of the match.
@@ -247,8 +229,6 @@ kb.onPress('Backslash', () => { showBoxes = !showBoxes; });
 kb.onPress('Quote', () => {
   if (PAINTED_FITS) courtView = COURT_VIEWS[(COURT_VIEWS.indexOf(courtView) + 1) % COURT_VIEWS.length];
 });
-kb.onPress('BracketLeft', () => stepLevel(-1));
-kb.onPress('BracketRight', () => stepLevel(1));
 
 // pausing without a key: the window loses focus, the tab is hidden, or fullscreen is left (the browser may keep the
 // Esc that leaves fullscreen to itself). F11's fullscreen isn't the Fullscreen API, so leaving it shows only as the
@@ -363,7 +343,6 @@ function simStep() {
   });
   const events = stepWorld(world, a1, a2);
   for (const e of events) {
-    if (e.type === 'newRally' && nextLevel !== null) applyLevel(nextLevel);
     if (e.type === 'ball') lastEvent = { ev: e.ev, frame: world.frame - 1 };
     else if (e.type === 'swing' || e.type === 'hit') lastContact = e;
   }
@@ -391,7 +370,7 @@ function drawMatch() {
     { landing: world.landing, size: SIZE, sprites: showBoxes ? null : sprites, racket: RACKET_SHIFT, art });
   effects.draw(ctx, world, 'front', SIZE, art);
   drawHud(ctx, world, {
-    help: { keys: layouts.map(helpLines), level: nextLevel ?? world.params.level },  // each side's keys (or the CPU's level)
+    help: { keys: layouts.map(helpLines), level: world.params.level },  // each side's keys (or the CPU's level)
     footer: `Esc pause     Controllers: A hard  B/X soft  Start pause${
       seats.some(s => s?.pad === null) ? '  (any button joins)' : ''}`,
     slow: SLOW,
@@ -420,7 +399,7 @@ function render() {
     } else if (ui.screen === 'pause') drawPause(ctx, ui);
     else if (ui.screen === 'result') drawResult(ctx, ui, world);
     if (showDebug) {
-      drawDebug(ctx, { stepsPerSec, world, heights, lastEvent, lastContact, shots: shotLog.shots, cpus, nextLevel,
+      drawDebug(ctx, { stepsPerSec, world, heights, lastEvent, lastContact, shots: shotLog.shots, cpus,
         anims: animNames() });
     }
   }
@@ -442,7 +421,6 @@ if (query.has('dev')) {
     get anims() { return animNames(); },
     get boxes() { return showBoxes; },
     set boxes(v) { showBoxes = v; },
-    get nextLevel() { return nextLevel; },
     /** @param {import('./ui/screens.js').Nav} n */ nav(n) { nav(n); render(); },
     /** @param {number} n */ step(n = 1) { for (let i = 0; i < n; i++) simStep(); render(); },
     get heights() { return [...heights]; },

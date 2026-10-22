@@ -34,8 +34,6 @@ const REFUSED = /** @type {Record<string, string>} */ ({
   Backquote: "That key is kept for testing the game",
   Backslash: "That key is kept for testing the game",
   Quote: "That key is kept for testing the game",
-  BracketLeft: "That key is kept for testing the game",
-  BracketRight: "That key is kept for testing the game",
 });
 
 /** Why a key can't be used for an action, or null if it can. @param {string} code */

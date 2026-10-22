@@ -31,7 +31,6 @@ import { SIM_HZ } from '../engine/loop.js';
  * @property {(import('../sim/player.js').SwingEvent & { side: number }) | null} lastContact
  * @property {Shot[]} shots     newest last
  * @property {(import('../sim/cpu.js').Cpu | null)[]} [cpus]  the CPU for each slot it plays
- * @property {number | null} [nextLevel]  a level waiting for the next rally
  * @property {string[]} [anims]  each player's animation, e.g. "forehand 3/8" ("<" = mirrored)
  */
 
@@ -157,10 +156,10 @@ export function drawDebug(ctx, d) {
     ? `serve aim  HARD ${xz(serveTarget(m.box, b.x / FP, b.z / FP, 'hard'))}  SOFT ${xz(serveTarget(m.box, b.x / FP, b.z / FP, 'soft'))}`
     : `serve aimed ${xz(w.serveTarget)}   landing ${xz(w.landing)}`;
   const lines = [
-    'keys  ` this overlay   [ ] level   \\ boxes   \' court view (painted, code, lines)',
+    'keys  ` this overlay   \\ boxes   \' court view (painted, code, lines)',
     `sim ${d.stepsPerSec.toFixed(1)} steps/s   frame ${w.frame}   ${w.phase} ${w.timer}`,
     `ball x${f1(b.x / FP)} y${f1(b.y / FP)} z${f1(b.z / FP)}`,
-    `level ${w.params.level}${d.nextLevel != null ? ` (next ${d.nextLevel})` : ''}  pace ${w.params.speed} gravity ${hex(w.params.gravity)}` +
+    `level ${w.params.level}  pace ${w.params.speed} gravity ${hex(w.params.gravity)}` +
       `  power ${w.params.powerMult} bounce ${w.params.bounceOffset}`,
     `speed ${mps.toFixed(1)} m/s  bounces ${b.bounces}${b.out ? '  OUT' : ''}`,
     ...w.players.map((pl, i) => `P${i + 1} x${f1(pl.x / FP)} z${f1(pl.z / FP)}  ${d.heights[i]}px  ` +
