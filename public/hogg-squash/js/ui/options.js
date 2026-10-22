@@ -1,6 +1,6 @@
 // @ts-check
 // The options screen, on a dark panel over the title art: each player's six keys (P1 and P2 side by side, a row per
-// action), then Laptop keys for P2 / Reset to defaults / Key test / Back. OK on a key waits for a new one (it shows
+// action), then Laptop keys for P2 / Reset to defaults / Key test / Touch controls: Auto, On or Off / Back. OK on a key waits for a new one (it shows
 // "?"); a key used twice shows red, with a warning on the message line. The moves and the key taken are screens.js's.
 import { WIDTH } from '../engine/screen.js';
 import { drawText, textWidth } from '../render/text.js';
@@ -8,12 +8,12 @@ import { drawPanel } from '../render/ui.js';
 import { ACTIONS, keyLabel, duplicates } from '../input/keymap.js';
 import { drawList, drawHighlight, BAR } from './menu.js';
 import { drawTitleBack } from './title.js';
-import { OPTION_ITEMS, KEY_CELLS, keyCell } from './screens.js';
+import { optionItems, KEY_CELLS, keyCell } from './screens.js';
 
 export const OPTIONS_HINT = 'Arrows: choose     Enter or A: change     Esc or B: back';
 
 /** The panel, the action names' column, and the centres of P1's and P2's key columns. */
-export const OPTIONS_LAYOUT = { x: 60, y: 10, w: 520, h: 338, NAMES_X: 120, COLS: [280, 420] };
+export const OPTIONS_LAYOUT = { x: 60, y: 4, w: 520, h: 352, NAMES_X: 120, COLS: [280, 420] };
 
 /** The note is a warning (a refusal or a key used twice), drawn red. @param {import('./screens.js').Ui} ui */
 function warning(ui) {
@@ -42,8 +42,8 @@ export function drawOptions(ctx, ui) {
     });
   });
 
-  drawList(ctx, OPTION_ITEMS, ui.sel - KEY_CELLS, cx, L.y + 46 + ACTIONS.length * BAR.ROW + 8,
-    { font: 'large-white', center: true });
+  drawList(ctx, optionItems(ui), ui.sel - KEY_CELLS, cx, L.y + 46 + ACTIONS.length * BAR.ROW + 4,
+    { font: 'large-white', center: true, base: KEY_CELLS });
   drawText(ctx, warning(ui) ? 'small-red' : 'small', ui.note, cx, L.y + L.h - 34, 'center');
   drawText(ctx, 'small-grey', OPTIONS_HINT, cx, L.y + L.h - 18, 'center');
 }

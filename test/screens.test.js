@@ -106,6 +106,8 @@ test('options: from the title and back, moving round the keys and buttons', () =
   run(ui, ['down']);
   assert.equal(OPTION_ITEMS[ui.sel - KEY_CELLS], 'LAPTOP KEYS FOR P2');
   run(ui, ['down', 'down', 'down']);
+  assert.equal(OPTION_ITEMS[ui.sel - KEY_CELLS], 'TOUCH CONTROLS');
+  run(ui, ['down']);
   assert.equal(OPTION_ITEMS[ui.sel - KEY_CELLS], 'BACK');
   run(ui, ['down']);
   assert.equal(ui.sel, 0, 'down from BACK wraps to the first key');

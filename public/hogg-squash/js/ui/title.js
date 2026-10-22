@@ -1,12 +1,12 @@
 // @ts-check
 // The title screen: A5's title art (assets/title.png: the front wall, the HOGG SQUASH lettering and the school's
 // shield) with 1 PLAYER / 2 PLAYERS / OPTIONS in its menu area (MENU: the `menu` slice in art/ui/title.aseprite), and
-// the keys on the red band under the wall. The setup, options and key test screens draw on the same background.
+// the keys on the red band under the wall (while the touch controls show, 2P is faded and the band says why). The setup, options and key test screens draw on the same background.
 // Without the image the screen is the margin colour with the name in the large font.
 import { WIDTH } from '../engine/screen.js';
 import { drawText } from '../render/text.js';
 import { drawList } from './menu.js';
-import { TITLE_ITEMS } from './screens.js';
+import { TITLE_ITEMS, TOUCH_2P_NOTE, titleOff } from './screens.js';
 
 /** The title art's menu area (x 44–350, y 196–292). */
 export const MENU = { x: 44, y: 196, w: 306, h: 96 };
@@ -42,6 +42,6 @@ export function drawHint(ctx, str) {
 /** @param {CanvasRenderingContext2D} ctx @param {import('./screens.js').Ui} ui */
 export function drawTitle(ctx, ui) {
   drawTitleBack(ctx);
-  drawList(ctx, TITLE_ITEMS, ui.sel, MENU.x + 40, MENU.y + 12);
-  drawHint(ctx, TITLE_HINT);
+  drawList(ctx, TITLE_ITEMS, ui.sel, MENU.x + 40, MENU.y + 12, { off: titleOff(ui) });
+  drawHint(ctx, ui.touch ? TOUCH_2P_NOTE : TITLE_HINT);   // touch is 1P only (2P is faded)
 }

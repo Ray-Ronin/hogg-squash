@@ -10,6 +10,9 @@
 // Gamepads: on the controllers screen any button on a pad joins it to the next player without one (P1 first); the
 // keys keep working alongside. In a match a new pad's button brings that screen up over it, and unplugging a pad that
 // plays shows "Controller disconnected" and waits.
+// Touch (phones and tablets, input/touch.js): on-screen stick, HARD and SOFT for P1, a pause button in a match, and
+// menu items work by tapping. Setting Auto / On / Off on the options (Auto: shown on the first touch, hidden on a key
+// press or pad use); 2P can't be picked while they show. A portrait phone is told to turn sideways (and pauses).
 // Debug keys: ` toggles the debug overlay, [ and ] change the level (1P; from the next rally), ' steps the court view:
 // the painted court, the code court (with the code ball and effects), and the painted court with the code's lines
 // over it in cyan, for checking that they match.
@@ -32,6 +35,8 @@ import { createKeyboard } from './input/keyboard.js';
 import { layoutCodes, readActions, padActions, combineActions, makeSeats, seatOf, joinPad, dropPad,
   forgetLost, swapSeats } from './input/actions.js';
 import { createPads, padName } from './input/gamepad.js';
+import { createTouchControls, makeTouchState, touchShowing, noteTouch, noteKeyOrPad, loadTouchMode, saveTouchMode,
+  touchActions, touchNavs } from './input/touch.js';
 import { browserStore, loadLayouts, saveLayouts, helpLines, seatLabel } from './input/keymap.js';
 import { makeWorld, stepWorld } from './sim/world.js';
 import { makeCpu, cpuActions } from './sim/cpu.js';
@@ -48,8 +53,9 @@ import { useFont, drawText, lineHeight } from './render/text.js';
 import { useUi } from './render/ui.js';
 import { useFx } from './render/fx.js';
 import { drawDebug, createShotLog } from './render/debug.js';
-import { makeUi, navigate, captureKey, matchOver, autoPause, assignInMatch, showsMatch, DEFAULT_SETTINGS }
-  from './ui/screens.js';
+import { makeUi, navigate, captureKey, matchOver, autoPause, assignInMatch, showsMatch, setTouch, tap,
+  DEFAULT_SETTINGS } from './ui/screens.js';
+import { clearHits, hitAt } from './ui/menu.js';
 import { drawTitle, useTitle } from './ui/title.js';
 import { drawOptions } from './ui/options.js';
 import { drawKeyTest } from './ui/keytest.js';
@@ -85,6 +91,7 @@ const ui = makeUi({
   target: MATCH_LENGTHS.includes(to) ? to : DEFAULT_SETTINGS.target,
   level: toLevel(query.get('level') ?? undefined),
 }, SHORTCUT ? 'match' : 'title', loadLayouts(store));
+ui.touchMode = loadTouchMode(store);
 /** The character sprites, once loaded (null: boxes). @type {import('./render/actors.js').Sprites | null} */
 let sprites = null;
 let showBoxes = query.has('boxes');
@@ -153,11 +160,19 @@ function stepLevel(d) {
  */
 function nav(n) {
   const from = ui.screen;
-  const effect = navigate(ui, n);
+  doEffect(from, navigate(ui, n));
+}
+
+/** Do what a move or a tap asks of the match. @param {import('./ui/screens.js').ScreenName} from  the screen it was made on @param {import('./ui/screens.js').Effect} effect */
+function doEffect(from, effect) {
   if (from === 'assign' && (effect === 'start' || effect === 'resume')) forgetLost(seats);  // carry on with the keys
   if (effect === 'prepare' || effect === 'rematch') newMatch(nextSeed++);
   else if (effect === 'restart') newMatch(matchSeed);
   else if (effect === 'keys') keysChanged();
+  else if (effect === 'touch') {
+    touchState.mode = ui.touchMode;
+    saveTouchMode(store, ui.touchMode);
+  }
 }
 
 /** The options changed a key: keep the layouts and give the keyboard the new game keys. */
@@ -179,6 +194,34 @@ const kb = createKeyboard([...layoutCodes(layouts), ...Object.keys(MENU_KEYS)]);
 const pads = createPads();
 /** The browser's name for each pad seen. @type {Map<number, string>} */
 const padIds = new Map();
+/** The on-screen controls, and whether they show (Auto shows them from the start only on a phone-like screen). */
+const touch = createTouchControls();
+const touchState = makeTouchState(ui.touchMode, matchMedia('(pointer: coarse) and (hover: none)').matches);
+/** Taps on the canvas since the last step, in game pixels (a menu item under one is picked). @type {[number, number][]} */
+const taps = [];
+// any touch shows the controls (Auto); a short tap on the canvas (not a drag) is queued for the menus
+document.addEventListener('touchstart', () => noteTouch(touchState), { capture: true, passive: true });
+/** @type {Map<number, [number, number]>} */
+const tapStarts = new Map();
+const gameCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('game'));
+gameCanvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) tapStarts.set(t.identifier, [t.clientX, t.clientY]);
+}, { passive: false });
+gameCanvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  const r = gameCanvas.getBoundingClientRect();
+  for (const t of e.changedTouches) {
+    const start = tapStarts.get(t.identifier);
+    tapStarts.delete(t.identifier);
+    if (!start || Math.hypot(t.clientX - start[0], t.clientY - start[1]) > 20) continue;
+    taps.push([(t.clientX - r.left) * WIDTH / r.width, (t.clientY - r.top) * HEIGHT / r.height]);
+  }
+}, { passive: false });
+gameCanvas.addEventListener('touchcancel', () => tapStarts.clear());
+/** A portrait phone shows "turn sideways" over the game. */
+const portrait = () => touchShowing(touchState) && window.innerHeight > window.innerWidth;
+
 /** A playing pad was unplugged and nobody has carried on yet. */
 const lost = () => seats.some(s => s?.lost);
 
@@ -213,14 +256,14 @@ kb.onPress('BracketRight', () => stepLevel(1));
 // pausing without a key: the window loses focus, the tab is hidden, or fullscreen is left (the browser may keep the
 // Esc that leaves fullscreen to itself). F11's fullscreen isn't the Fullscreen API, so leaving it shows only as the
 // window shrinking from the screen's size.
-window.addEventListener('blur', () => autoPause(ui));
-document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(ui); });
+window.addEventListener('blur', () => { autoPause(ui); touch.release(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { autoPause(ui); touch.release(); } });
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) autoPause(ui); });
 const screenSized = () => window.innerWidth >= window.screen.width && window.innerHeight >= window.screen.height;
 let wasScreenSized = screenSized();
 window.addEventListener('resize', () => {
   const now = screenSized();
-  if (wasScreenSized && !now) autoPause(ui);
+  if ((wasScreenSized && !now) || portrait()) autoPause(ui);
   wasScreenSized = now;
 });
 
@@ -236,6 +279,7 @@ function pollPads() {
   const bySlot = [null, null];
   for (const p of list) {
     padIds.set(p.index, p.id);
+    if (p.any || p.pressed.up || p.pressed.down || p.pressed.left || p.pressed.right) noteKeyOrPad(touchState);
     let slot = seatOf(seats, p.index);
     const seating = ui.screen === 'assign' || ui.screen === 'match';
     if (seating && slot < 0) {
@@ -270,7 +314,11 @@ function simStep() {
   stepCount++;
   const wasMatch = ui.screen === 'match';
   const presses = kb.takePresses();       // sampled once per step; presses on the menus don't reach the match
+  if (presses.size) noteKeyOrPad(touchState);
   const padNow = pollPads();
+  const touchNow = touch.take();
+  const tapped = taps.splice(0);
+  setTouch(ui, touchShowing(touchState));   // before the moves: the key that hides touch can pick 2P at once
   if (ui.screen === 'match' || ui.screen === 'keytest') {   // the key test tests every key, so only Esc leaves it
     if (presses.has('Escape')) nav('back');
   } else {
@@ -285,6 +333,21 @@ function simStep() {
       if (playing() || ui.listen) break;  // the key that starts or resumes the match (or asks for a key) does nothing more
     }
   }
+  // touch: the pause button in a match; on the menus the stick, HARD (OK), SOFT (back) and taps on the items
+  if (wasMatch) {
+    if (touchNow.pressed.pause && playing()) nav('start');
+  } else if (!playing()) {
+    for (const n of touchNavs(touchNow)) {
+      nav(n);
+      if (playing()) break;
+    }
+    for (const [x, y] of tapped) {
+      if (playing()) break;
+      const from = ui.screen;
+      doEffect(from, tap(ui, hitAt(x, y)));
+    }
+  }
+  touch.show(ui.touch, ui.screen === 'match');
   kb.grab(ui.screen === 'keytest' || ui.listen);
   if (!wasMatch || !playing()) return;  // a press that closes a menu or opens one doesn't also play
 
@@ -296,7 +359,10 @@ function simStep() {
     const c = cpus[i];
     if (c) return cpuActions(c, world);
     const keys = readActions(kb, layouts[i], presses), pad = padNow[i];
-    return pad ? combineActions(keys, padActions(pad)) : keys;
+    const list = [keys];
+    if (pad) list.push(padActions(pad));
+    if (i === 0) list.push(touchActions(touchNow));     // touch plays P1
+    return combineActions(...list);
   });
   const events = stepWorld(world, a1, a2);
   for (const e of events) {
@@ -315,7 +381,7 @@ function simStep() {
 }
 
 // --- render ---
-const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('game'));
+const canvas = gameCanvas;
 const screen = createScreen(canvas, { mode: query.get('scale') === 'int' ? 'int' : 'fill' });
 const ctx = screen.ctx;
 
@@ -344,6 +410,7 @@ function render() {
     rateSteps = stepCount;
   }
 
+  clearHits();
   if (ui.screen === 'title') drawTitle(ctx, ui);
   else if (ui.screen === 'length' || ui.screen === 'level') drawSetup(ctx, ui);
   else if (ui.screen === 'options') drawOptions(ctx, ui);

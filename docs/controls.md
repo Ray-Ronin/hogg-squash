@@ -37,6 +37,7 @@ The input layer turns keyboard keys or gamepad buttons into these actions, so th
 - Read `touchstart`/`touchend` (not `click`) so two fingers work at once, and set `touch-action: none` so the page doesn't scroll or zoom.
 - **1P vs CPU only on touch.** 2P needs a keyboard or gamepads.
 - The game is 640×360 (landscape), so portrait phones get a "Turn your phone sideways" message.
+- *As built (S11b):* a stick bottom-left, HARD bottom-right with SOFT beside it, pause top-left (in a match) and fullscreen top-right; menu items work by tapping them, or with the stick + HARD (OK) / SOFT (back). The setting is TOUCH CONTROLS on the options screen, saved in the browser. Touch always plays P1.
 
 ## Menu navigation and pause
 - Arrows/WASD + Enter/Space, or the D-pad + A. (Built in S10: a player's HARD key also means OK and SOFT means back, as do A and B/X on a pad; Esc goes back a step.)
