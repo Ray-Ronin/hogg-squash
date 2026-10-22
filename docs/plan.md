@@ -35,7 +35,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] 💳 Approve SpriteCook spend for A5 *(you)*
 - [x] **A5** Art: font, callouts, score panel, title art
 - [x] **S9** Court, ball and HUD art in the game
-- [ ] **CP-E** Play-test 4 *(you)*: the look
+- [x] **CP-E** Play-test 4 *(you)*: the look
 - [ ] **S10** Screens, match flow and pause menu
 - [ ] **S11** Options: key remapping and key test
 - [ ] **S11b** Touch controls (mobile mode): on-screen buttons, Auto / On / Off setting
@@ -1090,7 +1090,8 @@ Go through "Done when", tick S11b, add a Session log entry, and commit. Ask me b
 **Goal:** make v1 ready to share. Fix the CP-E list and tidy the rough edges. No new features.
 
 **In scope**
-- The fix list from CP-E.
+- The fix list from CP-E:
+  - **The racket at contact, a little closer to the ball** (the owner: "change it a little so that it looks more like it hit the ball"). Code only, no new art and no SpriteCook spend. Raise the racket shift's cap (`RACKET.MAX` in `js/render/sprites.js`, 12% of the drawn height since S8b) a little, and try a small sideways shift towards the ball too (S8b measured the racket head a median 12 px off the ball across). Show the owner the current look and two candidates side by side at the same contacts (e.g. 16% and 20%, using `?racket=` for comparison), with low, waist-high and serve contacts and how far the feet sink below the floor point. The owner picks one. Measure the gaps as S8b did and record the new numbers in `docs/decisions.md` ("Racket height at contact").
 - A fullscreen toggle (button or key), a loading screen, and a favicon.
 - A short "How to play" card on the title screen (HARD/SOFT; timing sets the angle; the landing marker).
 - Small effects: a flash on a point, and the celebrate/dejected animations if A3 made them.
@@ -1406,3 +1407,5 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Logo slot:** `LOGO` in `render/hud.js` (`url: 'assets/logo.png'`, `on: false`, in the right margin under P2's panel, at most 66 px, shrunk smoothly if bigger). Off by default, it makes no request; `?logo=on` turns it on for testing. Checked with a temporary copy of the owner's shield (not committed). A missing file just leaves the slot empty, with a console warning.
   - **Checked in the browser** (Wrangler on 8787, `?dev&slow=100000` with `hogg.step`, both players driven by CPU brains): a full 1P game to 5 (the CPU won 6–4, on win by 2) and a full 2P game to 5 (P2 won 6–4), with the TIN, DOUBLE BOUNCE, POINT/score and GAME screens, the serve tag moving with the server, a MISS label (the receiver swinging during a serve), pause, all three court views, the controller overlay (a faked gamepad), and the logo slot. No console errors (the only 404s were `?logo=on` without the file). A frame takes 1.55 ms to draw and present at 1280×720 (4.9 ms with the code court). **Checked only by tests:** every HUD string's characters are in its font, the slices and fx tags the game needs exist, every callout fits on the wall above the service line, the footer fits. **Not checked:** play at full speed with a person at the keys, and the step rate (the pane was hidden), Firefox, a real gamepad.
   - **For CP-E:** the HUD layout (keys at the foot of each margin, the footer line) is new; say if it's too busy. The MISS label and pause notice are small; say if they need art.
+- 2026-10-22, CP-E (planning only): the owner's answers. (1) Text and HUD are readable at 1280×720 and full screen ("a good size"). (2) The ball is always visible. (3) The HUD doesn't distract from the game, so the S9 layout stays. (4) No art for the MISS label or the pause notice ("it would be distracting"). (5) The racket at contact should change "a little so that it looks more like it hit the ball".
+  - **Plan change:** one fix, added to S12's CP-E list: a slightly bigger racket-shift cap and a small sideways shift, code only, with the owner picking from candidates shown side by side. No fix-up session and no SpriteCook spend; S10 and S11 are unchanged.
