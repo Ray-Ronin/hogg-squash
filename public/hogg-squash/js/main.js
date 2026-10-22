@@ -11,8 +11,9 @@
 // keys keep working alongside. In a match a new pad's button brings that screen up over it, and unplugging a pad that
 // plays shows "Controller disconnected" and waits.
 // Touch (phones and tablets, input/touch.js): on-screen stick, HARD and SOFT for P1, a pause button in a match, and
-// menu items work by tapping. Setting Auto / On / Off on the options (Auto: shown on the first touch, hidden on a key
-// press or pad use); 2P can't be picked while they show. A portrait phone is told to turn sideways (and pauses).
+// menu items work by tapping. They show on the first touch and hide on a key press or pad use (no setting); 2P can't
+// be picked while they show. A portrait phone is told to turn sideways (and pauses).
+// The title's RONINRAY.COM goes back to the website's start page.
 // Debug keys: ` toggles the debug overlay, [ and ] change the level (1P; from the next rally), ' steps the court view:
 // the painted court, the code court (with the code ball and effects), and the painted court with the code's lines
 // over it in cyan, for checking that they match.
@@ -35,8 +36,8 @@ import { createKeyboard } from './input/keyboard.js';
 import { layoutCodes, readActions, padActions, combineActions, makeSeats, seatOf, joinPad, dropPad,
   forgetLost, swapSeats } from './input/actions.js';
 import { createPads, padName } from './input/gamepad.js';
-import { createTouchControls, makeTouchState, touchShowing, noteTouch, noteKeyOrPad, loadTouchMode, saveTouchMode,
-  touchActions, touchNavs } from './input/touch.js';
+import { createTouchControls, makeTouchState, touchShowing, noteTouch, noteKeyOrPad, touchActions, touchNavs }
+  from './input/touch.js';
 import { browserStore, loadLayouts, saveLayouts, helpLines, seatLabel } from './input/keymap.js';
 import { makeWorld, stepWorld } from './sim/world.js';
 import { makeCpu, cpuActions } from './sim/cpu.js';
@@ -54,7 +55,7 @@ import { useUi } from './render/ui.js';
 import { useFx } from './render/fx.js';
 import { drawDebug, createShotLog } from './render/debug.js';
 import { makeUi, navigate, captureKey, matchOver, autoPause, assignInMatch, showsMatch, setTouch, tap,
-  DEFAULT_SETTINGS } from './ui/screens.js';
+  DEFAULT_SETTINGS, SITE_URL } from './ui/screens.js';
 import { clearHits, hitAt } from './ui/menu.js';
 import { drawTitle, useTitle } from './ui/title.js';
 import { drawOptions } from './ui/options.js';
@@ -91,7 +92,6 @@ const ui = makeUi({
   target: MATCH_LENGTHS.includes(to) ? to : DEFAULT_SETTINGS.target,
   level: toLevel(query.get('level') ?? undefined),
 }, SHORTCUT ? 'match' : 'title', loadLayouts(store));
-ui.touchMode = loadTouchMode(store);
 /** The character sprites, once loaded (null: boxes). @type {import('./render/actors.js').Sprites | null} */
 let sprites = null;
 let showBoxes = query.has('boxes');
@@ -169,10 +169,7 @@ function doEffect(from, effect) {
   if (effect === 'prepare' || effect === 'rematch') newMatch(nextSeed++);
   else if (effect === 'restart') newMatch(matchSeed);
   else if (effect === 'keys') keysChanged();
-  else if (effect === 'touch') {
-    touchState.mode = ui.touchMode;
-    saveTouchMode(store, ui.touchMode);
-  }
+  else if (effect === 'site') location.href = SITE_URL;
 }
 
 /** The options changed a key: keep the layouts and give the keyboard the new game keys. */
@@ -194,12 +191,12 @@ const kb = createKeyboard([...layoutCodes(layouts), ...Object.keys(MENU_KEYS)]);
 const pads = createPads();
 /** The browser's name for each pad seen. @type {Map<number, string>} */
 const padIds = new Map();
-/** The on-screen controls, and whether they show (Auto shows them from the start only on a phone-like screen). */
+/** The on-screen controls, and whether they show (from the start only on a phone-like screen). */
 const touch = createTouchControls();
-const touchState = makeTouchState(ui.touchMode, matchMedia('(pointer: coarse) and (hover: none)').matches);
+const touchState = makeTouchState(matchMedia('(pointer: coarse) and (hover: none)').matches);
 /** Taps on the canvas since the last step, in game pixels (a menu item under one is picked). @type {[number, number][]} */
 const taps = [];
-// any touch shows the controls (Auto); a short tap on the canvas (not a drag) is queued for the menus
+// any touch shows the controls; a short tap on the canvas (not a drag) is queued for the menus
 document.addEventListener('touchstart', () => noteTouch(touchState), { capture: true, passive: true });
 /** @type {Map<number, [number, number]>} */
 const tapStarts = new Map();

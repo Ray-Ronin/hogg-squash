@@ -3,43 +3,36 @@
 // markup and look are in index.html), a stick on the left for moving and HARD / SOFT on the right, plus small pause
 // and fullscreen buttons. They give the same actions as the keys and pads (input/actions.js), so the sim never
 // knows; on the menus the stick moves, HARD is OK and SOFT is back, like a pad.
-// When they show (setting "Touch controls: Auto / On / Off", saved in localStorage beside the key layouts):
-//   Auto: hidden at start (shown from the start only on a phone-like screen: coarse pointer, no hover), shown on the
-//   first touch, hidden again when a key is pressed or a pad is used. On / Off: always / never.
+// When they show (automatic, no setting; the owner's call after S11b): hidden at start (shown from the start only on a
+// phone-like screen: coarse pointer, no hover), shown on the first touch, hidden again when a key is pressed or a pad
+// is used. So someone on a computer never sees them.
 // Touch is 1P vs CPU only (docs/decisions.md, "Mobile and touch"): the title greys out 2P while they show.
 // Touch events (not click), each finger followed by its identifier, so moving and hitting work at once.
-// The state, the stick's directions and the setting's storage are plain functions, so Node can test them
+// The state and the stick's directions are plain functions, so Node can test them
 // (test/touch.test.js); only createTouchControls touches the page.
 import { PAD } from './gamepad.js';
 
 /** @typedef {import('../sim/player.js').Actions} Actions */
-/** @typedef {import('./keymap.js').Store} Store */
-/** @typedef {'auto' | 'on' | 'off'} TouchMode */
 /** @typedef {{ up: boolean, down: boolean, left: boolean, right: boolean }} Dirs */
 /** @typedef {Dirs & { hard: boolean, soft: boolean, pause: boolean }} TouchButtons */
 /** One sim step's touch input: the stick's directions held, and what went down since the last step. @typedef {{ held: Dirs, pressed: TouchButtons }} TouchInput */
 
-/** The setting's values, in the order OK steps through them. @type {TouchMode[]} */
-export const TOUCH_MODES = ['auto', 'on', 'off'];
-export const DEFAULT_TOUCH_MODE = /** @type {TouchMode} */ ('auto');
-/** Where the setting is kept (beside the key layouts' 'hogg-squash.keys'). */
-export const TOUCH_KEY = 'hogg-squash.touch';
 /** The stick: no direction within this share of its radius of the centre; 8 ways beyond it, as a pad's stick. */
 export const STICK = { DEAD: 0.25, DIAGONAL: PAD.DIAGONAL, KNOB: 0.55 };
 
 /**
- * Whether the controls show. touched (Auto only): touch was used more recently than a key or a pad.
- * @typedef {{ mode: TouchMode, touched: boolean }} TouchState
+ * Whether the controls show. touched: touch was used more recently than a key or a pad.
+ * @typedef {{ touched: boolean }} TouchState
  */
 
-/** @param {TouchMode} mode @param {boolean} [phone]  a phone-like screen: Auto shows them from the start @returns {TouchState} */
-export function makeTouchState(mode, phone = false) {
-  return { mode, touched: phone };
+/** @param {boolean} [phone]  a phone-like screen: they show from the start @returns {TouchState} */
+export function makeTouchState(phone = false) {
+  return { touched: phone };
 }
 
 /** @param {TouchState} s */
 export function touchShowing(s) {
-  return s.mode === 'on' || (s.mode === 'auto' && s.touched);
+  return s.touched;
 }
 
 /** The screen was touched. @param {TouchState} s */
@@ -50,33 +43,6 @@ export function noteTouch(s) {
 /** A key was pressed or a pad used. @param {TouchState} s */
 export function noteKeyOrPad(s) {
   s.touched = false;
-}
-
-/** The next (d 1) or previous (d -1) mode, wrapping. @param {TouchMode} mode @param {1 | -1} [d] @returns {TouchMode} */
-export function nextMode(mode, d = 1) {
-  const n = TOUCH_MODES.length;
-  return TOUCH_MODES[(TOUCH_MODES.indexOf(mode) + d + n) % n];
-}
-
-/** The saved setting, or Auto (nothing saved, damaged, or storage blocked). @param {Store | null} store @returns {TouchMode} */
-export function loadTouchMode(store) {
-  try {
-    const v = store?.getItem(TOUCH_KEY);
-    return TOUCH_MODES.find(m => m === v) ?? DEFAULT_TOUCH_MODE;
-  } catch {
-    return DEFAULT_TOUCH_MODE;
-  }
-}
-
-/** Keep the setting. Returns false if storage is blocked or full. @param {Store | null} store @param {TouchMode} mode */
-export function saveTouchMode(store, mode) {
-  if (!store) return false;
-  try {
-    store.setItem(TOUCH_KEY, mode);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**

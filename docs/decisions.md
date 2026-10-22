@@ -15,7 +15,8 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 
 ## Mobile and touch (2026-10-20)
 - **Phones and tablets are supported** with on-screen touch controls, built in S11b after the options screen.
-- **The touch controls never show up for someone on a computer.** Setting "Touch controls: Auto / On / Off", default **Auto**: hidden at start, shown on the first touch, hidden again when a key or gamepad is used. On and Off override it for odd cases (e.g. a touchscreen laptop).
+- **The touch controls never show up for someone on a computer.** Hidden at start, shown on the first touch, hidden again when a key or gamepad is used.
+- **No setting (2026-10-22, the owner's call after S11b):** the game chooses by itself from the device being used. S11b's "Touch controls: Auto / On / Off" option was removed; it always behaves as Auto did. A phone-like screen (coarse pointer, no hover) starts with them shown.
 - Touch sets the same actions as the keyboard and pads; the simulation never knows the device.
 - **Touch is 1P vs CPU only.** Two players on one touchscreen is too cramped, so 2P needs a keyboard or gamepads.
 
@@ -183,6 +184,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - Flow: **title → 1P / 2P → match length (5/7/9/11) → difficulty 1–9 (1P only) → controller assignment → match → result → rematch / menu.**
 - **Pause menu on Esc** (and Start on a gamepad). Pause also triggers automatically when the window loses focus or leaves fullscreen.
 - **Options screen:** key remapping and a key test.
+- **RONINRAY.COM on the title (2026-10-22, the owner's request):** the title's fourth item goes back to the website's start page (https://roninray.com/), where the game and the build log are.
 
 ## Version numbers (2026-10-22, the owner's call)
 - **`0.<session>.<fix>`**, shown small in the bottom-right corner of every screen (`js/version.js`; `package.json` matches).

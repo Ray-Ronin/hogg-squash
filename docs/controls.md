@@ -31,13 +31,11 @@ The input layer turns keyboard keys or gamepad buttons into these actions, so th
 
 ## Touch controls: phones and tablets (decided 2026-10-20, built in S11b)
 - On-screen buttons over the canvas: move on the left (D-pad or thumb stick), **HARD** and **SOFT** on the right. Menus work by tapping.
-- **Shown only when someone is playing by touch.** Setting "Touch controls: Auto / On / Off" (default Auto):
-  - **Auto:** hidden at start, shown on the first touch, hidden again on a key press or gamepad input. Screen size and user-agent guesses aren't used, because touchscreen laptops and tablets with keyboards fool them.
-  - **On / Off:** always or never shown.
+- **Shown only when someone is playing by touch,** with no setting: hidden at start, shown on the first touch, hidden again on a key press or gamepad input. Screen size and user-agent guesses aren't used, because touchscreen laptops and tablets with keyboards fool them; only a phone-like screen (coarse pointer, no hover) starts with them shown. (S11b built an Auto / On / Off option; the owner had it removed the same day.)
 - Read `touchstart`/`touchend` (not `click`) so two fingers work at once, and set `touch-action: none` so the page doesn't scroll or zoom.
 - **1P vs CPU only on touch.** 2P needs a keyboard or gamepads.
 - The game is 640×360 (landscape), so portrait phones get a "Turn your phone sideways" message.
-- *As built (S11b):* a stick bottom-left, HARD bottom-right with SOFT beside it, pause top-left (in a match) and fullscreen top-right; menu items work by tapping them, or with the stick + HARD (OK) / SOFT (back). The setting is TOUCH CONTROLS on the options screen, saved in the browser. Touch always plays P1.
+- *As built (S11b):* a stick bottom-left, HARD bottom-right with SOFT beside it, pause top-left (in a match) and fullscreen top-right; menu items work by tapping them, or with the stick + HARD (OK) / SOFT (back). Touch always plays P1.
 
 ## Menu navigation and pause
 - Arrows/WASD + Enter/Space, or the D-pad + A. (Built in S10: a player's HARD key also means OK and SOFT means back, as do A and B/X on a pad; Esc goes back a step.)

@@ -3,7 +3,7 @@
 // test it (test/screens.test.js). The flow:
 //   title (1P / 2P) → match length → level (1P only) → controllers → match → result → rematch, or back to the title
 // and the pause menu over the match (Resume / Restart match / Quit to title), and from the title the options (each
-// player's six keys, remapped by pressing a key; presets; the key test; the touch controls' setting). main.js turns
+// player's six keys, remapped by pressing a key; presets; the key test), and RONINRAY.COM back to the website. main.js turns
 // key presses, pad buttons and touch into Navs (a tap on a menu item is tap()), calls navigate, and does what the
 // Effect it returns asks (build the match, start it, …). While the touch controls show, 2P can't be picked (touch is
 // 1P vs CPU only; docs/decisions.md, "Mobile and touch").
@@ -11,7 +11,6 @@
 import { MATCH_LENGTHS } from '../sim/match.js';
 import { LEVELS, DEFAULT_LEVEL } from '../sim/difficulty.js';
 import { ACTIONS, defaultLayouts, refusal, duplicateNote, keyLabel, resetLayouts, laptopPreset } from '../input/keymap.js';
-import { DEFAULT_TOUCH_MODE, nextMode } from '../input/touch.js';
 
 /** @typedef {'title' | 'length' | 'level' | 'assign' | 'match' | 'pause' | 'result' | 'options' | 'keytest'} ScreenName */
 /** @typedef {{ players: 1 | 2, target: number, level: number }} Settings  target: points to win; level: 1P only */
@@ -27,8 +26,8 @@ import { DEFAULT_TOUCH_MODE, nextMode } from '../input/touch.js';
  *  prepare: build a match from the settings (the controllers screen shows it behind its panel)
  *  start: play the prepared match; resume: carry on with the match
  *  restart: the same match again from 0–0; rematch: a new match with the same settings; quit: drop the match
- *  keys: the key layouts changed (save them, and tell the keyboard); touch: the touch setting changed (save it)
- * @typedef {null | 'prepare' | 'start' | 'resume' | 'restart' | 'rematch' | 'quit' | 'keys' | 'touch'} Effect
+ *  keys: the key layouts changed (save them, and tell the keyboard); site: leave for roninray.com (SITE_URL)
+ * @typedef {null | 'prepare' | 'start' | 'resume' | 'restart' | 'rematch' | 'quit' | 'keys' | 'site'} Effect
  */
 
 /**
@@ -40,39 +39,27 @@ import { DEFAULT_TOUCH_MODE, nextMode } from '../input/touch.js';
  * @property {import('../input/keymap.js').KeyLayout[]} keys  P1's and P2's keys (the options change them in place)
  * @property {boolean} listen     the options screen is waiting for a key for the selected action
  * @property {string} note        the options screen's message line (a prompt, a refusal, a key used twice)
- * @property {import('../input/touch.js').TouchMode} touchMode  the setting "Touch controls: Auto / On / Off"
  * @property {boolean} touch       the touch controls are showing (then 2P can't be picked)
  */
 
 /** The defaults: 1 player, first to 9, level 5 (the plan's suggestion; the owner decides at the end of S10). */
 export const DEFAULT_SETTINGS = Object.freeze({ players: /** @type {1 | 2} */ (1), target: 9, level: DEFAULT_LEVEL });
 
-export const TITLE_ITEMS = ['1 PLAYER', '2 PLAYERS', 'OPTIONS'];
+export const TITLE_ITEMS = ['1 PLAYER', '2 PLAYERS', 'OPTIONS', 'RONINRAY.COM'];
+/** Where the title's last item goes: the website's start page (the game, and how it was built). */
+export const SITE_URL = 'https://roninray.com/';
 export const PAUSE_ITEMS = ['RESUME', 'RESTART MATCH', 'QUIT TO TITLE'];
 export const RESULT_ITEMS = ['REMATCH', 'MENU'];
-/** The options screen's buttons, under its 6 rows × 2 players of keys (selections 0–11, P1 then P2 on each row).
- * TOUCH CONTROLS shows its setting after it (optionItems). */
-export const OPTION_ITEMS = ['LAPTOP KEYS FOR P2', 'RESET TO DEFAULTS', 'KEY TEST', 'TOUCH CONTROLS', 'BACK'];
+/** The options screen's buttons, under its 6 rows × 2 players of keys (selections 0–11, P1 then P2 on each row). */
+export const OPTION_ITEMS = ['LAPTOP KEYS FOR P2', 'RESET TO DEFAULTS', 'KEY TEST', 'BACK'];
 /** The first button's selection. */
 export const KEY_CELLS = ACTIONS.length * 2;
-const [LAPTOP, RESET, KEY_TEST, TOUCH, OPTIONS_BACK] = OPTION_ITEMS.map((_, i) => KEY_CELLS + i);
+const [LAPTOP, RESET, KEY_TEST, OPTIONS_BACK] = OPTION_ITEMS.map((_, i) => KEY_CELLS + i);
 /** The title's 2P item. */
 const TWO_PLAYERS = 1;
 
 /** The title's line while the touch controls show (in place of the keys). */
 export const TOUCH_2P_NOTE = '2 players needs a keyboard or gamepads';
-/** What each touch setting means, on the options' message line. */
-export const TOUCH_NOTES = /** @type {Record<import('../input/touch.js').TouchMode, string>} */ ({
-  auto: 'Touch controls show when you touch the screen',
-  on: 'Touch controls always show',
-  off: 'Touch controls never show',
-});
-
-/** The options' buttons as drawn: "TOUCH CONTROLS: AUTO". @param {Ui} ui */
-export function optionItems(ui) {
-  return OPTION_ITEMS.map(it => (it === 'TOUCH CONTROLS' ? `${it}: ${ui.touchMode.toUpperCase()}` : it));
-}
-
 /** The title items that can't be picked just now (2P while the touch controls show). @param {Ui} ui */
 export function titleOff(ui) {
   return ui.touch ? [TWO_PLAYERS] : [];
@@ -92,7 +79,7 @@ export function setTouch(ui, on) {
  */
 export function makeUi(settings = {}, screen = 'title', keys = defaultLayouts()) {
   return { screen, settings: { ...DEFAULT_SETTINGS, ...settings }, sel: 0, inMatch: false, keys, listen: false, note: '',
-    touchMode: DEFAULT_TOUCH_MODE, touch: false };
+    touch: false };
 }
 
 /** The player and action of an options key cell (null for a button). @param {number} sel */
@@ -136,6 +123,7 @@ export function navigate(ui, nav) {
       upDown(ui, nav, TITLE_ITEMS.length);
       if (ui.touch && ui.sel === TWO_PLAYERS) upDown(ui, nav, TITLE_ITEMS.length);   // stepping over 2P
       if (isOk(nav) && ui.touch && ui.sel === TWO_PLAYERS) return null;
+      if (isOk(nav) && ui.sel === 3) return 'site';
       if (isOk(nav) && ui.sel === 2) {
         go(ui, 'options');
         ui.listen = false;
@@ -231,11 +219,7 @@ function options(ui, nav) {
   if (nav === 'up') ui.sel = ui.sel === 0 ? OPTIONS_BACK : ui.sel === LAPTOP ? KEY_CELLS - 2 : ui.sel - (cell ? 2 : 1);
   else if (nav === 'down') ui.sel = ui.sel === OPTIONS_BACK ? 0 : cell ? Math.min(ui.sel + 2, LAPTOP) : ui.sel + 1;
   else if ((nav === 'left' || nav === 'right') && cell) ui.sel ^= 1;
-  else if (ui.sel === TOUCH && (nav === 'left' || nav === 'right' || isOk(nav))) {
-    ui.touchMode = nextMode(ui.touchMode, nav === 'left' ? -1 : 1);
-    ui.note = TOUCH_NOTES[ui.touchMode];
-    return 'touch';
-  } else if (nav === 'back' || (isOk(nav) && ui.sel === OPTIONS_BACK)) go(ui, 'title', 2);
+  else if (nav === 'back' || (isOk(nav) && ui.sel === OPTIONS_BACK)) go(ui, 'title', 2);
   else if (isOk(nav) && cell) {
     ui.listen = true;
     ui.note = `Press a key for ${cellName(cell)}     Esc: cancel`;

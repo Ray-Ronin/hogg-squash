@@ -9,7 +9,7 @@ import { makeUi, navigate, matchOver, autoPause, assignInMatch, showsMatch, DEFA
 import { OPTIONS_HINT, OPTIONS_LAYOUT } from '../public/hogg-squash/js/ui/options.js';
 import { KEYTEST_TEXT, KEYS, keyBox } from '../public/hogg-squash/js/ui/keytest.js';
 import { defaultLayouts, keyLabel, helpLines, seatLabel, ACTIONS } from '../public/hogg-squash/js/input/keymap.js';
-import { TITLE_HINT } from '../public/hogg-squash/js/ui/title.js';
+import { TITLE_HINT, TITLE_TOP } from '../public/hogg-squash/js/ui/title.js';
 import { SETUP_HINT, levelNote, lengthNote, modeLine } from '../public/hogg-squash/js/ui/setup.js';
 import { ASSIGN_TEXT } from '../public/hogg-squash/js/ui/assign.js';
 import { PAUSE_HINT } from '../public/hogg-squash/js/ui/pause.js';
@@ -85,7 +85,7 @@ test('back steps through the setup to the title, keeping the selection', () => {
 test('menus wrap up and down; Start works as OK on the menus', () => {
   const ui = makeUi();
   run(ui, ['up']);
-  assert.equal(ui.sel, 2, 'up from 1 PLAYER wraps to OPTIONS');
+  assert.equal(ui.sel, 3, 'up from 1 PLAYER wraps to RONINRAY.COM');
   run(ui, ['down']);
   assert.equal(ui.sel, 0);
   run(ui, ['start', 'start', 'start']);
@@ -106,8 +106,6 @@ test('options: from the title and back, moving round the keys and buttons', () =
   run(ui, ['down']);
   assert.equal(OPTION_ITEMS[ui.sel - KEY_CELLS], 'LAPTOP KEYS FOR P2');
   run(ui, ['down', 'down', 'down']);
-  assert.equal(OPTION_ITEMS[ui.sel - KEY_CELLS], 'TOUCH CONTROLS');
-  run(ui, ['down']);
   assert.equal(OPTION_ITEMS[ui.sel - KEY_CELLS], 'BACK');
   run(ui, ['down']);
   assert.equal(ui.sel, 0, 'down from BACK wraps to the first key');
@@ -270,8 +268,8 @@ test('options and key test: every word in the font, and it fits', () => {
     for (const ch of line) if (ch !== ' ') assert.ok(glyphFor(fonts[font], ch), `${font} has ${ch} (${line})`);
     assert.ok(measureWith(fonts, font, line) <= max, `${font} "${line}" fits in ${max} px`);
   };
-  // the title's third row stays in its menu area (y 196–292, the list from 12 px down, rows 24 px apart)
-  assert.ok(12 + TITLE_ITEMS.length * 24 <= 96);
+  // the title's last row stays in its menu area (y 196–292, rows 24 px apart; the bar reaches 19 px below a row's top)
+  assert.ok(TITLE_TOP + (TITLE_ITEMS.length - 1) * 24 + 19 <= 96);
   for (const item of [...OPTION_ITEMS, 'OPTIONS', 'KEY TEST']) fits('large-white', item, OPTIONS_LAYOUT.w - 60);
   // every key a player is likely to pick, as a key cell (half the gap between P1's and P2's columns, each side)
   const codes = ['Space', 'Enter', 'NumpadEnter', 'ShiftLeft', 'ShiftRight', 'Backspace', 'CapsLock', 'Semicolon',
