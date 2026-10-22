@@ -39,6 +39,6 @@ The input layer turns keyboard keys or gamepad buttons into these actions, so th
 - The game is 640×360 (landscape), so portrait phones get a "Turn your phone sideways" message.
 
 ## Menu navigation and pause
-- Arrows/WASD + Enter/Space, or the D-pad + A.
+- Arrows/WASD + Enter/Space, or the D-pad + A. (Built in S10: a player's HARD key also means OK and SOFT means back, as do A and B/X on a pad; Esc goes back a step.)
 - **Esc pauses** (and Start on a gamepad).
 - **Fullscreen catch:** while the game is fullscreen, the browser uses Esc to exit fullscreen and the page may never see the key. So the game also pauses whenever it leaves fullscreen or the window loses focus.

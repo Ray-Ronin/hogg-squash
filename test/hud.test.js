@@ -51,12 +51,12 @@ test('ui.json: the score panels with their parts, the serve tag, the panels and 
 });
 
 test('the font has every character of the HUD text, and measures it', () => {
-  /** [font, text] the HUD and the overlays draw (numbers stand for any score or level). */
+  /** [font, text] the HUD draws (numbers stand for any score or level; the screens' own text: screens.test.js). */
   const used = [
-    ['large-white', 'P1 P2 CPU PAUSED CONTROLLERS CONTROLLER DISCONNECTED'], ['large-red', 'P2 CPU WINS 11–9 0 – 10'],
-    ['huge-white', '0123456789'], ['small', "FIRST TO 11 P1 keys WASD move CPU MISS Esc or Start to carry on (any button joins)"],
+    ['large-white', 'P1 P2 CPU'], ['large-red', 'P2 CPU 0 – 10'],
+    ['huge-white', '0123456789'], ['small', "FIRST TO 11 P1 keys WASD move CPU MISS (any button joins)"],
     ['small-grey', 'WIN BY 2 F hard G soft arrows move Num0 hard Num. soft level 9 Esc pause Controllers: A hard B/X soft'],
-    ['small-dark', "P1's point CPU to serve HARD to play again MISS"], ['small-red', 'P1 SLOW x4'],
+    ['small-dark', "P1's point CPU to serve MISS"], ['small-red', 'P1 SLOW x4'],
   ];
   for (const [font, text] of used) {
     for (const ch of text) if (ch !== ' ') assert.ok(glyphFor(fonts[font], ch), `${font} has ${ch}`);

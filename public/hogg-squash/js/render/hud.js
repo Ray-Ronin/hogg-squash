@@ -2,13 +2,13 @@
 // The HUD, in the bitmap font (text.js) and A5's pieces (ui.js; docs/art-style-guide.md §3): a score panel in each
 // side margin (P1 left in Hogg red, P2 / the CPU right in white) with the serve tag under the server's score, the
 // match length on a dark panel under P1's, each side's controls at the foot of its margin, and on the front wall the
-// rally callouts (the reason's word, the winner's point under it), the score, the match result and the serve notice.
-// The pause notice sits on a dark panel over the wall. The optional logo slot (LOGO) is in the right margin.
+// rally callouts (the reason's word, the winner's point under it), the score, GAME at the end and the serve notice.
+// The pause menu and the result are screens of their own (js/ui/). The optional logo slot (LOGO) is in the right margin.
 import { project } from './projection.js';
 import { WIDTH, HEIGHT } from '../engine/screen.js';
 import { TIMING } from '../sim/world.js';
 import { LINES } from '../sim/court-rules.js';
-import { drawText, textWidth, lineHeight, capsHeight } from './text.js';
+import { drawText, lineHeight, capsHeight } from './text.js';
 import { drawSlice, drawPanel, slice } from './ui.js';
 
 /** @typedef {import('../sim/world.js').World} World */
@@ -111,7 +111,7 @@ export function loadLogo(on) {
 /**
  * @param {CanvasRenderingContext2D} ctx
  * @param {World} w
- * @param {{ paused: boolean, help: HelpInfo, footer: string, slow: number }} opts
+ * @param {{ help: HelpInfo, footer: string, slow: number }} opts
  *   footer: one line under the court (pause and controller hints); slow: the ?slow factor (1: normal speed)
  */
 export function drawHud(ctx, w, opts) {
@@ -150,19 +150,9 @@ export function drawHud(ctx, w, opts) {
       drawText(ctx, 'large-red', `${m.scores[0]} – ${m.scores[1]}`, cx, LAYOUT.NOTE_Y - 4, 'center');
     }
   } else if (w.phase === 'over' && m.winner !== null) {
-    const win = m.scores[m.winner], lose = m.scores[m.winner === 0 ? 1 : 0];
-    callout(ctx, 'callout GAME');
-    drawText(ctx, 'large-red', `${name(w, m.winner)} WINS ${win}–${lose}`, cx, LAYOUT.NOTE_Y - 4, 'center');
-    drawText(ctx, 'small-dark', 'HARD to play again', cx, LAYOUT.NOTE_Y + 26, 'center');
+    callout(ctx, 'callout GAME');               // the result screen (js/ui/result.js) says who won
   } else if (w.phase === 'serve') {
     drawText(ctx, 'small-dark', `${name(w, m.server)} to serve`, cx, LAYOUT.NOTE_Y, 'center');
   }
 
-  if (opts.paused) {
-    const note = 'Esc or Start to carry on';
-    const pw = Math.max(textWidth('large-white', 'PAUSED'), textWidth('small', note)) + 24, ph = 48;
-    drawPanel(ctx, 'panel dark', Math.round(cx - pw / 2), 64, pw, ph);
-    drawText(ctx, 'large-white', 'PAUSED', cx, 71, 'center');
-    drawText(ctx, 'small', note, cx, 95, 'center');
-  }
 }

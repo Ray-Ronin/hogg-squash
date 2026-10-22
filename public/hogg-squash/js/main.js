@@ -1,25 +1,31 @@
 // @ts-check
-// Boot: wires the loop, the keyboard and gamepads, the CPU, the world (all game logic is in js/sim/) and the renderer.
-// Default: 1 player (WASD + F HARD / G SOFT) against the CPU, the human serving first.
-// ?mode=2p: 2 players on one keyboard, P1 as above, P2 arrows + Numpad 0 (HARD) / Numpad . (SOFT).
-// Gamepads: any button on a pad joins it to the next player without one (P1 first) and shows the controller overlay;
-// the keys keep working alongside. Unplugging a pad that plays waits on "Controller disconnected".
-// Esc or Start freezes (so does losing focus), ` toggles the debug overlay, [ and ] change the level (1P; from the next rally),
-// ' steps the court view: the painted court, the code court (with the code ball and effects), and the painted court
-// with the code's lines over it in cyan, for checking that they match.
-// URL options: ?mode=2p versus, ?level=1..9 difficulty (default 5: the CPU's skill and, in 1P, the game's pace; 2P
-// always plays at level 5's pace), ?to=5|7|9|11 match length (default 9), ?seed=<n> seed for the 2P first server and
-// the CPU's choices (default random),
+// Boot: wires the loop, the keyboard and gamepads, the screens (js/ui/), the CPU, the world (all game logic is in
+// js/sim/) and the renderer.
+// The screens (docs/decisions.md, "Screens"): title → 1P / 2P → match length → level (1P only) → controllers →
+// match → result → rematch or menu. Menus take arrows / WASD (any player's movement keys), Enter / Space or a HARD key
+// for OK, Esc or a SOFT key for back, and on a pad the D-pad or stick, A (OK), B / X (back) and Start.
+// In a match Esc or Start opens the pause menu (Resume / Restart match / Quit to title); so do losing focus, hiding
+// the tab and leaving fullscreen. 1P: WASD + F HARD / G SOFT against the CPU, the human serving first. 2P: P1 as
+// above, P2 arrows + Numpad 0 (HARD) / Numpad . (SOFT).
+// Gamepads: on the controllers screen any button on a pad joins it to the next player without one (P1 first); the
+// keys keep working alongside. In a match a new pad's button brings that screen up over it, and unplugging a pad that
+// plays shows "Controller disconnected" and waits.
+// Debug keys: ` toggles the debug overlay, [ and ] change the level (1P; from the next rally), ' steps the court view:
+// the painted court, the code court (with the code ball and effects), and the painted court with the code's lines
+// over it in cyan, for checking that they match.
+// URL options (debug shortcuts): ?mode=2p, ?level=1..9 or ?to=5|7|9|11 skips the menus and starts that match at once
+// (the others at their defaults: 1P, level 5, first to 9; 2P always plays at level 5's pace), ?seed=<n> seed for the
+// 2P first server and the CPU's choices (default random),
 // ?h=<px> character height at the back, ?curve=true|half|old the true-scale, CP-B or S3 height curve (for comparing),
 // ?cam=zoom|old the S8b camera candidates the owner didn't pick, for comparison (the frozen camera is wide; old is S1's),
 // ?racket=off draws the swings without the racket shift (for comparing),
 // ?scale=int whole-number scaling only (default: fill the window),
-// ?slow=<n> slow motion (the sim runs n times slower), ?dev exposes the world as window.hogg for testing,
+// ?slow=<n> slow motion (the sim runs n times slower), ?dev exposes the game as window.hogg for testing,
 // ?court=code|lines starts on that court view, ?logo=on shows the logo slot (LOGO in render/hud.js) for testing.
 // The players are the animated sprites (assets/player-100.png + .json, loaded before the game starts; P2 / the CPU in
 // the swapped kit). \ or ?boxes shows the placeholder boxes instead (debug); they're also the fallback if loading fails.
-// The court, ball, effects, font and HUD pieces (A4, A5) load alongside; without them the code court and shapes are
-// drawn, with plain canvas text.
+// The court, ball, effects, font, HUD pieces and title (A4, A5) load alongside; without them the code court and
+// shapes are drawn, with plain canvas text.
 import { startLoop, SIM_HZ } from './engine/loop.js';
 import { createScreen, WIDTH, HEIGHT } from './engine/screen.js';
 import { createKeyboard } from './input/keyboard.js';
@@ -41,11 +47,15 @@ import { useFont } from './render/text.js';
 import { useUi } from './render/ui.js';
 import { useFx } from './render/fx.js';
 import { drawDebug, createShotLog } from './render/debug.js';
-import { drawPadOverlay } from './render/pads.js';
+import { makeUi, navigate, matchOver, autoPause, assignInMatch, DEFAULT_SETTINGS } from './ui/screens.js';
+import { drawTitle, useTitle } from './ui/title.js';
+import { drawSetup } from './ui/setup.js';
+import { drawAssign } from './ui/assign.js';
+import { drawPause } from './ui/pause.js';
+import { drawResult } from './ui/result.js';
 
 const query = new URLSearchParams(location.search);
 const to = Number(query.get('to'));
-const target = MATCH_LENGTHS.includes(to) ? to : 9;
 const seed = query.has('seed') ? Number(query.get('seed')) | 0 : crypto.getRandomValues(new Uint32Array(1))[0] | 0;
 const curve = query.get('curve');
 /** @type {import('./render/actors.js').SizeOpts} */
@@ -57,14 +67,17 @@ if (cam === 'wide' || cam === 'zoom' || cam === 'old') useCamera(cam);
 const PAINTED_FITS = cam !== 'zoom' && cam !== 'old';
 const SLOW = Math.max(1, Number(query.get('slow')) || 1);
 const RACKET_SHIFT = query.get('racket') !== 'off';
-const TWO_PLAYER = query.get('mode') === '2p';
-const LEVEL = toLevel(query.get('level') ?? undefined);
+/** ?mode, ?level or ?to: straight into that match, skipping the menus. */
+const SHORTCUT = query.has('mode') || query.has('level') || query.has('to');
+/** Steps that GAME shows on the wall before the result screen comes up (0.7 s). */
+const RESULT_DELAY = 40;
 
 // --- state ---
-const world = makeWorld({ target, seed, params: paramsFor(LEVEL, TWO_PLAYER), cpu: [false, !TWO_PLAYER] });
-/** The CPU for each slot it plays (P2 in 1P), else null. */
-const cpus = world.cpu.map((on, i) => (on ? makeCpu(world, /** @type {0 | 1} */ (i)) : null));
-const effects = createEffects();
+const ui = makeUi({
+  players: query.get('mode') === '2p' ? 2 : 1,
+  target: MATCH_LENGTHS.includes(to) ? to : DEFAULT_SETTINGS.target,
+  level: toLevel(query.get('level') ?? undefined),
+}, SHORTCUT ? 'match' : 'title');
 /** The character sprites, once loaded (null: boxes). @type {import('./render/actors.js').Sprites | null} */
 let sprites = null;
 let showBoxes = query.has('boxes');
@@ -78,48 +91,102 @@ let showDebug = false;
 let courtView = PAINTED_FITS ? (COURT_VIEWS.find(v => v === query.get('court')) ?? 'art') : 'code';
 /** The ball and effects follow the court view: the art, except on the code court. */
 const artOn = () => courtView !== 'code';
-let frozen = false;
 /** A level chosen with [ or ] during a rally, waiting for the next one (null: none). */
 let nextLevel = /** @type {number | null} */ (null);
+/** Steps since the match was won (the result screen comes up after RESULT_DELAY). */
+let overSteps = 0;
+
+// The match: built from the settings when the controllers screen comes up, and again for a restart or rematch.
+/** The seed of the match being played (a restart replays it) and of the next new one. */
+let matchSeed = seed, nextSeed = seed;
+/** @type {import('./sim/world.js').World} */
+let world;
+/** The CPU for each slot it plays (P2 in 1P), else null. @type {(import('./sim/cpu.js').Cpu | null)[]} */
+let cpus = [];
+let effects = createEffects();
+/** Which pad plays which human (null: the CPU's slot). @type {(import('./input/actions.js').Seat | null)[]} */
+let seats = makeSeats([false, true]);
+
+/** A match from 0–0 with the screens' settings. The pads that were playing keep playing (in the same order). @param {number} s  seed */
+function newMatch(s) {
+  const set = ui.settings, two = set.players === 2;
+  matchSeed = s;
+  world = makeWorld({ target: set.target, seed: s, params: paramsFor(set.level, two), cpu: [false, !two] });
+  cpus = world.cpu.map((on, i) => (on ? makeCpu(world, /** @type {0 | 1} */ (i)) : null));
+  effects = createEffects();
+  if (sprites) sprites.anims = [createAnimator(), createAnimator()];
+  nextLevel = null;
+  overSteps = 0;
+  lastEvent = null;
+  lastContact = null;
+  const kept = seats.flatMap(st => (st?.pad != null ? [st.pad] : []));
+  seats = makeSeats(world.cpu);
+  for (const p of kept) joinPad(seats, p);
+}
+newMatch(nextSeed++);
 
 /** Play at this level from now: the world's pace and the CPUs' skill (they re-read it as a rally starts). @param {number} level */
 function applyLevel(level) {
-  world.params = paramsFor(level, TWO_PLAYER);
+  world.params = paramsFor(level, !world.cpu[1]);
   for (const c of cpus) if (c) c.rally = null;
   nextLevel = null;
 }
 
 /** The debug key: step the level; it applies now if no serve has been struck yet, else at the next rally. @param {number} d */
 function stepLevel(d) {
-  if (TWO_PLAYER) return;                  // 2P always plays at level 5's pace
+  if (!world.cpu[1]) return;               // 2P always plays at level 5's pace
   const from = nextLevel ?? world.params.level;
   const to = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, LEVELS.indexOf(from) + d))];
   if (world.phase === 'serve') applyLevel(to); else nextLevel = to;
 }
 
+/**
+ * One menu move, and what it asks of the match.
+ * @param {import('./ui/screens.js').Nav} n
+ */
+function nav(n) {
+  const from = ui.screen;
+  const effect = navigate(ui, n);
+  if (from === 'assign' && (effect === 'start' || effect === 'resume')) forgetLost(seats);  // carry on with the keys
+  if (effect === 'prepare' || effect === 'rematch') newMatch(nextSeed++);
+  else if (effect === 'restart') newMatch(matchSeed);
+}
+
 // --- input ---
 const layouts = DEFAULT_LAYOUTS;
-const kb = createKeyboard(layoutCodes(layouts));
+/** Keys that work the menus whatever the layouts (the layouts' own keys do too: ACTION_NAV). */
+const MENU_KEYS = /** @type {Record<string, import('./ui/screens.js').Nav>} */ (
+  { Enter: 'ok', NumpadEnter: 'ok', Space: 'ok', Escape: 'back' });
+/** A player's action keys in the menus: movement moves, HARD is OK, SOFT is back. */
+const ACTION_NAV = /** @type {Record<string, import('./ui/screens.js').Nav>} */ (
+  { up: 'up', down: 'down', left: 'left', right: 'right', hard: 'ok', soft: 'back' });
+const kb = createKeyboard([...layoutCodes(layouts), ...Object.keys(MENU_KEYS)]);
 const pads = createPads();
-/** Which pad plays which human (null: the CPU's slot). */
-const seats = makeSeats(world.cpu);
 /** The browser's name for each pad seen. @type {Map<number, string>} */
 const padIds = new Map();
-/** The controller overlay is up after a pad joins, until A / Start / Enter. */
-let joining = false;
-/** A playing pad was unplugged: wait until one replaces it (or Enter carries on with the keyboard). */
+/** A playing pad was unplugged and nobody has carried on yet. */
 const lost = () => seats.some(s => s?.lost);
-/** The game waits: frozen, or an overlay is up. */
-const stopped = () => frozen || joining || lost();
 
-/** Enter / Space, or A / Start on a pad that plays: close the overlay (or carry on without the unplugged pad). */
-function confirmOverlay() {
-  if (lost()) forgetLost(seats);
-  else joining = false;
+/** The menu move a key makes, if any. @param {string} code @returns {import('./ui/screens.js').Nav | null} */
+function keyNav(code) {
+  if (code in MENU_KEYS) return MENU_KEYS[code];
+  for (const l of layouts) {
+    for (const [action, c] of Object.entries(l)) if (c === code) return ACTION_NAV[action];
+  }
+  return null;
 }
-kb.onPress('Escape', () => { if (joining) joining = false; else if (!lost()) frozen = !frozen; });
-kb.onPress('Enter', confirmOverlay);
-kb.onPress('Space', confirmOverlay);
+
+/** The menu moves a pad made this poll. @param {import('./input/gamepad.js').PadInput} p */
+function padNavs(p) {
+  /** @type {import('./ui/screens.js').Nav[]} */
+  const out = [];
+  for (const d of /** @type {const} */ (['up', 'down', 'left', 'right'])) if (p.pressed[d]) out.push(d);
+  if (p.pressed.hard) out.push('ok');
+  if (p.pressed.soft) out.push('back');
+  if (p.pressed.start) out.push('start');
+  return out;
+}
+
 kb.onPress('Backquote', () => { showDebug = !showDebug; });
 kb.onPress('Backslash', () => { showBoxes = !showBoxes; });
 kb.onPress('Quote', () => {
@@ -127,13 +194,25 @@ kb.onPress('Quote', () => {
 });
 kb.onPress('BracketLeft', () => stepLevel(-1));
 kb.onPress('BracketRight', () => stepLevel(1));
-window.addEventListener('blur', () => { frozen = true; });
-document.addEventListener('visibilitychange', () => { if (document.hidden) frozen = true; });
+
+// pausing without a key: the window loses focus, the tab is hidden, or fullscreen is left (the browser may keep the
+// Esc that leaves fullscreen to itself). F11's fullscreen isn't the Fullscreen API, so leaving it shows only as the
+// window shrinking from the screen's size.
+window.addEventListener('blur', () => autoPause(ui));
+document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(ui); });
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) autoPause(ui); });
+const screenSized = () => window.innerWidth >= window.screen.width && window.innerHeight >= window.screen.height;
+let wasScreenSized = screenSized();
+window.addEventListener('resize', () => {
+  const now = screenSized();
+  if (wasScreenSized && !now) autoPause(ui);
+  wasScreenSized = now;
+});
 
 // --- sim step (57.4 Hz, or slower with ?slow) ---
 /**
- * Poll the pads (once per step, frozen or not): unplugged pads, joins, Start, and the overlay's buttons.
- * @returns {(import('./input/gamepad.js').PadInput | null)[]} each slot's pad this step
+ * Poll the pads (once per step, on every screen): unplugged pads, joins, and the screens' buttons.
+ * @returns {(import('./input/gamepad.js').PadInput | null)[]} each slot's pad this step (for playing)
  */
 function pollPads() {
   const { pads: list, gone } = pads.poll();
@@ -143,29 +222,55 @@ function pollPads() {
   for (const p of list) {
     padIds.set(p.index, p.id);
     let slot = seatOf(seats, p.index);
-    if (slot < 0) {
+    const seating = ui.screen === 'assign' || ui.screen === 'match';
+    if (seating && slot < 0) {
       // the button that joins a pad does nothing else; a pad replacing an unplugged one carries straight on
       const wasLost = lost();
-      if (p.any && joinPad(seats, p.index) >= 0 && !wasLost) joining = true;
+      if (!p.any || joinPad(seats, p.index) < 0) continue;
+      if (ui.screen === 'match' && !wasLost) assignInMatch(ui);
+      else if (ui.screen === 'assign' && ui.inMatch && wasLost && !lost()) nav('ok');
       continue;
     }
-    if (joining) {
-      if (p.pressed.hard || p.pressed.start) joining = false;
+    if (ui.screen === 'assign') {
+      if (p.pressed.hard || p.pressed.start) nav('ok');
+      else if (p.pressed.soft) nav('back');
       else if ((slot === 0 && p.pressed.right) || (slot === 1 && p.pressed.left)) {
         if (swapSeats(seats, slot)) slot = 1 - slot;
       }
-    } else if (p.pressed.start && !lost()) frozen = !frozen;
-    bySlot[slot] = p;
+    } else if (ui.screen === 'match') {
+      if (p.pressed.start) nav('start');
+    } else {
+      for (const n of padNavs(p)) nav(n);
+    }
+    if (slot >= 0) bySlot[slot] = p;
   }
+  if (ui.screen === 'match' && lost()) assignInMatch(ui);
   return bySlot;
 }
 
 let stepCount = 0;
+/** The match is being played (no screen over it). (A function, so a check after nav() isn't narrowed away.) */
+const playing = () => ui.screen === 'match';
 function simStep() {
-  const wasStopped = stopped();
-  const presses = kb.takePresses();       // sampled once per step; presses made while frozen are dropped
+  stepCount++;
+  const wasMatch = ui.screen === 'match';
+  const presses = kb.takePresses();       // sampled once per step; presses on the menus don't reach the match
   const padNow = pollPads();
-  if (wasStopped || stopped()) return;    // a button that closes the overlay or unfreezes doesn't also play
+  if (ui.screen === 'match') {
+    if (presses.has('Escape')) nav('back');
+  } else {
+    for (const code of presses) {
+      const n = keyNav(code);
+      if (n) nav(n);
+      if (playing()) break;               // the key that starts or resumes the match does nothing more
+    }
+  }
+  if (!wasMatch || !playing()) return;  // a press that closes a menu or opens one doesn't also play
+
+  if (world.phase === 'over') {           // GAME on the wall, then the result screen
+    if (++overSteps >= RESULT_DELAY) matchOver(ui);
+    return;
+  }
   const [a1, a2] = [0, 1].map(i => {
     const c = cpus[i];
     if (c) return cpuActions(c, world);
@@ -174,7 +279,7 @@ function simStep() {
   });
   const events = stepWorld(world, a1, a2);
   for (const e of events) {
-    if ((e.type === 'newRally' || e.type === 'rematch') && nextLevel !== null) applyLevel(nextLevel);
+    if (e.type === 'newRally' && nextLevel !== null) applyLevel(nextLevel);
     if (e.type === 'ball') lastEvent = { ev: e.ev, frame: world.frame - 1 };
     else if (e.type === 'swing' || e.type === 'hit') lastContact = e;
   }
@@ -186,15 +291,32 @@ function simStep() {
   }
   effects.add(events, world);
   shotLog.add(events, world);
-  stepCount++;
 }
 
 // --- render ---
 /** Each side's controls, at the foot of its margin (a CPU's side shows its level instead). */
 const HELP_KEYS = [['P1 keys', 'WASD move', 'F hard', 'G soft'], ['P2 keys', 'arrows move', 'Num0 hard', 'Num. soft']];
+/** Each slot's keyboard keys on the controllers screen. */
+const SEAT_KEYS = ['WASD F G', 'arrows Num0 Num.'];
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('game'));
 const screen = createScreen(canvas, { mode: query.get('scale') === 'int' ? 'int' : 'fill' });
 const ctx = screen.ctx;
+
+/** The match as it stands: the court, the players and ball, the effects and the HUD. */
+function drawMatch() {
+  const art = artOn();
+  drawCourt(ctx, courtView);
+  effects.draw(ctx, world, 'wall', SIZE, art);
+  drawActors(ctx, world.ball, world.players,
+    { landing: world.landing, size: SIZE, sprites: showBoxes ? null : sprites, racket: RACKET_SHIFT, art });
+  effects.draw(ctx, world, 'front', SIZE, art);
+  drawHud(ctx, world, {
+    help: { keys: HELP_KEYS, level: nextLevel ?? world.params.level },
+    footer: `Esc pause     Controllers: A hard  B/X soft  Start pause${
+      seats.some(s => s?.pad === null) ? '  (any button joins)' : ''}`,
+    slow: SLOW,
+  });
+}
 
 let stepsPerSec = 0, rateStart = performance.now(), rateSteps = 0;
 function render() {
@@ -205,42 +327,38 @@ function render() {
     rateSteps = stepCount;
   }
 
-  const art = artOn();
-  drawCourt(ctx, courtView);
-  effects.draw(ctx, world, 'wall', SIZE, art);
-  drawActors(ctx, world.ball, world.players,
-    { landing: world.landing, size: SIZE, sprites: showBoxes ? null : sprites, racket: RACKET_SHIFT, art });
-  effects.draw(ctx, world, 'front', SIZE, art);
-  drawHud(ctx, world, {
-    paused: frozen && !joining && !lost(),
-    help: { keys: HELP_KEYS, level: nextLevel ?? world.params.level },
-    footer: `Esc pause     Controllers: A hard  B/X soft  Start pause${
-      seats.some(s => s?.pad === null) ? '  (any button joins)' : ''}`,
-    slow: SLOW,
-  });
-  if (joining || lost()) {
-    drawPadOverlay(ctx, { kind: lost() ? 'lost' : 'join', seats, keys: ['WASD F G', 'arrows Num0 Num.'],
-      name: i => padName(padIds.get(i) ?? '') });
-  }
-  if (showDebug) {
-    drawDebug(ctx, { stepsPerSec, world, heights, lastEvent, lastContact, shots: shotLog.shots, cpus, nextLevel,
-      anims: animNames() });
+  if (ui.screen === 'title') drawTitle(ctx, ui);
+  else if (ui.screen === 'length' || ui.screen === 'level') drawSetup(ctx, ui);
+  else {
+    drawMatch();
+    if (ui.screen === 'assign') {
+      drawAssign(ctx, { seats, keys: SEAT_KEYS, name: i => padName(padIds.get(i) ?? ''), level: world.params.level,
+        inMatch: ui.inMatch });
+    } else if (ui.screen === 'pause') drawPause(ctx, ui);
+    else if (ui.screen === 'result') drawResult(ctx, ui, world);
+    if (showDebug) {
+      drawDebug(ctx, { stepsPerSec, world, heights, lastEvent, lastContact, shots: shotLog.shots, cpus, nextLevel,
+        anims: animNames() });
+    }
   }
   screen.present();
 }
 
-// testing hook: run whole sim steps (keyboard → actions → world, as the loop does) and draw, without waiting for frames
+// testing hook: run whole sim steps (keyboard → screens or actions → world, as the loop does) and draw, without
+// waiting for frames
 if (query.has('dev')) {
   Object.assign(window, { hogg: {
-    world, kb, render, shots: shotLog.shots, cpus, seats, buffer: ctx.canvas,
+    kb, render, shots: shotLog.shots, ui, buffer: ctx.canvas,
+    get world() { return world; },
+    get cpus() { return cpus; },
+    get seats() { return seats; },
     get sprites() { return sprites; },
     get anims() { return animNames(); },
     get boxes() { return showBoxes; },
     set boxes(v) { showBoxes = v; },
-    get joining() { return joining; },
     get nextLevel() { return nextLevel; },
+    /** @param {import('./ui/screens.js').Nav} n */ nav(n) { nav(n); render(); },
     /** @param {number} n */ step(n = 1) { for (let i = 0; i < n; i++) simStep(); render(); },
-    get frozen() { return frozen; },
     get heights() { return [...heights]; },
     get shifts() { return [...shifts]; },
     get debug() { return showDebug; },
@@ -274,6 +392,7 @@ const art = loadAssets({
   fontJson: { kind: 'json', url: 'assets/font.json' },
   ui: { kind: 'image', url: 'assets/ui.png' },
   uiJson: { kind: 'json', url: 'assets/ui.json' },
+  title: { kind: 'image', url: 'assets/title.png' },
 });
 let loading = true;
 (function drawLoading() {
@@ -295,6 +414,7 @@ try {
   useFx(a.fx, a.fxJson);
   useFont(a.font, a.fontJson);
   useUi(a.ui, a.uiJson);
+  useTitle(a.title);
 } catch (e) {
   console.warn('Hogg Squash: the court and HUD art did not load, so the code court and plain text are drawn.', e);
 }

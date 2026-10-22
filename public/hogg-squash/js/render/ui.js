@@ -36,13 +36,22 @@ export function slice(name) {
 }
 
 /**
- * Draw a slice 1:1 with its top-left at x, y.
- * @param {CanvasRenderingContext2D} ctx @param {string} name @param {number} x @param {number} y
+ * Draw a slice 1:1 with its top-left at x, y, mirrored left to right if flip (the menu cursor pointing left).
+ * @param {CanvasRenderingContext2D} ctx @param {string} name @param {number} x @param {number} y @param {boolean} [flip]
  */
-export function drawSlice(ctx, name, x, y) {
+export function drawSlice(ctx, name, x, y, flip = false) {
   const s = slice(name);
   if (!loaded || !s) return;
-  ctx.drawImage(loaded.image, s.x, s.y, s.w, s.h, Math.round(x), Math.round(y), s.w, s.h);
+  x = Math.round(x); y = Math.round(y);
+  if (!flip) {
+    ctx.drawImage(loaded.image, s.x, s.y, s.w, s.h, x, y, s.w, s.h);
+    return;
+  }
+  ctx.save();
+  ctx.translate(x + s.w, y);
+  ctx.scale(-1, 1);
+  ctx.drawImage(loaded.image, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
+  ctx.restore();
 }
 
 /**
