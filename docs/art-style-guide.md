@@ -50,6 +50,8 @@ Viewed from behind, like the arcade.
 
 Tags that play once have `"repeat": "1"`; tags with a contact frame have `"data": "contact=<n>"`, where n is the 0-based frame within the tag (the same number as in the frame name, e.g. `forehand 3`). Mirror a tag about the `feet` pivot (x → 2 × 73 − x), not the frame centre.
 
+**Racket slices (S8b):** each swing tag (`serve`, `forehand`, `backhand`, `overhead`, `dive`) has a 1×1 slice `racket <tag>` on the racket head's centre in its contact frame (frame pixels: serve 59,65; forehand 111,69; backhand 59,66; overhead 79,15; dive 129,128). The game shifts a swinging sprite so this point meets the ball (`docs/decisions.md`, "Racket height at contact"). They are data only: `art/tools/racket-slices.lua` adds them to `player.aseprite` (and `a2-build.lua` calls it), and the exported PNG is unchanged.
+
 | Tag | Frames | Timing | Notes |
 |---|---|---|---|
 | `ready` | 8 | 125 ms each, loop | a small knee bounce |

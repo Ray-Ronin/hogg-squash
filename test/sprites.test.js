@@ -4,16 +4,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { parseSheet, frameAt, createAnimator, stepAnimator, MS_PER_FRAME } from '../public/hogg-squash/js/render/sprites.js';
+import { parseSheet, frameAt, createAnimator, stepAnimator, racketShift, RACKET, MS_PER_FRAME } from '../public/hogg-squash/js/render/sprites.js';
 import { SWING, DIVE, swingLength, makePlayer } from '../public/hogg-squash/js/sim/player.js';
 import { FP } from '../public/hogg-squash/js/squash-physics.js';
+import { SERVE_WINDUP } from '../public/hogg-squash/js/sim/world.js';
 
 const json = JSON.parse(fs.readFileSync('public/hogg-squash/assets/player-100.json', 'utf8'));
 const sheet = parseSheet(json);
 
 const LOOPS = ['ready', 'run_side', 'run_up', 'run_down'];
 /** Play-once tags with a contact frame, and the sim timing each must match. */
-const SWINGS = { serve: SWING, forehand: SWING, backhand: SWING, overhead: SWING, dive: DIVE };
+const SWINGS = { serve: { CONTACT: SERVE_WINDUP }, forehand: SWING, backhand: SWING, overhead: SWING, dive: DIVE };
 
 test('every expected tag is in the sheet; loops loop, swings play once with a contact frame', () => {
   for (const name of LOOPS) {
@@ -67,7 +68,7 @@ test('frameAt: loops wrap, play-once tags hold their last frame', () => {
 
 /**
  * Step an animator through a script of player states.
- * @param {{ x: number, z: number, swing?: any, served?: boolean }[]} steps  game units
+ * @param {{ x: number, z: number, swing?: any, serveSwing?: boolean }[]} steps  game units
  */
 function play(steps) {
   const a = createAnimator(), pl = makePlayer(0, 100);
@@ -75,7 +76,7 @@ function play(steps) {
     pl.x = s.x * FP;
     pl.z = s.z * FP;
     pl.swing = s.swing ?? null;
-    stepAnimator(a, sheet, pl, !!s.served);
+    stepAnimator(a, sheet, pl, s.serveSwing ? { x: 18 * FP, y: 30 * FP, z: 120 * FP } : null);
     return { ...a };
   });
 }
@@ -114,15 +115,85 @@ test('the animator: a swing shows the sim frame since the press; a backhand dive
   ]);
 });
 
-test('the animator: the serve starts on its contact frame (the sim has no wind-up) and plays out', () => {
+test('the animator: the serve starts on its first frame on the press, shows its contact frame on the launch, plays out', () => {
   const serve = sheet.tags.serve;
-  const steps = [{ x: 0, z: 120, served: true }];
+  const steps = [{ x: 0, z: 120, serveSwing: true }];
   for (let i = 0; i < serve.length; i++) steps.push({ x: 0, z: 120 });
   const r = play(steps);
   assert.equal(r[0].tag, 'serve');
-  assert.equal(frameAt(serve, r[0].t), serve.contact);
+  assert.equal(frameAt(serve, r[0].t), 0, 'the wind-up shows');
+  assert.equal(frameAt(serve, r[SERVE_WINDUP - 1].t), /** @type {number} */ (serve.contact) - 1);
+  assert.equal(frameAt(serve, r[SERVE_WINDUP].t), serve.contact, 'the contact frame on the launch step');
   const last = r.findLastIndex(a => a.tag === 'serve');
   assert.equal(frameAt(serve, r[last].t), serve.count - 1, 'the follow-through plays to its last frame');
-  assert.equal(last, serve.length - serve.starts[/** @type {number} */ (serve.contact)] - 1);
+  assert.equal(last, serve.length - 1);
   assert.equal(r[last + 1].tag, 'ready');
+});
+
+test('the animator: overhead for contact types 8–9 only (mirrored for a backhand), forehand / backhand otherwise', () => {
+  const swing = (/** @type {number | null} */ index, /** @type {'fore' | 'back'} */ hand, kind = 'swing') =>
+    ({ kind, t: SWING.CONTACT, hand, contact: index === null ? null : { index } });
+  const cases = /** @type {[number | null, 'fore' | 'back', string, string, boolean][]} */ ([
+    [8, 'fore', 'swing', 'overhead', false], [9, 'fore', 'swing', 'overhead', false], [8, 'back', 'swing', 'overhead', true],
+    [9, 'back', 'swing', 'overhead', true], [7, 'fore', 'swing', 'forehand', false], [0, 'back', 'swing', 'backhand', false],
+    [10, 'fore', 'dive', 'dive', false], [null, 'fore', 'swing', 'forehand', false],
+  ]);
+  for (const [index, hand, kind, tag, mirror] of cases) {
+    const [a] = play([{ x: 0, z: 100, swing: swing(index, hand, kind) }]);
+    assert.deepEqual([a.tag, a.mirror], [tag, mirror], `contact ${index} ${hand} ${kind}`);
+    assert.equal(frameAt(sheet.tags[a.tag], a.t), sheet.tags[a.tag].contact, 'on its contact frame');
+  }
+});
+
+test('every swing tag has a racket point (the "racket <tag>" slice) inside its frame', () => {
+  for (const name of Object.keys(SWINGS)) {
+    const p = sheet.tags[name].racket;
+    assert.ok(p, `${name} has a racket point`);
+    assert.ok(p.x > 0 && p.x < sheet.frameW && p.y > 0 && p.y < sheet.pivot.y, `${name}: inside the frame, above the feet`);
+  }
+  assert.ok(sheet.tags.overhead.racket.y < sheet.tags.forehand.racket.y - 40, 'the overhead holds it far higher');
+  assert.ok(sheet.tags.dive.racket.y > sheet.pivot.y - 30, 'the dive has it on the floor');
+});
+
+test('the racket shift: 0 at the press, the whole gap on the contact frame (capped), 0 again RACKET.OUT frames later', () => {
+  const fore = sheet.tags.forehand, h = 100, sy = 300;
+  const racketY = sy - (sheet.pivot.y - fore.racket.y);           // at 100 px, 1:1
+  const a = { ...createAnimator(), tag: 'forehand', contact: { x: 0, y: 19, z: 100 } };
+  const at = (/** @type {number} */ t, /** @type {number} */ ballY) => racketShift(sheet, { ...a, t }, sy, h, ballY);
+  assert.equal(at(0, racketY + 8), 0, 'nothing at the press');
+  assert.equal(at(SWING.CONTACT, racketY + 8), 8, 'down to a low ball on the contact frame');
+  assert.equal(at(SWING.CONTACT, racketY - 5), -5, 'up to a high one');
+  assert.equal(at(SWING.CONTACT, racketY + 50), Math.round(RACKET.MAX * h), 'capped');
+  assert.equal(at(SWING.CONTACT, racketY - 50), -Math.round(RACKET.MAX * h), 'capped up too');
+  assert.equal(at(SWING.CONTACT + RACKET.OUT, racketY + 8), 0, 'eased out by the end');
+  assert.equal(SWING.CONTACT + RACKET.OUT, swingLength('swing') - 1, '…which is the swing\'s last locked frame');
+  let prev = 0;
+  for (let t = 1; t <= SWING.CONTACT; t++) {
+    const s = at(t, racketY + 12);
+    assert.ok(s >= prev && s - prev <= 4, `t ${t}: eases in (${prev} → ${s})`);
+    prev = s;
+  }
+  assert.equal(at(SWING.CONTACT, null), 0, 'no ball: no shift');
+  assert.equal(racketShift(sheet, { ...a, contact: null, t: SWING.CONTACT }, sy, h, racketY + 8), 0, 'a miss: no shift');
+});
+
+test('the animator keeps the contact: the ghost ball for a swing, the held ball for a serve, none when running', () => {
+  const ghost = { x: 30 * FP, y: 12 * FP, z: 90 * FP };
+  const [sw] = play([{ x: 0, z: 100, swing: { kind: 'swing', t: 0, hand: 'fore', contact: { index: 3, ghost } } }]);
+  assert.deepEqual(sw.contact, { x: 30, y: 12, z: 90 });
+  const [miss] = play([{ x: 0, z: 100, swing: { kind: 'swing', t: 0, hand: 'fore', contact: null } }]);
+  assert.equal(miss.contact, null);
+  const r = play([{ x: 0, z: 120, serveSwing: true }, { x: 0, z: 120 }, { x: 0, z: 120 }]);
+  assert.deepEqual(r.map(a => a.contact), Array(3).fill({ x: 18, y: 30, z: 120 }));
+  const run = play([{ x: 0, z: 100 }, { x: 2.5, z: 100 }]);
+  assert.equal(run[1].contact, null);
+});
+
+test('the racket shift on a serve is back to 0 before a running server can cut the follow-through short', () => {
+  const serve = sheet.tags.serve, h = 100, sy = 300;
+  const racketY = sy - (sheet.pivot.y - serve.racket.y);
+  const a = { ...createAnimator(), tag: 'serve', contact: { x: 18, y: 30, z: 120 } };
+  const cut = serve.starts[/** @type {number} */ (serve.contact) + 1];
+  assert.equal(racketShift(sheet, { ...a, t: SERVE_WINDUP }, sy, h, racketY + 30), Math.round(RACKET.MAX * h));
+  assert.equal(racketShift(sheet, { ...a, t: cut - 1 }, sy, h, racketY + 30), 0, 'the last frame before the cut');
 });

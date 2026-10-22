@@ -3,7 +3,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FP, makeBall, step, classifyContact, difficultyParams, SERVE } from '../public/hogg-squash/js/squash-physics.js';
 import {
-  makeWorld, stepWorld, landingSpot, TIMING, SERVE_SPOT, SERVE_AIM, serveTarget, serveAim, serveFlight, serveIsGood,
+  makeWorld, stepWorld, landingSpot, TIMING, SERVE_SPOT, SERVE_AIM, SERVE_WINDUP, serveTarget, serveAim, serveFlight,
+  serveIsGood,
 } from '../public/hogg-squash/js/sim/world.js';
 import { serviceBox, LINES } from '../public/hogg-squash/js/sim/court-rules.js';
 import { makePlayer, PLAYER_LIMITS } from '../public/hogg-squash/js/sim/player.js';
@@ -32,6 +33,11 @@ function until(w, type, script, max = 2000) {
 
 /** The server presses HARD now. */
 const serveNow = (w, button = 'hard') => (w.match.server === 0 ? [keys(button), NO_KEYS] : [NO_KEYS, keys(button)]);
+
+/** The server presses, and the serve's wind-up plays out to the launch (SERVE_WINDUP frames). Returns every event. */
+function serve(w, button = 'hard') {
+  return [...stepWorld(w, ...serveNow(w, button)), ...run(w, SERVE_WINDUP)];
+}
 
 /** Depth error allowed for an aimed serve: the first bounce falls on a whole frame (SERVE_AIM). */
 const DEPTH_TOLERANCE = 4;
@@ -102,7 +108,7 @@ test('serve setup: server in the box match.js names, receiver in the opposite ba
 test('an unreturned serve: point to the server, who keeps serving from the other box', () => {
   const w = makeWorld({ seed: 3 });
   const s = w.match.server;
-  const served = stepWorld(w, ...serveNow(w));
+  const served = serve(w);
   assert.deepEqual(served.find(e => e.type === 'serve'), { type: 'serve', side: s, button: 'hard' });
   assert.equal(w.phase, 'rally');
   const r = until(w, 'rally');
@@ -122,12 +128,38 @@ test('an unreturned serve: point to the server, who keeps serving from the other
   assert.ok(w.ball.x < 0, 'serving from the left box');
 });
 
+test('the serve wind-up: the ball leaves SERVE_WINDUP (7) frames after the press; server and ball held until then', () => {
+  assert.equal(SERVE_WINDUP, 7, "a rally swing's wind-up (SWING.CONTACT)");
+  for (const seed of [1, 2]) {
+    const w = makeWorld({ seed });
+    const s = w.match.server, rcv = s === 0 ? 1 : 0;
+    assert.deepEqual(stepWorld(w, ...serveNow(w, 'soft')), [{ type: 'serveSwing', side: s, button: 'soft' }]);
+    const feet = { x: w.players[s].x, z: w.players[s].z }, ball = { ...w.ball }, rz = w.players[rcv].z;
+    for (let t = 1; t < SERVE_WINDUP; t++) {
+      // the server tries to run off and press HARD; the receiver runs up the court
+      const mash = keys('left', 'up', 'hard');
+      const ev = stepWorld(w, ...(s === 0 ? [mash, keys('up')] : [keys('up'), mash]));
+      assert.deepEqual(ev, [], `frame ${t} after the press: nothing yet`);
+      assert.equal(w.phase, 'serve');
+      assert.deepEqual({ x: w.players[s].x, z: w.players[s].z }, feet, 'the server is locked');
+      assert.deepEqual(w.ball, ball, 'the ball stays held');
+    }
+    assert.ok(w.players[rcv].z < rz, 'the receiver moves during the wind-up');
+    const ev = stepWorld(w, NO_KEYS, NO_KEYS);
+    assert.deepEqual(ev, [{ type: 'serve', side: s, button: 'soft' }], 'launched with the pressed button, not the mashed one');
+    assert.equal(w.phase, 'rally');
+    assert.equal(w.windup, null);
+    assert.deepEqual(w.serveTarget, serveTarget(w.match.box, ball.x / FP, ball.z / FP, 'soft'), 'aimed from the held ball');
+    assert.ok(w.landing, 'the landing marker is up');
+  }
+});
+
 test('the serve crosses the court: from the start spot it first bounces mid-way across the opposite back quarter', () => {
   const w = makeWorld({ seed: 3 });
   for (const [box, across] of [['right', 'left'], ['left', 'right']]) {
     assert.equal(w.match.box, box);
     const target = serviceBox(across);
-    stepWorld(w, ...serveNow(w));
+    serve(w);
     const mark = w.landing;
     assert.ok(mark, 'a landing marker');
     const mid = (SERVE_AIM.X_NEAR + SERVE_AIM.X_FAR) / 2 * (across === 'left' ? -1 : 1);
@@ -154,7 +186,7 @@ test('the aimed serve: the spot in the box picks the place across, HARD lands de
       const saved = structuredClone(w);
       w.players[s].x = px * FP;
       w.players[s].z = pz * FP;
-      stepWorld(w, ...serveNow(w, button));
+      serve(w, button);
       const t = w.serveTarget, mark = w.landing;
       const where = `${box} box, feet ${px},${pz}, ${button}`;
       assert.deepEqual(t, serveTarget(box, px + SERVE_SPOT.BALL_DX, pz, button), where);
@@ -182,7 +214,7 @@ test('the aimed serve: the spot in the box picks the place across, HARD lands de
       assert.ok(landed[`${px},${area.zMax},${button}`].z > landed[`${px},${area.zMin},${button}`].z,
         'the back of the box serves deeper than the front');
     }
-    stepWorld(w, ...serveNow(w));
+    serve(w);
     until(w, 'rally');
     run(w, FREEZE);
   }
@@ -216,7 +248,7 @@ test('turns: the server cannot hit the ball back, and nobody can take the serve 
   let e = stepWorld(w, ...press(rcv)).find(e => e.type === 'swing');
   assert.equal(e?.reach, false, 'no swing at a held ball');
   run(w, 20);                                   // let that swing finish (18 frames)
-  stepWorld(w, ...serveNow(w));
+  serve(w);
   e = stepWorld(w, ...press(rcv)).find(e => e.type === 'swing');
   assert.equal(e?.reach, false, 'the receiver waits for the front wall');
   // follow the ball with the server and swing: always a miss, it's the receiver's ball
@@ -232,7 +264,7 @@ test('turns: the server cannot hit the ball back, and nobody can take the serve 
 test('a good return: the receiver hits the serve back, the server misses it, the receiver wins the point and serves', () => {
   const w = makeWorld({ seed: 9 });
   const s = w.match.server, rcv = s === 0 ? 1 : 0;
-  stepWorld(w, ...serveNow(w));
+  serve(w);
   // as in rules.test.js: one bounce, back off the glass, 4 more frames, then stand where the ball will be
   let floors = 0, glass = false;
   while (!(floors === 1 && glass)) {
@@ -260,7 +292,7 @@ test('a good return: the receiver hits the serve back, the server misses it, the
 
 test('the landing marker is where the ball first bounces after the front wall', () => {
   const w = makeWorld({ seed: 2 });
-  stepWorld(w, ...serveNow(w));
+  serve(w);
   const mark = w.landing;
   assert.ok(mark);
   // replay the same ball with the plain physics
@@ -285,7 +317,7 @@ test('a whole match to 5: the result, then HARD starts a rematch at 0-0', () => 
   const s = w.match.server;
   for (let point = 0; point < 5; point++) {
     assert.equal(w.phase, 'serve');
-    stepWorld(w, ...serveNow(w));
+    serve(w);
     until(w, 'rally');
     run(w, FREEZE - 1);
     const end = run(w, 1);

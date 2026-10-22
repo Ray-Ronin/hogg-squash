@@ -4,12 +4,14 @@
 import { project } from './projection.js';
 import { WIDTH } from '../engine/screen.js';
 import { TIMING } from '../sim/world.js';
+import { LINES } from '../sim/court-rules.js';
 
 /** @typedef {import('../sim/world.js').World} World */
 
 const COLOURS = { text: '#f4f4f0', dim: '#8a8a94', wall: '#c8102e', wallDim: '#555', players: ['#ff5a6e', '#7aa2ff'] };
 const CALLOUTS = { tin: 'TIN', out: 'OUT', down: 'DOWN', notUp: 'NOT UP' };
-const MARGIN_W = 100;                 // each side margin is 100 px with the S1 camera
+/** Each side margin's width beside the floor at the glass (100 px with the S1 camera, 78 with wide or zoom). */
+const marginW = () => Math.floor(project(-LINES.SIDE, 0, LINES.BACK).sx);
 
 /**
  * Text centred on the front wall at height y (game units).
@@ -36,8 +38,9 @@ export function drawHud(ctx, w, opts) {
   const m = w.match;
 
   // side margins: P1 left, P2 right
+  const margin = marginW();
   for (const side of [0, 1]) {
-    const cx = side === 0 ? MARGIN_W / 2 : WIDTH - MARGIN_W / 2;
+    const cx = side === 0 ? margin / 2 : WIDTH - margin / 2;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillStyle = COLOURS.players[side];
@@ -58,8 +61,8 @@ export function drawHud(ctx, w, opts) {
   ctx.textBaseline = 'top';
   ctx.font = '10px monospace';
   ctx.fillStyle = COLOURS.dim;
-  ctx.fillText(`FIRST TO ${m.target}`, MARGIN_W / 2, 120);
-  ctx.fillText('WIN BY 2', MARGIN_W / 2, 132);
+  ctx.fillText(`FIRST TO ${m.target}`, margin / 2, 120);
+  ctx.fillText('WIN BY 2', margin / 2, 132);
 
   // front wall
   if (w.phase === 'point' && w.result) {

@@ -181,6 +181,8 @@ local fxi = math.floor(fx)
 local slice = spr:newSlice(Rectangle(fxi - 8, fy - 3, 16, 4))
 slice.name = "feet"
 slice.pivot = Point(fx - (fxi - 8), 3)
+RACKET_SLICES_LIB = true                      -- S8b: the racket head's point on each contact frame
+dofile(R .. "art/tools/racket-slices.lua").add(spr)
 spr:saveAs(R .. "art/character/player.aseprite")
 print(string.format("saved %dx%d, %d frames, feet at (%.1f, %d)", W, H, #frames, fx, fy))
 spr:close()

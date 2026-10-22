@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FP, makeBall, applyShot, shotEntry, SHOT_TABLES } from '../public/hogg-squash/js/squash-physics.js';
-import { makeWorld, stepWorld, serveTarget, serverArea, SERVE_SPOT, CPU_FLAG } from '../public/hogg-squash/js/sim/world.js';
+import { makeWorld, stepWorld, serveTarget, serverArea, SERVE_SPOT, SERVE_WINDUP, CPU_FLAG } from '../public/hogg-squash/js/sim/world.js';
 import { makePlayer, PLAYER_LIMITS, SWING } from '../public/hogg-squash/js/sim/player.js';
 import { makeRally } from '../public/hogg-squash/js/sim/rally.js';
 import { LINES } from '../public/hogg-squash/js/sim/court-rules.js';
@@ -205,16 +205,21 @@ test('the CPU serve: walks to a spot in its box, waits about 1 s, serves where s
     for (let n = 0; n < 2; n++) {
       while (w.phase !== 'serve') stepWorld(w, NO_KEYS, NO_KEYS);
       const box = w.match.box, a = serverArea(box);
-      let served = null, still = 0, frames = 0;
+      let served = null, still = 0, frames = 0, pressed = -1;
       for (; frames < 300 && !served; frames++) {
         const act = cpuActions(cpu, w);
         const moving = act.left || act.right || act.up || act.down;
-        if (act.hard || act.soft) assert.ok(!moving && still >= CPU.SERVE_WAIT - 1, 'stands still about 1 s before serving');
+        if (act.hard || act.soft) {
+          assert.ok(!moving && still >= CPU.SERVE_WAIT - 1, 'stands still about 1 s before serving');
+          assert.equal(pressed, -1, 'presses once');
+          pressed = frames;
+        }
         still = moving ? 0 : still + 1;
         const acts = server === 0 ? [act, NO_KEYS] : [NO_KEYS, act];
         served = stepWorld(w, acts[0], acts[1]).find(e => e.type === 'serve');
       }
       assert.ok(served, 'it serves');
+      assert.equal(frames - 1 - pressed, SERVE_WINDUP, 'the ball leaves SERVE_WINDUP frames after the press');
       assert.ok(frames >= CPU.SERVE_WAIT && frames < CPU.SERVE_WAIT + 40, `in about 1 s (${frames} frames)`);
       const s = cpu.serve, pl = w.players[server];
       assert.ok(Math.abs(pl.x / FP - s.x) <= 1.25 && Math.abs(pl.z / FP - s.z) <= 0.625, 'from its chosen spot');

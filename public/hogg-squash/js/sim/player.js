@@ -44,9 +44,9 @@ export const DROP = {
 /**
  * Contact types 8–9 (overheads: the ball above y 48) keep the arcade's entry. They are hit downward (negative lift),
  * and at a drop's power the ball falls into the tin before it reaches the wall (measured in S6b: 40–56% of them, none
- * with the arcade's entry).
+ * with the arcade's entry). The animator plays the `overhead` tag for them (S8b).
  */
-const OVERHEAD = [8, 9];
+export const OVERHEAD = [8, 9];
 
 /** Classifier flag for the dive band ("special": volley/lunge, contact types 10–11). */
 export const DIVE_FLAG = 0x10;

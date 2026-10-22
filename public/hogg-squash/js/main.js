@@ -9,6 +9,8 @@
 // always plays at level 5's pace), ?to=5|7|9|11 match length (default 9), ?seed=<n> seed for the 2P first server and
 // the CPU's choices (default random),
 // ?h=<px> character height at the back, ?curve=true|half|old the true-scale, CP-B or S3 height curve (for comparing),
+// ?cam=zoom|old the S8b camera candidates the owner didn't pick, for comparison (the frozen camera is wide; old is S1's),
+// ?racket=off draws the swings without the racket shift (for comparing),
 // ?scale=int whole-number scaling only (default: fill the window),
 // ?slow=<n> slow motion (the sim runs n times slower), ?dev exposes the world as window.hogg for testing.
 // The players are the animated sprites (assets/player-100.png + .json, loaded before the game starts; P2 / the CPU in
@@ -23,8 +25,9 @@ import { makeWorld, stepWorld } from './sim/world.js';
 import { makeCpu, cpuActions } from './sim/cpu.js';
 import { paramsFor, toLevel, LEVELS } from './sim/difficulty.js';
 import { MATCH_LENGTHS } from './sim/match.js';
+import { useCamera } from './render/projection.js';
 import { drawCourt } from './render/court.js';
-import { drawActors, heights } from './render/actors.js';
+import { drawActors, heights, shifts } from './render/actors.js';
 import { loadAssets } from './engine/assets.js';
 import { parseSheet, buildAtlas, createAnimator, stepAnimator, frameAt, KIT_SWAP } from './render/sprites.js';
 import { createEffects } from './render/effects.js';
@@ -40,7 +43,10 @@ const curve = query.get('curve');
 /** @type {import('./render/actors.js').SizeOpts} */
 const SIZE = { backHeight: Number(query.get('h')) || undefined,
   curve: curve === 'true' || curve === 'half' || curve === 'old' ? curve : 'fit' };
+const cam = query.get('cam');
+if (cam === 'wide' || cam === 'zoom' || cam === 'old') useCamera(cam);
 const SLOW = Math.max(1, Number(query.get('slow')) || 1);
+const RACKET_SHIFT = query.get('racket') !== 'off';
 const TWO_PLAYER = query.get('mode') === '2p';
 const LEVEL = toLevel(query.get('level') ?? undefined);
 
@@ -158,7 +164,8 @@ function simStep() {
   if (sprites) {
     const sp = sprites;
     sp.anims.forEach((a, i) =>
-      stepAnimator(a, sp.sheet, world.players[i], events.some(e => e.type === 'serve' && e.side === i)));
+      stepAnimator(a, sp.sheet, world.players[i],
+        events.some(e => e.type === 'serveSwing' && e.side === i) ? world.ball : null));
   }
   effects.add(events, world);
   shotLog.add(events, world);
@@ -181,7 +188,8 @@ function render() {
 
   drawCourt(ctx);
   effects.draw(ctx, world, 'wall', SIZE);
-  drawActors(ctx, world.ball, world.players, { landing: world.landing, size: SIZE, sprites: showBoxes ? null : sprites });
+  drawActors(ctx, world.ball, world.players,
+    { landing: world.landing, size: SIZE, sprites: showBoxes ? null : sprites, racket: RACKET_SHIFT });
   effects.draw(ctx, world, 'front', SIZE);
   drawHud(ctx, world, { paused: frozen && !joining && !lost() });
   ctx.font = '10px monospace';
@@ -222,6 +230,7 @@ if (query.has('dev')) {
     /** @param {number} n */ step(n = 1) { for (let i = 0; i < n; i++) simStep(); render(); },
     get frozen() { return frozen; },
     get heights() { return [...heights]; },
+    get shifts() { return [...shifts]; },
     get debug() { return showDebug; },
     set debug(v) { showDebug = v; },
   } });

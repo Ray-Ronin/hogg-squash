@@ -18,7 +18,8 @@
 //  5. recover  toward the T (T_X, T_Z), offset by its positioning error.
 // Positioning error (plan, open question 3): a fresh random offset each rally, up to the error step across (half that
 // in depth), that doesn't build up over a match as the arcade's does.
-// Serving: it picks a spot in its box and a button (chooseServe), walks there, waits SERVE_WAIT frames and serves.
+// Serving: it picks a spot in its box and a button (chooseServe), walks there, waits SERVE_WAIT frames and serves
+// (the ball leaves SERVE_WINDUP frames after the press, as a human's does).
 // Its skill comes from the world's params (difficulty.js): reaction delay, error step, shot sense, and (since S6b)
 // shot quality: timing error, aim jitter, how often it drops, and whether it volleys. It reads them again at the start
 // of each rally, so a level changed between rallies takes effect on the next one.
@@ -360,6 +361,7 @@ export function chooseServe(w, side) {
 
 /** Walk to the chosen spot, wait, serve. @param {Cpu} cpu @param {World} w @param {Player} me @returns {Actions} */
 function serveActions(cpu, w, me) {
+  if (w.windup) return NONE;                   // pressed: the serve's wind-up plays out
   const s = cpu.serve ??= chooseServe(w, cpu.side);
   const move = moveToward(me, s.x, s.z);
   if (move.left || move.right || move.up || move.down) return move;

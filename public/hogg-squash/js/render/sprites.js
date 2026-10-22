@@ -8,17 +8,22 @@
 // the tag's contact frame is on screen on the very step the racket meets the ball. sprites.test.js checks that each
 // tag's contact frame starts on SWING.CONTACT / DIVE.CONTACT and that its length is the sim's.
 //
-// What plays (stepAnimator): a swing or dive (forehand / backhand by the sim's hand; the dive mirrored for a backhand)
-// > the serve (from its contact frame: the sim launches the ball on the press, with no wind-up) > running (run_side,
-// mirrored for left; run_up toward the front wall; run_down) > ready. `overhead` is in the sheet but unused: the sim's
-// hand is only fore or back.
+// What plays (stepAnimator): a swing or dive (forehand / backhand by the sim's hand; `overhead` when the contact is
+// one of the classifier's overhead types; the dive and a backhand overhead mirrored) > the serve (from its first frame
+// on the press: the sim's wind-up is SERVE_WINDUP frames, so its contact frame is on screen on the launch step) >
+// running (run_side, mirrored for left; run_up toward the front wall; run_down) > ready.
 //
 // Drawing (drawSprite): the 100 px art scaled to the height heightAt gives, with smoothing on (docs/decisions.md,
 // "Sprites: one 100 px sheet, scaled smoothly"), the feet pivot on the projected feet point. Mirrored tags flip about
 // the pivot, not the frame centre. The size comes from the depth alone, so a change of size never restarts a tag.
+// Racket height at contact (S8b, CP-D): every contact frame holds the racket at one height, but the ball meets it
+// anywhere from the floor to overhead. So a swinging sprite is drawn shifted up or down (racketShift) to put the
+// racket head's point (the sheet's "racket <tag>" slices) on the ball at contact, eased in over the wind-up and out
+// over the follow-through, and capped (RACKET). Vertical only; no new art.
 // Node can import this file: only buildAtlas and drawSprite touch a canvas, and only when called.
 import { SIM_HZ } from '../engine/loop.js';
 import { FP } from '../squash-physics.js';
+import { OVERHEAD } from '../sim/player.js';
 
 /** The art's character height in px (head to soles, the ready pose): drawn 1:1 when heightAt gives this. */
 export const ART_HEIGHT = 100;
@@ -46,6 +51,21 @@ const TELEPORT = 8;
 const RUN_HOLD = 3;
 
 /**
+ * The racket shift (racketShift). Tunables.
+ *  - MAX: the cap, as a share of the drawn height (12 px at the back), so the feet never leave the shadow far behind.
+ *  - OUT: sim frames after contact over which the shift eases back to 0. A swing is planted for 11 frames from contact
+ *    (SWING.RECOVERY), so 10 is 0 on its last locked frame and nothing jumps when it ends; a dive gets the same, so
+ *    the player doesn't hang in the air while lying down. The serve's follow-through can be cut short by running off
+ *    (serveCut), so its shift is 0 by then (3 frames).
+ *  - ease: the 0 → 1 shape, used in over the wind-up (0 at the press, full on the contact frame) and out over OUT.
+ */
+export const RACKET = {
+  MAX: 0.12,
+  OUT: 10,
+  ease: (/** @type {number} */ f) => f * f * (3 - 2 * f),   // smoothstep
+};
+
+/**
  * @typedef {object} Tag
  * @property {string} name
  * @property {number} from      first frame in the sheet
@@ -54,6 +74,8 @@ const RUN_HOLD = 3;
  * @property {number | null} contact  the contact frame within the tag (from "data": "contact=<n>"), 0-based
  * @property {number[]} starts  each frame's start in sim frames from the start of the tag
  * @property {number} length    the tag's length in sim frames
+ * @property {{ x: number, y: number } | null} racket  the racket head on the contact frame (the "racket <tag>" slice),
+ *   frame pixels (the pixel's centre), unmirrored
  */
 
 /**
@@ -89,9 +111,10 @@ export function parseSheet(json) {
       ms += frames[t.from + i].ms;
     }
     const m = /contact=(\d+)/.exec(t.data ?? '');
+    const rk = json.meta.slices.find((/** @type {any} */ s) => s.name === `racket ${t.name}`)?.keys[0].bounds;
     tags[t.name] = {
       name: t.name, from: t.from, count, once: t.repeat === '1', contact: m ? Number(m[1]) : null,
-      starts, length: Math.round(ms / MS_PER_FRAME),
+      starts, length: Math.round(ms / MS_PER_FRAME), racket: rk ? { x: rk.x + 0.5, y: rk.y + 0.5 } : null,
     };
   }
   return { frameW, frameH, pivot, frames, tags };
@@ -118,11 +141,13 @@ export function frameAt(tag, t) {
  * @property {boolean} mirror
  * @property {{ x: number, z: number } | null} prev  the feet at the last step (game units)
  * @property {number} still   steps without moving
+ * @property {{ x: number, y: number, z: number } | null} contact  where the ball is met, for the racket shift (game
+ *   units): a swing's planned contact (the classifier's ghost ball), or the held ball for a serve; null otherwise
  */
 
 /** @returns {Animator} */
 export function createAnimator() {
-  return { tag: 'ready', t: 0, mirror: false, prev: null, still: 0 };
+  return { tag: 'ready', t: 0, mirror: false, prev: null, still: 0, contact: null };
 }
 
 /** @param {Animator} a @param {string} tag @param {number} t @param {boolean} mirror */
@@ -133,13 +158,20 @@ function show(a, tag, t, mirror) {
 }
 
 /**
+ * The sim frame from which a running server cuts the serve's follow-through short: the frame after its contact frame.
+ * @param {Tag} serve
+ */
+const serveCut = serve => serve.starts[(serve.contact ?? 0) + 1];
+
+/**
  * One sim step of a player's animation. Call it after stepWorld, once per step (not per drawn frame).
  * @param {Animator} a
  * @param {Sheet} sheet
  * @param {import('../sim/player.js').Player} pl
- * @param {boolean} served  this player served on this step
+ * @param {{ x: number, y: number, z: number } | null} serveBall  the held ball (16.16) if this player pressed to serve on
+ *   this step (the world's 'serveSwing' event), else null
  */
-export function stepAnimator(a, sheet, pl, served) {
+export function stepAnimator(a, sheet, pl, serveBall) {
   const x = pl.x / FP, z = pl.z / FP;
   let dx = a.prev ? x - a.prev.x : 0, dz = a.prev ? z - a.prev.z : 0;
   if (Math.abs(dx) > TELEPORT || Math.abs(dz) > TELEPORT) dx = dz = 0;
@@ -151,11 +183,18 @@ export function stepAnimator(a, sheet, pl, served) {
   const serve = sheet.tags.serve;
   if (s) {
     const back = s.hand === 'back';
-    show(a, s.kind === 'dive' ? 'dive' : back ? 'backhand' : 'forehand', s.t, s.kind === 'dive' && back);
-  } else if (served) {
-    show(a, 'serve', serve.starts[serve.contact ?? 0], false);
+    const over = s.kind === 'swing' && !!s.contact && OVERHEAD.includes(s.contact.index);
+    show(a, s.kind === 'dive' ? 'dive' : over ? 'overhead' : back ? 'backhand' : 'forehand', s.t,
+      (s.kind === 'dive' || over) && back);
+    const g = s.contact?.ghost;
+    a.contact = g ? { x: g.x / FP, y: g.y / FP, z: g.z / FP } : null;    // a miss has no contact: no shift
+    return;
+  }
+  if (serveBall) {
+    show(a, 'serve', 0, false);
+    a.contact = { x: serveBall.x / FP, y: serveBall.y / FP, z: serveBall.z / FP };
   } else if (a.tag === 'serve' && a.t + 1 < serve.length &&
-             !(moving && a.t + 1 >= serve.starts[(serve.contact ?? 0) + 1])) {
+             !(moving && a.t + 1 >= serveCut(serve))) {
     a.t++;                                      // the follow-through plays out, unless the server runs off after contact
   } else if (moving || (a.tag.startsWith('run_') && a.still <= RUN_HOLD)) {
     const running = a.tag.startsWith('run_');
@@ -169,6 +208,30 @@ export function stepAnimator(a, sheet, pl, served) {
   } else {
     show(a, 'ready', a.tag === 'ready' ? a.t + 1 : 0, false);
   }
+  if (a.tag !== 'serve') a.contact = null;
+}
+
+/**
+ * How far to draw a swinging sprite down (+) or up (−), in whole px: the gap between the ball and the racket head on
+ * the contact frame, capped at RACKET.MAX of the height, times the easing for where the tag is (0 at the press, full on
+ * the contact frame, 0 again RACKET.OUT frames after it). 0 when nothing is being met.
+ * @param {Sheet} sheet
+ * @param {Animator} a
+ * @param {number} sy  projected feet point, screen y
+ * @param {number} h   character height in whole px
+ * @param {number | null} ballY  the contact ball's drawn centre, screen y (null: no contact)
+ * @returns {number}
+ */
+export function racketShift(sheet, a, sy, h, ballY) {
+  const tag = sheet.tags[a.tag];
+  if (ballY === null || !a.contact || tag.contact === null || !tag.racket) return 0;
+  const c = tag.starts[tag.contact];
+  const out = a.tag === 'serve' ? Math.min(RACKET.OUT, serveCut(tag) - 1 - c) : RACKET.OUT;
+  const f = a.t <= c ? a.t / c : 1 - (a.t - c) / out;
+  if (f <= 0) return 0;
+  const racketY = sy - (sheet.pivot.y - tag.racket.y) * h / ART_HEIGHT;
+  const max = RACKET.MAX * h;
+  return Math.round(Math.max(-max, Math.min(max, ballY - racketY)) * RACKET.ease(f));
 }
 
 /**
@@ -228,14 +291,15 @@ export function buildAtlas(img, sheet, swap = []) {
  * @param {number} sx  projected feet point, screen x
  * @param {number} sy  projected feet point, screen y
  * @param {number} h   character height in whole px (heightAt)
+ * @param {number} [shift]  px down (+) or up (−): the racket shift (racketShift)
  */
-export function drawSprite(ctx, sheet, atlas, a, sx, sy, h) {
+export function drawSprite(ctx, sheet, atlas, a, sx, sy, h, shift = 0) {
   const tag = sheet.tags[a.tag];
   const cell = atlas.cells[tag.from + frameAt(tag, a.t)];
   const k = h / ART_HEIGHT;
   const { frameW: w, frameH: fh, pivot } = sheet;
   const px = a.mirror ? w - pivot.x : pivot.x;          // mirrored about the pivot: x → 2 × pivot − x
-  const dx = Math.round(sx - px * k), dy = Math.round(sy - pivot.y * k);   // whole pixels: exact at 1:1
+  const dx = Math.round(sx - px * k), dy = Math.round(sy - pivot.y * k) + shift;   // whole pixels: exact at 1:1
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   if (a.mirror) {

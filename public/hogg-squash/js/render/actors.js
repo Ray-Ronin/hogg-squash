@@ -5,12 +5,13 @@
 // Character height follows one smooth perspective curve with the feet z, 57 px at the front wall (true to scale there:
 // the head just under the 1.78 m service line) to 100 px at the back (docs/decisions.md, "Camera and character size");
 // ?curve=true, ?curve=half and ?curve=old show the true-scale, CP-B and S3 curves for comparison.
+// A swinging sprite is drawn shifted so the racket head meets the ball at contact (racketShift; ?racket=off turns it off).
 // Boxes: while swinging, a racket stub on the box shows the side of the swing (right = forehand, left = backhand) and
 // moves from raised (wind-up) through level (contact) to low (recovery). A diving box lies on the floor on the dive side.
 import { FP } from '../squash-physics.js';
 import { SWING, DIVE, swingPhase } from '../sim/player.js';
 import { project, UNITS_PER_M } from './projection.js';
-import { drawSprite } from './sprites.js';
+import { drawSprite, racketShift } from './sprites.js';
 
 const BALL_RADIUS_M = 0.05;           // drawn larger than a real ball (0.02 m) so it reads at 640×360
 const COLOURS = {
@@ -100,6 +101,20 @@ export function boxEdges(sx, hExact) {
 /** Each player's height at the last draw (for the debug overlay). @type {[number, number]} */
 export const heights = [0, 0];
 
+/** Each player's racket shift at the last draw, px (for the debug overlay and testing). @type {[number, number]} */
+export const shifts = [0, 0];
+
+/**
+ * The ball's drawn centre on screen (it is drawn resting on its projected point: a circle of BALL_RADIUS_M, at least
+ * 1 px, centred that far above it).
+ * @param {number} x @param {number} y @param {number} z  game units
+ */
+export function ballCentre(x, y, z) {
+  const r = Math.max(1, BALL_RADIUS_M * project(x, 0, z).scale);
+  const p = project(x, Math.max(0, y), z);
+  return { sx: p.sx, sy: p.sy - r };
+}
+
 /** @typedef {import('../sim/player.js').Player} Player */
 
 /**
@@ -112,8 +127,8 @@ export const heights = [0, 0];
  * @param {CanvasRenderingContext2D} ctx
  * @param {{ x: number, y: number, z: number }} ball  16.16
  * @param {Player[]} players  P1 first
- * @param {{ landing: { x: number, z: number } | null, size?: SizeOpts, sprites?: Sprites | null }} opts
- *   sprites: null or missing draws the placeholder boxes
+ * @param {{ landing: { x: number, z: number } | null, size?: SizeOpts, sprites?: Sprites | null, racket?: boolean }} opts
+ *   sprites: null or missing draws the placeholder boxes; racket: false turns the racket shift off (?racket=off)
  */
 export function drawActors(ctx, ball, players, opts) {
   const bx = ball.x / FP, by = Math.max(0, ball.y / FP), bz = ball.z / FP;
@@ -131,10 +146,10 @@ export function drawActors(ctx, ball, players, opts) {
   const items = [{
     z: bz,
     draw() {
-      const p = project(bx, by, bz);
+      const p = ballCentre(bx, by, bz);
       ctx.fillStyle = COLOURS.ball;
       ctx.beginPath();
-      ctx.arc(p.sx, p.sy - r, r, 0, Math.PI * 2);
+      ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
       ctx.fill();
     },
   }];
@@ -144,8 +159,10 @@ export function drawActors(ctx, ball, players, opts) {
     heights[i] = Math.round(hExact);
     const sp = opts.sprites;
     items.push({ z, draw: sp ? () => {
-      const p = project(pl.x / FP, 0, z);
-      drawSprite(ctx, sp.sheet, sp.atlases[i], sp.anims[i], p.sx, p.sy, heights[i]);
+      const p = project(pl.x / FP, 0, z), a = sp.anims[i], c = a.contact;
+      const ballY = c && opts.racket !== false ? ballCentre(c.x, c.y, c.z).sy : null;
+      shifts[i] = racketShift(sp.sheet, a, p.sy, heights[i], ballY);
+      drawSprite(ctx, sp.sheet, sp.atlases[i], a, p.sx, p.sy, heights[i], shifts[i]);
     } : () => drawBox(ctx, pl, hExact, COLOURS.players[i]) });
   });
   items.sort((a, b) => a.z - b.z).forEach(it => it.draw());

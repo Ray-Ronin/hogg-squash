@@ -3,11 +3,13 @@
 // Pure sim code: no DOM, canvas or input devices. One call to stepWorld is one 57.4 Hz sim step.
 //
 // Phases:  serve → rally → point (a freeze: callout, then POINT and the score) → serve … → over (HARD = rematch)
-//  - serve: the server stands in the service box match.js names and holds the ball. HARD or SOFT launches it with
-//    the arcade's SERVE height, aimed across the court (serveTarget, serveAim): where the server stands in the box
-//    picks the first bounce's place across the opposite back quarter (a mirror image), and the button picks its
-//    depth (HARD deep, SOFT shorter). Arcade-simple: no service faults. The receiver starts in the opposite back
-//    quarter. Both may move; the server stays inside the box.
+//  - serve: the server stands in the service box match.js names and holds the ball. HARD or SOFT starts the serve
+//    swing (CP-D): the server is locked and the ball stays held for SERVE_WINDUP frames, then it launches on the
+//    swing's contact frame, as a rally swing's contact does. The launch uses the arcade's SERVE height, aimed across
+//    the court (serveTarget, serveAim): where the server stands in the box picks the first bounce's place across the
+//    opposite back quarter (a mirror image), and the button picks its depth (HARD deep, SOFT shorter). Arcade-simple:
+//    no service faults. The receiver starts in the opposite back quarter. Both may move until the press; the server
+//    stays inside the box, and the receiver may move throughout.
 //  - rally: each step runs stepPlayer for P1 then P2 (a 'hit' calls rallyStrike), then stepBall. Only the player
 //    whose turn it is (canStrike) can make contact; anyone else's swing misses.
 // A slot the computer plays (makeWorld's `cpu`) gets its actions from cpu.js, like keys; here it only gets the arcade's
@@ -17,10 +19,19 @@ import { levelParams, DEFAULT_LEVEL } from './difficulty.js';
 import { serviceBox, LINES } from './court-rules.js';
 import { makeRally, canStrike, rallyStrike, stepBall } from './rally.js';
 import { firstServer, makeMatch, scoreRally } from './match.js';
-import { makePlayer, stepPlayer, PLAYER_LIMITS } from './player.js';
+import { makePlayer, stepPlayer, PLAYER_LIMITS, SWING } from './player.js';
 
 /** Freeze after a rally, in sim frames: the callout, then POINT and the score (about 1.5 s in all). */
 export const TIMING = { CALLOUT: 43, POINT: 43 };
+
+/**
+ * Frames from the serve press to the launch (CP-D): a rally swing's wind-up, so the serve tag's 3 wind-up frames
+ * (40 + 40 + 42 ms) show and its contact frame is on screen on the launch step.
+ */
+export const SERVE_WINDUP = SWING.CONTACT;
+
+/** No movement and no buttons: the server during the serve's wind-up. */
+const STILL = { up: false, down: false, left: false, right: false, hard: false, soft: false };
 
 /** Where the serve starts, in game units. */
 export const SERVE_SPOT = {
@@ -76,13 +87,15 @@ export const SERVE_AIM = {
  * @property {[Player, Player]} players
  * @property {{ x: number, z: number } | null} landing  where the ball will first bounce after the front wall (units)
  * @property {{ x: number, z: number } | null} serveTarget  where this rally's serve was aimed (units; null before it)
+ * @property {{ button: 'hard' | 'soft', t: number } | null} windup  the serve's wind-up: the button pressed and frames
+ *   since the press (null before the press and after the launch)
  * @property {RallyResult | null} result  the last rally's result (kept through the freeze)
  */
 
 /**
  * @typedef {(
  *   { type: 'swing' | 'hit', side: Side } & import('./player.js').SwingEvent |
- *   { type: 'serve', side: Side, button: 'hard' | 'soft' } |
+ *   { type: 'serveSwing' | 'serve', side: Side, button: 'hard' | 'soft' } |
  *   { type: 'ball', ev: string, x: number, y: number, z: number } |
  *   { type: 'rally', winner: Side, reason: import('./rally.js').RallyReason, scores: [number, number] } |
  *   { type: 'newRally', server: Side } |
@@ -123,7 +136,7 @@ export function makeWorld({ target = 9, seed = 0, params = defaultParams(), cpu 
   const w = {
     params, seed, cpu: [cpu[0], cpu[1]], matchNo: 0, frame: 0, phase: 'serve', timer: 0,
     match: makeMatch({ target, server }), rally: makeRally(server), ball: makeBall(),
-    players: [makePlayer(0, 0), makePlayer(0, 0)], landing: null, serveTarget: null, result: null,
+    players: [makePlayer(0, 0), makePlayer(0, 0)], landing: null, serveTarget: null, windup: null, result: null,
   };
   setupServe(w);
   return w;
@@ -141,6 +154,7 @@ function setupServe(w) {
   w.timer = 0;
   w.landing = null;
   w.serveTarget = null;
+  w.windup = null;
   w.result = null;
   holdBall(w);
 }
@@ -315,13 +329,17 @@ export function stepWorld(w, a1, a2) {
   return events;
 }
 
-/** @param {World} w @param {[Actions, Actions]} acts @param {WorldEvent[]} events */
+/**
+ * The serve phase. 'serveSwing' on the press; 'serve' on the launch, SERVE_WINDUP frames later.
+ * @param {World} w @param {[Actions, Actions]} acts @param {WorldEvent[]} events
+ */
 function stepServe(w, acts, events) {
-  const s = w.match.server;
+  const s = w.match.server, wind = w.windup;
   for (const side of /** @type {Side[]} */ ([0, 1])) {
     const pl = w.players[side];
     if (side === s) {
-      stepPlayer(pl, { ...acts[side], hard: false, soft: false }, w.ball, w.params, w.frame, turnOf(w, side));
+      stepPlayer(pl, wind ? STILL : { ...acts[side], hard: false, soft: false }, w.ball, w.params, w.frame,
+        turnOf(w, side));
       clampToBox(pl, w.match.box);
     } else {
       const e = stepPlayer(pl, acts[side], w.ball, w.params, w.frame, turnOf(w, side));
@@ -330,22 +348,35 @@ function stepServe(w, acts, events) {
   }
   holdBall(w);
   const act = acts[s];
-  if (act.hard || act.soft) {
+  if (wind) {
+    if (++wind.t >= SERVE_WINDUP) launchServe(w, wind.button, events);
+  } else if (act.hard || act.soft) {
     const button = act.hard ? 'hard' : 'soft';
-    w.ball.vy = SERVE.vy[button === 'hard' ? 1 : 0];
-    const target = serveTarget(w.match.box, w.ball.x / FP, w.ball.z / FP, button);
-    const aim = serveAim(w.ball, w.params, target);
-    if (aim) Object.assign(w.ball, aim);
-    else {                                       // not expected (the tests cover every pace): the arcade depth speed
-      w.ball.vz = SERVE.vz;
-      w.ball.vx = serveVx(w.ball, w.params, target.x);
-    }
-    w.serveTarget = target;
-    rallyStrike(w.rally, s, w.ball);
-    w.phase = 'rally';
-    w.landing = landingSpot(w.ball, w.params, true);
-    events.push({ type: 'serve', side: s, button });
+    w.windup = { button, t: 0 };
+    events.push({ type: 'serveSwing', side: s, button });
   }
+}
+
+/**
+ * The serve leaves the server's hand, aimed from where the held ball is.
+ * @param {World} w @param {'hard' | 'soft'} button @param {WorldEvent[]} events
+ */
+function launchServe(w, button, events) {
+  const s = w.match.server;
+  w.ball.vy = SERVE.vy[button === 'hard' ? 1 : 0];
+  const target = serveTarget(w.match.box, w.ball.x / FP, w.ball.z / FP, button);
+  const aim = serveAim(w.ball, w.params, target);
+  if (aim) Object.assign(w.ball, aim);
+  else {                                         // not expected (the tests cover every pace): the arcade depth speed
+    w.ball.vz = SERVE.vz;
+    w.ball.vx = serveVx(w.ball, w.params, target.x);
+  }
+  w.serveTarget = target;
+  w.windup = null;
+  rallyStrike(w.rally, s, w.ball);
+  w.phase = 'rally';
+  w.landing = landingSpot(w.ball, w.params, true);
+  events.push({ type: 'serve', side: s, button });
 }
 
 /** @param {World} w @param {[Actions, Actions]} acts @param {WorldEvent[]} events */

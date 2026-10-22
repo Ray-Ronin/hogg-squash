@@ -676,7 +676,12 @@
    { "name": "dive", "from": 59, "to": 72, "direction": "forward", "repeat": "1", "color": "#000000ff", "data": "contact=3" }
   ],
   "slices": [
-   { "name": "feet", "keys": [{ "frame": 0, "bounds": {"x": 65, "y": 145, "w": 16, "h": 4 }, "pivot": {"x": 8, "y": 3 } }] }
+   { "name": "feet", "keys": [{ "frame": 0, "bounds": {"x": 65, "y": 145, "w": 16, "h": 4 }, "pivot": {"x": 8, "y": 3 } }] },
+   { "name": "racket serve", "keys": [{ "frame": 0, "bounds": {"x": 59, "y": 65, "w": 1, "h": 1 } }] },
+   { "name": "racket forehand", "keys": [{ "frame": 0, "bounds": {"x": 111, "y": 69, "w": 1, "h": 1 } }] },
+   { "name": "racket backhand", "keys": [{ "frame": 0, "bounds": {"x": 59, "y": 66, "w": 1, "h": 1 } }] },
+   { "name": "racket overhead", "keys": [{ "frame": 0, "bounds": {"x": 79, "y": 15, "w": 1, "h": 1 } }] },
+   { "name": "racket dive", "keys": [{ "frame": 0, "bounds": {"x": 129, "y": 128, "w": 1, "h": 1 } }] }
   ]
  }
 }

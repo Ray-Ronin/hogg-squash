@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { heightAt, exactHeightAt, boxEdges, CHARACTER_HEIGHT } from '../public/hogg-squash/js/render/actors.js';
-import { project } from '../public/hogg-squash/js/render/projection.js';
+import { project, CAMERA, CAMERAS, useCamera } from '../public/hogg-squash/js/render/projection.js';
 import { PLAYER_LIMITS } from '../public/hogg-squash/js/sim/player.js';
 import { PLAYER } from '../public/hogg-squash/js/squash-physics.js';
 
@@ -71,4 +71,27 @@ test('?h= scales the whole curve, and ?curve=old is the S3 curve', () => {
   assert.deepEqual([12, 39, 100, 155, 179].map(z => heightAt(z, old)), [68, 68, 84, 100, 100]);
   assert.equal(heightAt(155, { curve: 'old', backHeight: 120 }), 120);
   assert.equal(CHARACTER_HEIGHT.OLD_POINTS.length, 3);
+});
+
+test('the frozen camera (S8b, wide) puts the court corners where docs/decisions.md says', () => {
+  assert.deepEqual(CAMERA, CAMERAS.wide);
+  const at = (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) => {
+    const p = project(x, y, z);
+    return [Math.round(p.sx), Math.round(p.sy)];
+  };
+  assert.deepEqual(at(-144, 0, 0), [210, 195]);      // front wall: 220 × 143 px to the out-line
+  assert.deepEqual(at(144, 161, 0), [430, 52]);
+  assert.deepEqual(at(-144, 0, 183), [78, 345]);     // floor at the glass: 484 px wide, 78 px margins
+  assert.deepEqual(at(144, 0, 183), [562, 345]);
+});
+
+test('the player heights are set in pixels: 57 → 100 px under every S8b camera', () => {
+  for (const name of /** @type {const} */ (['old', 'wide', 'zoom'])) {
+    useCamera(name);
+    assert.deepEqual([PLAYER_LIMITS.zMin, 100, PLAYER_LIMITS.zMax].map(z => heightAt(z)), [57, 73, 100], name);
+    for (let z = PLAYER_LIMITS.zMin; z <= PLAYER_LIMITS.zMax; z++) {
+      assert.ok(exactHeightAt(z) < 1.78 * project(0, 0, z).scale, `${name}, z ${z}: the head is under the service line`);
+    }
+  }
+  useCamera('wide');
 });
