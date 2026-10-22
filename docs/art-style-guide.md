@@ -83,6 +83,31 @@ Also needed: the ball + shadow, landing marker, front-wall impact ring, the cour
 | `ring` | 6 × 58 ms, once | front-wall impact ring, radius 3 → 15 px over the code's 20 sim frames, Hogg red fading through red highlight and grey to a dotted near-white |
 | `sparkle` | 4 × 35 ms, once | contact starburst over the code's 8 sim frames, flash yellows, a white core on the first frame |
 
+**The font (A5):** `public/hogg-squash/assets/font.png` + `font.json`, from `art/ui/font.aseprite` (built by `art/tools/a5-font.lua`; the glyphs and styles are in `art/tools/a5-lib.lua`; preview `art/mockups/a5-font.png`). Our own lettering: the A4 boards' blocky 5×7 capitals, plus lowercase (descenders 2 px), 0–9 (all 5 px wide, so scores line up) and `- – : . ! ? ' , / ( ) < > +`. Bigger sizes double the 5×7 letters with a Scale2x-style rule that adds pixels on diagonal steps only (smooth diagonals, square corners). The game never tints: each font is one size in fixed colours.
+
+| Font | Capitals | Look | For |
+|---|---|---|---|
+| `small`, `small-grey`, `small-dark`, `small-red` | 7 px | plain white, grey 2, black kit, Hogg red; 1 px apart | HUD labels, wall notes ("P1's point"), menus' small print |
+| `large-white`, `large-red` | 14 px | 2×, 1 px outline, 1 px drop shadow (Hogg red under white, grey 3 under red) | names, menu items, "P1 WINS 11–9" |
+| `huge-white`, `huge-red` | 28 px | 4×, outline, 2 px drop shadow, a red highlight along the tops of the red letters | the score digits in the margins |
+
+`font.json` is `{ image, fonts: { <name>: { height, baseline, spacing, space, glyphs: { <char>: [x, y, w] } } } }`: every glyph of a font is `height` px tall at sheet (x, y), w wide. Draw it at the pen position and advance by w + `spacing` (0 for `large`, 2 for `huge`: the outlines touch); a space advances by `space` + `spacing`. `baseline` is the row just under the capitals. Characters missing from the font must be avoided (or upper-cased).
+
+**The UI pieces (A5):** `public/hogg-squash/assets/ui.png` + `ui.json` (Aseprite JSON array, one frame, with slices), from `art/ui/ui.aseprite` (built by `art/tools/a5-ui.lua`, exported by `art/tools/a5-export.sh`; preview over the court `art/mockups/a5-ui.png`).
+
+| Slice | Size | Notes |
+|---|---|---|
+| `score panel p1`, `score panel p2` | 66 × 84 | for the 78 px margins (6 px each side). Header in the kit colour (Hogg red for P1, white for P2 / CPU), black body. Sub-slices `… name` (62 × 20, the header), `… score` (62 × 42) and `… serve` (62 × 14) are where to centre the name (`large-white` on P1's red, `large-red` on P2's white), the score (`huge-white`) and the serve tag |
+| `serve` | 46 × 11 | the serve indicator: a red tag with a ball and SERVE |
+| `serve ball` | 7 × 7 | the ball alone (a bullet or a small serve marker) |
+| `panel dark`, `panel light` | 24 × 24, 9-slice | the slice's `center` is the stretchable middle (4 px borders). Dark: black with a red frame, for the margins ("FIRST TO 11 / WIN BY 2") and menus. Light: front-wall white with a red frame |
+| `highlight` | 16 × 14, 9-slice | the bar behind the selected menu row |
+| `cursor` | 8 × 11 | a red arrow pointing right; mirror it for left |
+| `callout POINT`, `OUT`, `TIN`, `DOWN`, `GAME`, `WINS` | 62–110 × 32 | front-wall callouts in the 28 px red lettering |
+| `callout DOUBLE BOUNCE` | 107 × 52 | the second-bounce callout (the reason `notUp`), on two lines, a size smaller (21 px capitals, the lettering tripled) so it fits the 220 px wall (the owner's wording) |
+
+**The title (A5):** `public/hogg-squash/assets/title.png`, 640×360, from `art/ui/title.aseprite` (built by `art/tools/a5-title.lua`; preview with a sample menu `art/mockups/a5-title.png`). A squash front wall seen square on (out-line, faint ball marks, tin, a strip of maple floor), the "HOGG SQUASH" logotype (the lettering at 8×, 2 px outline, a 5 px drop: HOGG red on black, SQUASH black on red) and, on the right, the school's Hogg Razorbacks shield (the owner's file `art/ui/hogg-logo-source.png`, area-averaged to 240 px and locked to the neutrals and reds). **The menu goes in x 44–350, y 196–292** (the `menu` slice in `title.aseprite`). The hidden `mascot` layer is the unused SpriteCook razorback.
+
 ## 4. Pipeline: SpriteCook + Aseprite
 1. **SpriteCook** (AI generation): concept art, a base character sprite, first-pass animations, court pieces and UI. Use the same style reference images on every request so assets stay consistent.
 2. **Aseprite** (cleanup, done by Claude through the Aseprite connection): AI output always needs fixing for a game: lock it to our palette, fix the size so the character is the same height in every frame, line up the feet, remove stray pixels and blur, and tidy the timing of the contact frame.
@@ -94,6 +119,7 @@ Also needed: the ball + shadow, landing marker, front-wall impact ring, the cour
 
 **SpriteCook account (checked 2026-10-18):** free tier, **0 credits**. Still images cost roughly **5–25 credits each** depending on model and quality (e.g. GPT 2.5 Flare: 5 low / 8 medium / 25 high at 1K; it supports pixel art and transparency). Animations cost more. Credits are needed before any generation.
 **Update (2026-10-20, A1):** the account is now on the Apprentice tier (800 credits when A1 started). A1 spent 32 (`art/spritecook-manifest.md`). Flare bills a non-square 1K image as 2K and adds 8 credits per reference image.
+**After A5 (2026-10-22):** 488 credits (A4 spent 8, A5 32).
 
 ## 5. Still to settle (in the build)
 - (Decided: character height 70–100 px on the smooth curve, art at 100 px, scaled smoothly; see §3.)

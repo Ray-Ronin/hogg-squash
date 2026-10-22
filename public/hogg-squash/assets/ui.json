@@ -1,0 +1,43 @@
+{ "frames": [
+   {
+    "filename": "ui.aseprite",
+    "frame": { "x": 0, "y": 0, "w": 256, "h": 212 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 256, "h": 212 },
+    "sourceSize": { "w": 256, "h": 212 },
+    "duration": 100
+   }
+ ],
+ "meta": {
+  "app": "https://www.aseprite.org/",
+  "version": "1.3.18.6-x64",
+  "image": "ui.png",
+  "format": "I8",
+  "size": { "w": 256, "h": 212 },
+  "scale": "1",
+  "slices": [
+   { "name": "score panel p1", "keys": [{ "frame": 0, "bounds": {"x": 0, "y": 0, "w": 66, "h": 84 } }] },
+   { "name": "score panel p1 name", "keys": [{ "frame": 0, "bounds": {"x": 2, "y": 2, "w": 62, "h": 20 } }] },
+   { "name": "score panel p1 score", "keys": [{ "frame": 0, "bounds": {"x": 2, "y": 24, "w": 62, "h": 42 } }] },
+   { "name": "score panel p1 serve", "keys": [{ "frame": 0, "bounds": {"x": 2, "y": 68, "w": 62, "h": 14 } }] },
+   { "name": "score panel p2", "keys": [{ "frame": 0, "bounds": {"x": 68, "y": 0, "w": 66, "h": 84 } }] },
+   { "name": "score panel p2 name", "keys": [{ "frame": 0, "bounds": {"x": 70, "y": 2, "w": 62, "h": 20 } }] },
+   { "name": "score panel p2 score", "keys": [{ "frame": 0, "bounds": {"x": 70, "y": 24, "w": 62, "h": 42 } }] },
+   { "name": "score panel p2 serve", "keys": [{ "frame": 0, "bounds": {"x": 70, "y": 68, "w": 62, "h": 14 } }] },
+   { "name": "serve", "keys": [{ "frame": 0, "bounds": {"x": 136, "y": 0, "w": 46, "h": 11 } }] },
+   { "name": "serve ball", "keys": [{ "frame": 0, "bounds": {"x": 186, "y": 2, "w": 7, "h": 7 } }] },
+   { "name": "panel dark", "keys": [{ "frame": 0, "bounds": {"x": 136, "y": 16, "w": 24, "h": 24 }, "center": {"x": 4, "y": 4, "w": 16, "h": 16 } }] },
+   { "name": "panel light", "keys": [{ "frame": 0, "bounds": {"x": 164, "y": 16, "w": 24, "h": 24 }, "center": {"x": 4, "y": 4, "w": 16, "h": 16 } }] },
+   { "name": "highlight", "keys": [{ "frame": 0, "bounds": {"x": 192, "y": 16, "w": 16, "h": 14 }, "center": {"x": 4, "y": 4, "w": 8, "h": 6 } }] },
+   { "name": "cursor", "keys": [{ "frame": 0, "bounds": {"x": 212, "y": 16, "w": 8, "h": 11 } }] },
+   { "name": "callout POINT", "keys": [{ "frame": 0, "bounds": {"x": 0, "y": 92, "w": 110, "h": 32 } }] },
+   { "name": "callout OUT", "keys": [{ "frame": 0, "bounds": {"x": 112, "y": 92, "w": 70, "h": 32 } }] },
+   { "name": "callout TIN", "keys": [{ "frame": 0, "bounds": {"x": 184, "y": 92, "w": 62, "h": 32 } }] },
+   { "name": "callout DOWN", "keys": [{ "frame": 0, "bounds": {"x": 0, "y": 126, "w": 94, "h": 32 } }] },
+   { "name": "callout GAME", "keys": [{ "frame": 0, "bounds": {"x": 96, "y": 126, "w": 94, "h": 32 } }] },
+   { "name": "callout WINS", "keys": [{ "frame": 0, "bounds": {"x": 0, "y": 160, "w": 86, "h": 32 } }] },
+   { "name": "callout DOUBLE BOUNCE", "keys": [{ "frame": 0, "bounds": {"x": 88, "y": 160, "w": 107, "h": 52 } }] }
+  ]
+ }
+}

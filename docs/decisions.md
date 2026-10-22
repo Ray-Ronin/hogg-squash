@@ -41,10 +41,13 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **The game fills the window (2026-10-18, after S3).** Instead of only whole-number scales with a border, the screen scales to fill the window with sharp-bilinear scaling (a whole-number upscale with no smoothing, then a smooth shrink to fit). Exact sizes (2×, 3×, 4×, so 1920×1080 fullscreen too) skip the smoothing and stay pixel-exact. `?scale=int` keeps the old whole-number-only behaviour. The page background matches the court's margin colour, so there's no visible box. **Confirmed at CP-B (2026-10-19):** sharp enough in a normal window, so it stays the default.
 - **Tools:** Aseprite (drawing, cleanup, animation, export) and **SpriteCook** (AI generation of concepts, base sprites and animations). See `art-style-guide.md` §4.
 - **Shared palette (2026-10-20, A1):** 36 colours in `art/palette/hogg-squash.gpl` (room to grow to 48). Hogg red is `#c8102e` (the court lines), the kit red `#e8202a`. Every sprite, court piece and UI element is locked to it. The colours are listed in `theme.md`.
+- **Our own bitmap font (2026-10-22, A5):** the blocky 5×7 letters of the A4 wall boards, extended to A–Z, a–z, 0–9 and punctuation, in three sizes (1×, 2× and 4×, the bigger ones outlined with a drop shadow) and a few fixed colours (`assets/font.png` + `font.json`). No outside font, so no licence file. The owner approved it and the HUD pieces.
+- **"DOUBLE BOUNCE", not "NOT UP" (2026-10-22, A5, the owner's call):** the callout for a ball that bounces twice (the rally reason `notUp`) reads DOUBLE BOUNCE, on two lines and a size smaller than the other callouts so it fits the front wall. S9 shows it; the code's reason name stays `notUp`.
 
 ## Theme (2026-10-18)
 - The game is themed on **Hogg Middle School** (Houston ISD), whose squash courts are used by **Mission Success** (Mission Squash Academy). The school's **colours and logos can be used**. See `theme.md`.
 - References are a general guide only. Nothing has to match or be copied exactly.
+- **The school's shield is on the title screen (2026-10-22, A5, the owner's call).** The owner supplied the Hogg Razorbacks shield ("HOGG RAZORBACKS IB STEM" over a red boar's head) and asked for it in place of the title mascot. This settles open question 6 for the title: the shield goes public with the next push. It is pixelated onto the palette in `assets/title.png` (`art/ui/hogg-logo-source.png` is the owner's file). Elsewhere (the court, the HUD) the game still uses only the colours and our own lettering. The original SpriteCook mascot is kept, unused, as a hidden layer in `art/ui/title.aseprite`.
 
 ## Match rules (2026-10-18)
 - **One match = one game.** Before the match, players choose **first to 5, 7, 9 or 11**.

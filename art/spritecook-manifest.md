@@ -92,3 +92,27 @@ A first dive submission with edge margin 30 was refused by the service before it
 - The re-run wasn't needed. Everything else in A4 (walls, lines, tin, boards, ball, shadow, landing marker, impact ring, sparkle) is drawn by script in Aseprite, with no credits.
 
 **A4 total: 8 of the 16 approved credits.** Account after A4: 520 credits.
+
+## A5: font, callouts, score panel, title art
+
+**Approved spend:** up to 64 credits (a 4-variation mascot concept round + an optional 2-image refine round), 2026-10-22. Everything else in A5 (font, callouts, score panels, serve tag, menu pieces, logotype) is drawn by script in Aseprite, with no credits.
+
+### Mascot concept round (job `931cb905-88e6-493f-814a-04575d716177`): 32 credits
+
+- **Model:** GPT 2.5 Flare (`gpt-image-2.5-flare`), quality medium, 1K square, pixel art, transparent background, 4 variations, size hint 160×160, smart crop tightest, palette constraint: the neutrals, reds, skin and hair colours (22 of the shared palette). No reference images.
+- **Prompt:** Original cartoon razorback wild boar mascot standing upright on two legs like a sports player, full body, facing the viewer in a confident three-quarter pose, gripping a squash racket in one hoof raised over its shoulder, a squash ball in the other. Dark brown bristly fur with a spiky mane ridge along its back, two short curved white tusks, a determined grin, bright eyes. Wears a red short-sleeve sports shirt with black side panels and black shorts with red stripes, white court shoes. Fierce but friendly, energetic mascot for a school squash game. Single character, centred, whole body visible.
+- **Style:** clean 16-bit sports game title-screen mascot, bold readable shapes, dark outline, limited palette, bright even lighting
+- **Theme:** indoor squash sports game, school colours red, black and white
+
+| File (`art/spritecook/a5/`) | sha12 | Asset ID | Size |
+|---|---|---|---|
+| `mascot-1.png` | `670e0225d0d2` | `e11111f8-c29e-4e18-bbec-c5ff3be1903b` | 250×250 |
+| `mascot-2.png` | `7aa8750918d3` | `0d61a6a3-006f-46d9-a747-46d81ff1c940` | 190×190 |
+| `mascot-3.png` | `32caad9b175f` | `4cc62812-1361-4ce1-9ea7-2df6941b5251` | 246×246 |
+| `mascot-3-raw.png` | `696283354e45` | (the same asset's full-size raw image, no extra credits) | 1024×1024 |
+| `mascot-4.png` | `0893112f5357` | `830970e8-9a5a-4d73-bddc-4a0c82cde339` | 202×202 |
+
+**Picked:** concept 3 (`4cc62812-1361-4ce1-9ea7-2df6941b5251`), cleaned from its raw image at 292 px (`art/tools/a5-title.lua`). The comparison is `art/mockups/a5-mascot-concepts.png`.
+**Then not used on the title:** the owner chose the school's Hogg Razorbacks shield for the title instead (`docs/decisions.md`). The cleaned mascot stays as a hidden layer in `art/ui/title.aseprite`. The refine round was skipped.
+
+**A5 total: 32 of the 64 approved credits.** Account after A5: 488 credits.
