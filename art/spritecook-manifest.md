@@ -77,3 +77,18 @@ A first dive submission with edge margin 30 was refused by the service before it
 - **dive, re-run 2 (used):** "…is seen from behind and dives sideways to the right side of the picture to reach a ball. The player steps out to the right, lunges and flies sideways to the right with the body horizontal and the right arm and racket leading out to the right, then lands on the floor and lies stretched out across the picture from left to right, feet on the left, head and racket on the right, still facing away from the camera. The right hand never lets go of the squash racket: while the player lies on the floor, the racket lies flat on the floor at the end of the outstretched right arm on the right, its red frame and white strings clearly visible. The left hand stays empty. Then the player pushes up off the floor with the left hand, kneels, stands back up and returns to the ready stance with the racket held up in front in the right hand." Negative prompt: "racket disappearing, empty right hand, racket in left hand, diving forward, diving away from the camera, turning around, face visible, rolling over, motion blur, smear trails".
 
 **A3 total: 120 of the 160 approved credits** (4 animations + 2 dive re-runs). Account after A3: 528 credits.
+
+## A4: court background, ball and effects
+
+**Approved spend:** up to 16 credits (a wood-floor texture + 1 re-run), 2026-10-22. The owner also approved hand-drawn "HOGG RAZORBACKS" wall boards with a small Mission Success colour stripe (no credits).
+
+| File (`art/spritecook/a4/`) | sha12 | Asset ID | Job | Size | Credits | Used in |
+|---|---|---|---|---|---|---|
+| `wood.png` | `f7b541308ebd` | `216cea5b-2646-4ce0-8d10-1997358bce97` | `1ac947af-e383-472f-83b3-70ca5cfd154a` | 230×230 | 8 | the court floor (`art/tools/a4-court.lua` maps it onto the floor in perspective at 75 texture px per metre, pulls it halfway or more towards the plain floor colour and locks it to the five wood colours) |
+
+- **Model:** GPT 2.5 Flare (`gpt-image-2.5-flare`), quality medium, 1K square, pixel art, mode `texture`, background included, size hint 128×128, smart crop off, palette constraint: the five wood colours (`#8f6a3e #b48a56 #cfa772 #dfbd8c #ecd3a8`). No reference images.
+- **Prompt:** Seamless tileable top-down texture of a light maple hardwood sports-court floor: long narrow pale boards running vertically, staggered end joints, subtle straight wood grain, even bright lighting, no markings, no lines, no logos
+- **Style:** clean 16-bit pixel art, limited palette
+- The re-run wasn't needed. Everything else in A4 (walls, lines, tin, boards, ball, shadow, landing marker, impact ring, sparkle) is drawn by script in Aseprite, with no credits.
+
+**A4 total: 8 of the 16 approved credits.** Account after A4: 520 credits.

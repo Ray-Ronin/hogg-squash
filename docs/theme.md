@@ -53,3 +53,4 @@ The rest of the palette:
 - **Decided:** the player is an adult in Hogg red and black. The CPU / P2 uses a palette swap to white and black (A1).
 - A cartoon razorback as the title-screen mascot (and in the crowd, once there is one; no crowd in v1).
 - Mission Success logo or colours on a wall board as a nod to the programme.
+- **Decided (A4):** side-wall boards in Hogg red with white "HOGG" (left wall) and "RAZORBACKS" (right wall), each with a thin Mission Success orange-and-teal stripe along the bottom (the colours only, not their logo). No school shield anywhere until the school confirms (open question 6).

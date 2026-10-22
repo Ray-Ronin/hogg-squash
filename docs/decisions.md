@@ -127,6 +127,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - Like the Hogg courts: **white walls, red lines, light wood floor**. No court photos are needed.
 - **No back wall drawn** in v1 (the camera looks in from behind). The ball still bounces off the back wall in the physics.
 - **No crowd** in v1. Later.
+- **Wall boards (2026-10-22, A4, the owner's call):** a Hogg red board low on each side wall, "HOGG" on the left and "RAZORBACKS" on the right, hand-drawn, with a small Mission Success orange-and-teal stripe. No school logo (open question 6). The painted court is `assets/court.png`, made for the frozen camera only (`art-style-guide.md` §3).
 
 ## Camera and character size (2026-10-18, CP-A)
 - **Camera stays as built in S1** (`CAMERA` in `js/render/projection.js`): 8.1 m behind the back wall, 4.0 m high, focal 557 px, eye line at y 70. The front wall is 200 × 143 px, the floor is 150 px deep and each side margin is 100 px. It can still change until CP-D. After that it is frozen, because A4 paints the court to match it. *(Changed at CP-D: frozen at the end of S8b instead, as the `wide` camera; see "FROZEN" below.)*
