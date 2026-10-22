@@ -28,7 +28,8 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] 💳 Approve SpriteCook spend for A3 *(you)*
 - [x] **A3** Art: character animations, part 2 (swings, dive, get-up)
 - [x] **S8** Sprite and animation engine; the character goes into the game
-- [ ] **CP-D** Play-test 3 *(you)*: the character in motion
+- [x] **CP-D** Play-test 3 *(you)*: the character in motion
+- [ ] **S8b** CP-D fix-ups: a wider court (camera frozen), racket height at contact, serve wind-up, overhead
 - [ ] 💳 Approve SpriteCook spend for A4 *(you)*
 - [ ] **A4** Art: court background, ball and effects
 - [ ] 💳 Approve SpriteCook spend for A5 *(you)*
@@ -67,7 +68,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 
     | Suggested effort | Sessions |
     |---|---|
-    | `high` | S1, S2, S3, S4, S4b, S5, S6b, S8: new foundations, the rules, or porting arcade logic, where mistakes are costly |
+    | `high` | S1, S2, S3, S4, S4b, S5, S6b, S8, S8b: new foundations, the rules, or porting arcade logic, where mistakes are costly |
     | `medium` | S6, S7, S9, S10, S11, S11b, S12, A1–A5: building on settled code or art work driven by the shared rules |
     | `medium` | Checkpoint planning sessions (CP-A … CP-E): editing this plan from your notes |
 
@@ -83,7 +84,7 @@ Asked and answered before writing:
 Settled by the plan (say so if you disagree):
 - **Court lines in game units.** The arcade's units are ≈45 per metre across (x), ≈35.2 per metre in height (y) and ≈18.8 per metre in depth (z). The back glass being 75 units high matches the real 2.13 m back-wall out-line, which supports the height scale. Real squash heights then give: tin **17**, service line **63**, front-wall out-line **161**, side-wall out-line sloping from **161** at the front wall to **75** at the back, short line at **z = 103**, service boxes 72 units wide × 30 deep (z 103–133). These are a starting point, approved at the end of S2.
 - **The projection works in metres** (x/45, y/35.2, z/18.8), so the court looks like a real 6.4 × 9.75 m court even though the arcade's units aren't to scale. The camera constants live in one object.
-- **The court is a fixed background.** The camera never moves, so the court can be drawn once. From A4 onward it is a painted 640×360 image, painted over an export of our own projected court so that the lines match the physics exactly. **This means the camera is frozen after CP-D.** Moving it later means repainting the court.
+- **The court is a fixed background.** The camera never moves, so the court can be drawn once. From A4 onward it is a painted 640×360 image, painted over an export of our own projected court so that the lines match the physics exactly. **This means the camera is frozen after CP-D.** Moving it later means repainting the court. *(Changed at CP-D: the owner wants the court a little wider, so the camera is frozen at the end of S8b instead, once the owner has picked the wider view.)*
 - **The tests don't fail at the moment.** `test/run-all.js` prints each test's first line and always exits 0, so a regression would go unnoticed. S2 makes `npm test` compare against recorded baselines and exit 1 if any number drops. This is test code only.
 - **`squash-physics.js` has no `// @ts-check` yet.** S2 adds it and JSDoc comments, with no change to any expression. If a type error could only be fixed by changing code, it is left alone and noted.
 - **`latMult` isn't in `difficultyParams()`.** The tests take it from the recording, and `docs/research/physics-core.md` uses 17. S2 checks which value the fixtures hold, and the game passes it in alongside `difficultyParams`.
@@ -783,6 +784,72 @@ Read docs/plan.md and its Session log. My CP-D feedback: <notes>. Camera is fina
 Update the remaining sessions, tick CP-D, and commit. Don't push.
 ```
 
+**Answers (2026-10-21):** the owner answered the three open points from the S8 Session log ("For CP-D") and the camera question. No notes were given on questions 1 and 3 (readability against the floor, the palette swap).
+- **Racket height at contact:** fix it with a small sprite offset by ball height, not new art.
+- **The serve:** give the sim serve a 7-frame wind-up (the ball leaves 0.12 s after the press, like a swing), so the serve tag's 3 wind-up frames show. It's a gameplay change.
+- **Overhead:** wire it, by the rule proposed in S8.
+- **Camera:** not final yet. "I want to make the court a little wider." The camera is frozen at the end of S8b, once the owner has picked the wider view there.
+
+The fixes are S8b.
+
+---
+
+## S8b: CP-D fix-ups (a wider court, racket height at contact, serve wind-up, overhead)
+
+**Goal:** the four changes from CP-D, before A4 paints the court. Afterwards the camera is frozen.
+
+**In scope**
+- **A little wider court (the owner picks in this session).** All the court drawing goes through `project()`, so this is a change to `CAMERA` in `js/render/projection.js`. Build two candidates, switchable with `?cam=wide|zoom|old`, then **stop and ask the owner to pick** (or adjust the amount) before the tests and the freeze:
+  - `wide` (the default proposal): stretch across only, with a new `CAMERA.widen` (default 1.10) multiplying the screen x offset. Measured while planning: the front wall goes from 200 × 143 px to 220 × 143, the floor at the glass from 440 to 484 px wide, and each side margin from 100 to 78 px. Heights and depths don't change, nor does `heightAt` (it uses `scale`, which is unchanged). The court reads about 10% wider than a real one, which is fine: the arcade's units aren't to scale either.
+  - `zoom`: a ~10% larger `focal` (557 → about 612), with the eye line `cy` raised so the floor at the glass stays on screen (at focal 612 and cy 70 it ends at y 372, off the 360 px screen). The front wall is about 220 × 157 px and the margins are about 78 px. Everything gets bigger, not just wider.
+  - The player sprites keep their size (`heightAt`), and the sprites are never stretched. The ball, shadow, landing marker and effects follow `project()`.
+  - The placeholder HUD's `MARGIN_W` (`js/render/hud.js`, 100 px "with the S1 camera") is computed from the camera, and the scores and serve marker still fit the narrower margins.
+  - After the pick, record the final camera in `docs/decisions.md` ("Camera and character size"): the constants, the front-wall size, the floor depth and the margin width. **The camera is then frozen.** `?cam=old` may stay until S12 for comparison, but A4 paints only the chosen camera.
+- **Racket height at contact: a sprite offset by ball height.** The contact frames hold the racket at shoulder height, but S8 measured the ball at y 8–27 units for the middle half of hits (median 19, max 55), so the racket meets the ball from above.
+  - Record the racket head's point on the contact frame of every swing tag (forehand, backhand, overhead, serve, dive). Prefer a `racket` slice in the character's Aseprite source, re-exported to `player-100.json`, with no SpriteCook. A named table in `js/render/sprites.js` is the fallback; say which in the Session log.
+  - Draw the swinging sprite shifted up or down so that, on the contact frame, the racket head's screen y meets the ball's projected y at contact. The shift eases in over the wind-up (0 at the press, full on the contact frame) and out over the follow-through (0 by the swing's end), so it reads as reaching down or up rather than a jump. Up for overheads and high balls, down for low ones. It's vertical only; across stays as it is.
+  - The shift is capped (`RACKET_SHIFT_MAX`, default 12% of the drawn height, ≈12 px at the back), so the feet never move far from the shadow. The cap and easing are named constants.
+  - The ball height comes from the planned contact. The swing already keeps the classifier's `contact`. If the ball's y at contact isn't available, predict it in the renderer, or add it to the swing as a render-only field (no rule changes).
+  - `?racket=off` turns the shift off for comparison.
+- **Serve wind-up in the sim (a gameplay change).** Pressing HARD or SOFT to serve starts a serve swing. The ball stays held for `SERVE_WINDUP` = 7 frames (= `SWING.CONTACT`; the serve tag's wind-up frames, 40 + 40 + 42 ms, are exactly 7 sim frames) and then launches with the button that was pressed.
+  - The server is locked in place during the wind-up, and further presses are ignored. The aim (`serveTarget`, `serveAim`) is computed at the launch from the held ball, which hasn't moved. The receiver moves as before. The phase stays `serve` until the launch, and the rally starts at the launch.
+  - The CPU server presses as now. Check that `SERVE_WAIT` and anything else timed from the press still make sense with the 7 frames added.
+  - Animator: the serve tag plays from its first frame on the press, so its contact frame is on screen on the launch step. Remove S8's special case that starts it on the contact frame.
+  - Check the serve's contact frame against the held ball in slow motion. S8 saw the racket swing across to the left at the shoulder while the ball is waist-high on the server's right (`SERVE_SPOT`). The racket shift above handles height. If they're still far apart across, note it for CP-E. Don't move `SERVE_SPOT`, because it aims the serve.
+  - Record the wind-up in `docs/decisions.md` (match rules, serving).
+- **Overhead wired.** In `stepAnimator`, play `overhead` instead of forehand/backhand when the swing's contact is one of the classifier's overhead types (index 8–9, the ball above y 48, the same test `shotFor` uses). Mirror it for a backhand, as the dive is.
+- **Tests:**
+  - world: the serve launches exactly 7 frames after the press; the ball and the server don't move before it; the button comes from the press; serves stay legal and on target (the existing serve tests updated for the delay); determinism.
+  - cpu: the existing tests still pass with the wind-up.
+  - sprites: the serve tag's contact frame starts on `SERVE_WINDUP`; overhead is chosen for contacts 8–9 and not for others; every contact frame has a racket point.
+  - projection / actors: the chosen camera puts the court corners where `decisions.md` says; `heightAt` unchanged.
+
+**Not in scope:** new art or SpriteCook spend (the `racket` slice is a data edit in Aseprite), painting the court (A4), HUD art, changing `SERVE_SPOT` or the serve's aim, and any change to `squash-physics.js`.
+
+**Depends on:** CP-D.
+
+**Main files:** `js/render/projection.js`, `js/render/court.js`, `js/render/hud.js`, `js/render/sprites.js`, `js/render/actors.js`, `js/sim/world.js`, `js/sim/player.js` (the serve swing, if it lives there), `js/sim/cpu.js`, `art/character/` + `assets/player-100.json` (the `racket` slice), `test/world.test.js`, `test/cpu.test.js`, `test/sprites.test.js`, `docs/decisions.md`.
+
+**Done when…**
+- `npm test` and `npm run typecheck` pass. `squash-physics.js` is unchanged, and the golden numbers are exactly the P0 baseline.
+- In the browser:
+  - the owner has picked the camera, and the court is wider, with nothing cut off at the screen edges and the HUD inside the margins;
+  - in slow motion the racket head meets the ball on the contact frame for low, waist-high and overhead balls (give the measured gap in px before and after, over 20+ hits);
+  - a serve shows its wind-up and the ball leaves on the contact frame;
+  - a high ball plays the overhead.
+- The final camera is in `docs/decisions.md`, marked frozen.
+
+**You check or decide at the end:** pick the camera during the session. At the end, play a few rallies and serves at full speed, then approve the SpriteCook spend for A4.
+
+**Starter prompt**
+```text
+We're doing Session S8b of docs/plan.md: "CP-D fix-ups (a wider court, racket height at contact, serve wind-up, overhead)".
+Read CLAUDE.md, docs/decisions.md, docs/art-style-guide.md and docs/plan.md (rules, the CP-D answers, S8b, and the S8 and CP-D Session log entries). Check CP-D is ticked.
+Build S8b's "In scope" list only. Start with the camera: build ?cam=wide|zoom|old, show me screenshots of each, and STOP until I pick. Don't change squash-physics.js.
+The browser pane may be throttled: use ?dev (window.hogg.step(n), dispatched KeyboardEvents) and ?slow, and say what couldn't be checked in real time.
+Go through "Done when", tick S8b, add a Session log entry (the chosen camera, the racket gaps before and after, the serve timing), and commit. Ask me before pushing.
+```
+
 ---
 
 ## A4: Art: court background, ball and effects
@@ -790,14 +857,14 @@ Update the remaining sessions, tick CP-D, and commit. Don't push.
 **Goal:** the in-match art apart from the character and the UI.
 
 **In scope**
-- **Court background:** export a 640×360 PNG of our own code-drawn court, using the frozen camera, and paint over it in Aseprite. That gives white walls, red lines, the tin band, light wood boards, and the side margins prepared for the HUD. SpriteCook may supply a wood texture, wall texture or wall boards (spend gate first).
+- **Court background:** export a 640×360 PNG of our own code-drawn court, using the frozen camera (picked in S8b; `docs/decisions.md`, not `?cam=old`), and paint over it in Aseprite. That gives white walls, red lines, the tin band, light wood boards, and the side margins prepared for the HUD. SpriteCook may supply a wood texture, wall texture or wall boards (spend gate first).
 - Side-wall boards with "HOGG RAZORBACKS" and an optional Mission Success nod: ask the owner first. **No school logo** (open question 6).
 - Small sprites hand-drawn in Aseprite (no credits): the ball at 5–7 sizes by depth, shadow, landing marker, front-wall impact ring, and contact sparkle.
 - Export `assets/court.png`, `assets/fx.png` + `assets/fx.json`.
 
 **Not in scope:** font and UI (A5), game code.
 
-**Depends on:** CP-D, and the 💳 approval line above it.
+**Depends on:** S8b (the frozen camera), and the 💳 approval line above it.
 
 **Main files:** `art/court/court.aseprite`, `art/fx/fx.aseprite`, `public/hogg-squash/assets/court.png`, `public/hogg-squash/assets/fx.png`, `public/hogg-squash/assets/fx.json`, `art/spritecook-manifest.md`.
 
@@ -811,7 +878,7 @@ Update the remaining sessions, tick CP-D, and commit. Don't push.
 **Starter prompt**
 ```text
 We're doing Session A4 of docs/plan.md: "Art: court background, ball and effects".
-Read CLAUDE.md, docs/art-style-guide.md, docs/theme.md and docs/plan.md ("Art sessions: shared rules", open question 6, A4).
+Read CLAUDE.md, docs/decisions.md (the frozen camera), docs/art-style-guide.md, docs/theme.md and docs/plan.md ("Art sessions: shared rules", open question 6, A4). Check S8b is ticked.
 First check my SpriteCook balance and list any planned generations with estimated credits (hand-drawn Aseprite work needs no credits), then STOP and wait for my OK.
 No game code changes. No school logo. Finish with "Done when", tick A4, add a Session log entry, and commit. Ask me before pushing.
 ```
@@ -823,7 +890,7 @@ No game code changes. No school logo. Finish with "Done when", tick A4, add a Se
 **In scope**
 - **A bitmap font:** our own, drawn in Aseprite. Or an open-licence pixel font, but only with your OK and its licence file committed next to it.
 - Callouts: POINT, OUT, TIN, DOWN, NOT UP, GAME, "WINS".
-- A score panel frame and a serve indicator.
+- A score panel frame and a serve indicator, sized to fit the side margins the S8b camera leaves (the width is in `docs/decisions.md`; about 78 px if `wide` was picked, not the old 100).
 - Title art: a "HOGG SQUASH" logotype and an original cartoon razorback mascot (SpriteCook, spend gate), but no school logo.
 - Menu panel/cursor pieces.
 - Export to `assets/font.png` + `font.json`, `assets/ui.png` + `ui.json`, `assets/title.png`.
@@ -1294,3 +1361,10 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
     - **Where the racket is at contact.** The timing is exact, but every contact frame holds the racket at shoulder height, while the sim's contacts are mostly lower: over 40 hits the ball was at y 8–27 units for the middle half (about 0.2–0.75 m), median 19 (0.55 m), max 55. So the racket usually meets the ball from above it, near it across. Fixes would be art (low and high contact variants) or a small sprite offset by ball height; nothing changed for now.
     - **The serve:** its contact frame swings the racket across to the left at the shoulder, while the sim holds the ball waist-high on the server's right (`SERVE_SPOT`), and the 3 wind-up frames never show because the sim serve has no wind-up. Options: a 7-frame serve wind-up in the sim (the ball leaves 0.12 s after the press; a gameplay change), showing the serve's frame 2 (racket up on the right) on the serve step instead of the marked contact frame, or new serve art.
     - **Overhead (not wired; the owner's call):** proposed rule: play `overhead` instead of forehand/backhand when the swing's contact is one of the classifier's overhead types (8–9, the ball above y 48), the same test `shotFor` already uses for overheads. It's a one-line choice in `stepAnimator` (the swing's `contact.index`), no sim change. In the 40 hits above, the highest was at y 55, so at least one would have used it.
+- 2026-10-21, CP-D (planning only): the owner's answers (listed under CP-D) became a new fix-up session, **S8b**, before A4.
+  - **Racket height at contact:** a small sprite offset by the ball's height at contact (eased in and out, capped at about 12% of the drawn height, vertical only). No new art: the racket head's point per contact frame goes in a `racket` slice (or a table).
+  - **The serve:** a 7-frame wind-up in the sim (`SERVE_WINDUP` = `SWING.CONTACT`; the serve tag's wind-up is exactly 7 sim frames), so the ball leaves 0.12 s after the press and the 3 wind-up frames show. A gameplay change, so it gets world tests. `SERVE_SPOT` and the aim stay as they are.
+  - **Overhead:** wired, by the S8 rule (contact types 8–9).
+  - **Camera:** not final. The owner wants the court "a little wider". Measured while planning: a 1.10 stretch across only gives a 220 × 143 px front wall, a 484 px floor at the glass and 78 px margins, with heights unchanged. A 10% zoom (focal 612) also needs the eye line raised, or the floor at the glass ends at y 372, off screen. S8b builds both, the owner picks, and the camera is frozen there. A4 now depends on S8b. A5's score panel is sized to the new margins.
+  - **No notes** on readability against the floor or the palette swap.
+  - **Effort for S8b:** `high` (it changes the serve's timing in the sim, and freezes the camera that A4 paints over).
