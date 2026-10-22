@@ -11,13 +11,13 @@ The input layer turns keyboard keys or gamepad buttons into these actions, so th
 | **Player 1** (left side) | W A S D | F | G |
 | **Player 2** (right side) | Arrow keys | Numpad 0 | Numpad . |
 
-*All keys are remappable* (options screen). Laptops without a numpad will need to remap P2's hit keys; suggested fallback: . (period) and / (slash), or K / L.
+*All keys are remappable* (options screen, built in S11: OPTIONS on the title; saved in the browser). Laptops without a numpad will need to remap P2's hit keys: the "Laptop keys for P2" button puts them on . (period) HARD and / (slash) SOFT.
 *Num Lock doesn't matter:* with Num Lock off, those keys act as Insert/Delete, but the game reads the physical key (`Numpad0`, `NumpadDecimal`), so they work either way.
 *Single player:* either layout works, and P1's layout is the default.
 
 ### Pitfalls this layout avoids
 - **Never use Ctrl as a hit key.** If P1 is holding **W** and P2 presses **Ctrl**, the browser sees **Ctrl+W** and closes the tab, and a web page can't block that shortcut. Ctrl+R / Ctrl+S / Ctrl+D have similar problems. **Alt** opens browser menus on Windows. Tab moves focus.
-- **Keyboard ghosting.** Many cheaper keyboards can't register some combinations of 3+ keys pressed at once, so a key press just doesn't arrive. WASD + F/G and the arrow cluster usually work together, but it varies by keyboard. Plan: a small **"key test" screen** in the options that lights up every key being held, so players can check their keyboard. Hit keys should be **remappable**.
+- **Keyboard ghosting.** Many cheaper keyboards can't register some combinations of 3+ keys pressed at once, so a key press just doesn't arrive. WASD + F/G and the arrow cluster usually work together, but it varies by keyboard. The options have a **key test** (built in S11) that lights up every key being held, so players can check their keyboard, and every key is **remappable**.
 - **Physical key position, not letter.** Read `KeyboardEvent.code` (`KeyW`, `ArrowLeft`, `Period`…) rather than `key`. Then the layout stays in the same place on AZERTY/QWERTZ keyboards.
 - **Stop the browser reacting.** Call `preventDefault()` on game keys, otherwise arrows scroll the page (and `/`, if remapped to, opens quick-find in Firefox).
 - **Lost focus.** If the window loses focus (alt-tab), clear all held keys and pause, so nobody keeps running forever.

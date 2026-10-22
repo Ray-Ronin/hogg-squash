@@ -2,13 +2,15 @@
 // The screens (docs/decisions.md, "Screens") as a small state machine, with no drawing and no devices, so Node can
 // test it (test/screens.test.js). The flow:
 //   title (1P / 2P) → match length → level (1P only) → controllers → match → result → rematch, or back to the title
-// and the pause menu over the match (Resume / Restart match / Quit to title). main.js turns key presses and pad
+// and the pause menu over the match (Resume / Restart match / Quit to title), and from the title the options (each
+// player's six keys, remapped by pressing a key; presets; the key test). main.js turns key presses and pad
 // buttons into Navs, calls navigate, and does what the Effect it returns asks (build the match, start it, …).
 // Each screen's drawing is in its own file in js/ui/; the menus' words are here, so the tests can check the font.
 import { MATCH_LENGTHS } from '../sim/match.js';
 import { LEVELS, DEFAULT_LEVEL } from '../sim/difficulty.js';
+import { ACTIONS, defaultLayouts, refusal, duplicateNote, keyLabel, resetLayouts, laptopPreset } from '../input/keymap.js';
 
-/** @typedef {'title' | 'length' | 'level' | 'assign' | 'match' | 'pause' | 'result'} ScreenName */
+/** @typedef {'title' | 'length' | 'level' | 'assign' | 'match' | 'pause' | 'result' | 'options' | 'keytest'} ScreenName */
 /** @typedef {{ players: 1 | 2, target: number, level: number }} Settings  target: points to win; level: 1P only */
 
 /**
@@ -22,7 +24,8 @@ import { LEVELS, DEFAULT_LEVEL } from '../sim/difficulty.js';
  *  prepare: build a match from the settings (the controllers screen shows it behind its panel)
  *  start: play the prepared match; resume: carry on with the match
  *  restart: the same match again from 0–0; rematch: a new match with the same settings; quit: drop the match
- * @typedef {null | 'prepare' | 'start' | 'resume' | 'restart' | 'rematch' | 'quit'} Effect
+ *  keys: the key layouts changed (save them, and tell the keyboard)
+ * @typedef {null | 'prepare' | 'start' | 'resume' | 'restart' | 'rematch' | 'quit' | 'keys'} Effect
  */
 
 /**
@@ -31,23 +34,40 @@ import { LEVELS, DEFAULT_LEVEL } from '../sim/difficulty.js';
  * @property {Settings} settings  the choices so far (kept between matches)
  * @property {number} sel         the selected item on a menu screen
  * @property {boolean} inMatch    the controllers screen is over a match being played (a pad joined or was unplugged)
+ * @property {import('../input/keymap.js').KeyLayout[]} keys  P1's and P2's keys (the options change them in place)
+ * @property {boolean} listen     the options screen is waiting for a key for the selected action
+ * @property {string} note        the options screen's message line (a prompt, a refusal, a key used twice)
  */
 
 /** The defaults: 1 player, first to 9, level 5 (the plan's suggestion; the owner decides at the end of S10). */
 export const DEFAULT_SETTINGS = Object.freeze({ players: /** @type {1 | 2} */ (1), target: 9, level: DEFAULT_LEVEL });
 
-export const TITLE_ITEMS = ['1 PLAYER', '2 PLAYERS'];
+export const TITLE_ITEMS = ['1 PLAYER', '2 PLAYERS', 'OPTIONS'];
 export const PAUSE_ITEMS = ['RESUME', 'RESTART MATCH', 'QUIT TO TITLE'];
 export const RESULT_ITEMS = ['REMATCH', 'MENU'];
+/** The options screen's buttons, under its 6 rows × 2 players of keys (selections 0–11, P1 then P2 on each row). */
+export const OPTION_ITEMS = ['LAPTOP KEYS FOR P2', 'RESET TO DEFAULTS', 'KEY TEST', 'BACK'];
+/** The first button's selection. */
+export const KEY_CELLS = ACTIONS.length * 2;
+const [LAPTOP, RESET, KEY_TEST, OPTIONS_BACK] = OPTION_ITEMS.map((_, i) => KEY_CELLS + i);
 
 /**
  * @param {Partial<Settings>} [settings]
  * @param {ScreenName} [screen]  'title', or 'match' to go straight to a match (the URL shortcuts)
+ * @param {import('../input/keymap.js').KeyLayout[]} [keys]  the key layouts (the saved ones, else the defaults)
  * @returns {Ui}
  */
-export function makeUi(settings = {}, screen = 'title') {
-  return { screen, settings: { ...DEFAULT_SETTINGS, ...settings }, sel: 0, inMatch: false };
+export function makeUi(settings = {}, screen = 'title', keys = defaultLayouts()) {
+  return { screen, settings: { ...DEFAULT_SETTINGS, ...settings }, sel: 0, inMatch: false, keys, listen: false, note: '' };
 }
+
+/** The player and action of an options key cell (null for a button). @param {number} sel */
+export function keyCell(sel) {
+  return sel < KEY_CELLS ? { player: sel % 2, action: ACTIONS[Math.floor(sel / 2)] } : null;
+}
+
+/** A key cell's name: "P2 HARD". @param {{ player: number, action: string }} c */
+const cellName = c => `P${c.player + 1} ${c.action.toUpperCase()}`;
 
 const isOk = (/** @type {Nav} */ nav) => nav === 'ok' || nav === 'start';
 
@@ -80,10 +100,19 @@ export function navigate(ui, nav) {
   switch (ui.screen) {
     case 'title':
       upDown(ui, nav, TITLE_ITEMS.length);
-      if (isOk(nav)) {
+      if (isOk(nav) && ui.sel === 2) {
+        go(ui, 'options');
+        ui.listen = false;
+        ui.note = duplicateNote(ui.keys);
+      } else if (isOk(nav)) {
         s.players = ui.sel === 0 ? 1 : 2;
         go(ui, 'length', MATCH_LENGTHS.indexOf(s.target));
       }
+      return null;
+    case 'options':
+      return options(ui, nav);
+    case 'keytest':
+      if (nav === 'back') go(ui, 'options', KEY_TEST);
       return null;
     case 'length':
       leftRight(ui, nav, MATCH_LENGTHS.length);
@@ -147,6 +176,58 @@ export function navigate(ui, nav) {
       }
       return null;
   }
+}
+
+/**
+ * A move on the options screen: up / down through the rows of keys and the buttons (wrapping), left / right between
+ * P1's and P2's key, OK on a key to wait for a new one (captureKey), back to the title.
+ * @param {Ui} ui @param {Nav} nav @returns {Effect}
+ */
+function options(ui, nav) {
+  if (ui.listen) {                       // only back does anything (the keys go to captureKey)
+    if (nav === 'back') {
+      ui.listen = false;
+      ui.note = duplicateNote(ui.keys);
+    }
+    return null;
+  }
+  const cell = keyCell(ui.sel);
+  if (nav === 'up') ui.sel = ui.sel === 0 ? OPTIONS_BACK : ui.sel === LAPTOP ? KEY_CELLS - 2 : ui.sel - (cell ? 2 : 1);
+  else if (nav === 'down') ui.sel = ui.sel === OPTIONS_BACK ? 0 : cell ? Math.min(ui.sel + 2, LAPTOP) : ui.sel + 1;
+  else if ((nav === 'left' || nav === 'right') && cell) ui.sel ^= 1;
+  else if (nav === 'back' || (isOk(nav) && ui.sel === OPTIONS_BACK)) go(ui, 'title', 2);
+  else if (isOk(nav) && cell) {
+    ui.listen = true;
+    ui.note = `Press a key for ${cellName(cell)}     Esc: cancel`;
+  } else if (isOk(nav) && ui.sel === KEY_TEST) go(ui, 'keytest');
+  else if (isOk(nav) && (ui.sel === LAPTOP || ui.sel === RESET)) {
+    if (ui.sel === LAPTOP) laptopPreset(ui.keys); else resetLayouts(ui.keys);
+    ui.note = duplicateNote(ui.keys)
+      || (ui.sel === LAPTOP ? 'P2 now hits with . (HARD) and / (SOFT)' : 'Every key is back to its default');
+    return 'keys';
+  }
+  return null;
+}
+
+/**
+ * A key pressed while the options screen waits for one: it becomes the selected action's key, unless it can't be used
+ * (the reason shows and the screen keeps waiting). Esc cancels. A key used twice is allowed, with a warning.
+ * @param {Ui} ui @param {string} code  KeyboardEvent.code
+ * @returns {Effect} 'keys' if a key changed
+ */
+export function captureKey(ui, code) {
+  const cell = keyCell(ui.sel);
+  if (ui.screen !== 'options' || !ui.listen || !cell) return null;
+  if (code === 'Escape') return options(ui, 'back');
+  const why = refusal(code);
+  if (why) {
+    ui.note = `${why}. Press another key.`;
+    return null;
+  }
+  ui.keys[cell.player][cell.action] = code;
+  ui.listen = false;
+  ui.note = duplicateNote(ui.keys) || `${cellName(cell)}: ${keyLabel(code)}`;
+  return 'keys';
 }
 
 /** On to the controllers screen, with the match built behind it. @param {Ui} ui @returns {Effect} */

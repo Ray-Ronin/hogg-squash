@@ -2,7 +2,7 @@
 // Boot: wires the loop, the keyboard and gamepads, the screens (js/ui/), the CPU, the world (all game logic is in
 // js/sim/) and the renderer.
 // The screens (docs/decisions.md, "Screens"): title → 1P / 2P → match length → level (1P only) → controllers →
-// match → result → rematch or menu. Menus take arrows / WASD (any player's movement keys), Enter / Space or a HARD key
+// match → result → rematch or menu, and title → options (remap keys, saved in localStorage) → key test. Menus take arrows / WASD (any player's movement keys), Enter / Space or a HARD key
 // for OK, Esc or a SOFT key for back, and on a pad the D-pad or stick, A (OK), B / X (back) and Start.
 // In a match Esc or Start opens the pause menu (Resume / Restart match / Quit to title); so do losing focus, hiding
 // the tab and leaving fullscreen. 1P: WASD + F HARD / G SOFT against the CPU, the human serving first. 2P: P1 as
@@ -29,9 +29,10 @@
 import { startLoop, SIM_HZ } from './engine/loop.js';
 import { createScreen, WIDTH, HEIGHT } from './engine/screen.js';
 import { createKeyboard } from './input/keyboard.js';
-import { DEFAULT_LAYOUTS, layoutCodes, readActions, padActions, combineActions, makeSeats, seatOf, joinPad, dropPad,
+import { layoutCodes, readActions, padActions, combineActions, makeSeats, seatOf, joinPad, dropPad,
   forgetLost, swapSeats } from './input/actions.js';
 import { createPads, padName } from './input/gamepad.js';
+import { browserStore, loadLayouts, saveLayouts, helpLines, seatLabel } from './input/keymap.js';
 import { makeWorld, stepWorld } from './sim/world.js';
 import { makeCpu, cpuActions } from './sim/cpu.js';
 import { paramsFor, toLevel, LEVELS } from './sim/difficulty.js';
@@ -47,8 +48,11 @@ import { useFont, drawText, lineHeight } from './render/text.js';
 import { useUi } from './render/ui.js';
 import { useFx } from './render/fx.js';
 import { drawDebug, createShotLog } from './render/debug.js';
-import { makeUi, navigate, matchOver, autoPause, assignInMatch, showsMatch, DEFAULT_SETTINGS } from './ui/screens.js';
+import { makeUi, navigate, captureKey, matchOver, autoPause, assignInMatch, showsMatch, DEFAULT_SETTINGS }
+  from './ui/screens.js';
 import { drawTitle, useTitle } from './ui/title.js';
+import { drawOptions } from './ui/options.js';
+import { drawKeyTest } from './ui/keytest.js';
 import { drawSetup } from './ui/setup.js';
 import { drawAssign } from './ui/assign.js';
 import { drawPause } from './ui/pause.js';
@@ -74,11 +78,13 @@ const SHORTCUT = query.has('mode') || query.has('level') || query.has('to');
 const RESULT_DELAY = 40;
 
 // --- state ---
+/** Where the key layouts are kept (null if the browser blocks storage: then they last until the page closes). */
+const store = browserStore();
 const ui = makeUi({
   players: query.get('mode') === '2p' ? 2 : 1,
   target: MATCH_LENGTHS.includes(to) ? to : DEFAULT_SETTINGS.target,
   level: toLevel(query.get('level') ?? undefined),
-}, SHORTCUT ? 'match' : 'title');
+}, SHORTCUT ? 'match' : 'title', loadLayouts(store));
 /** The character sprites, once loaded (null: boxes). @type {import('./render/actors.js').Sprites | null} */
 let sprites = null;
 let showBoxes = query.has('boxes');
@@ -151,10 +157,18 @@ function nav(n) {
   if (from === 'assign' && (effect === 'start' || effect === 'resume')) forgetLost(seats);  // carry on with the keys
   if (effect === 'prepare' || effect === 'rematch') newMatch(nextSeed++);
   else if (effect === 'restart') newMatch(matchSeed);
+  else if (effect === 'keys') keysChanged();
+}
+
+/** The options changed a key: keep the layouts and give the keyboard the new game keys. */
+function keysChanged() {
+  saveLayouts(store, layouts);
+  kb.setCodes([...layoutCodes(layouts), ...Object.keys(MENU_KEYS)]);
 }
 
 // --- input ---
-const layouts = DEFAULT_LAYOUTS;
+/** P1's and P2's keys: the screens' (the options change them in place), so the match and the menus read the same. */
+const layouts = ui.keys;
 /** Keys that work the menus whatever the layouts (the layouts' own keys do too: ACTION_NAV). */
 const MENU_KEYS = /** @type {Record<string, import('./ui/screens.js').Nav>} */ (
   { Enter: 'ok', NumpadEnter: 'ok', Space: 'ok', Escape: 'back' });
@@ -257,15 +271,21 @@ function simStep() {
   const wasMatch = ui.screen === 'match';
   const presses = kb.takePresses();       // sampled once per step; presses on the menus don't reach the match
   const padNow = pollPads();
-  if (ui.screen === 'match') {
+  if (ui.screen === 'match' || ui.screen === 'keytest') {   // the key test tests every key, so only Esc leaves it
     if (presses.has('Escape')) nav('back');
   } else {
     for (const code of presses) {
+      if (ui.listen) {                    // the options screen is waiting for a key: this one, if it can be used
+        if (captureKey(ui, code) === 'keys') keysChanged();
+        if (ui.listen) continue;
+        break;
+      }
       const n = keyNav(code);
       if (n) nav(n);
-      if (playing()) break;               // the key that starts or resumes the match does nothing more
+      if (playing() || ui.listen) break;  // the key that starts or resumes the match (or asks for a key) does nothing more
     }
   }
+  kb.grab(ui.screen === 'keytest' || ui.listen);
   if (!wasMatch || !playing()) return;  // a press that closes a menu or opens one doesn't also play
 
   if (world.phase === 'over') {           // GAME on the wall, then the result screen
@@ -295,10 +315,6 @@ function simStep() {
 }
 
 // --- render ---
-/** Each side's controls, at the foot of its margin (a CPU's side shows its level instead). */
-const HELP_KEYS = [['P1 keys', 'WASD move', 'F hard', 'G soft'], ['P2 keys', 'arrows move', 'Num0 hard', 'Num. soft']];
-/** Each slot's keyboard keys on the controllers screen. */
-const SEAT_KEYS = ['WASD F G', 'arrows Num0 Num.'];
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('game'));
 const screen = createScreen(canvas, { mode: query.get('scale') === 'int' ? 'int' : 'fill' });
 const ctx = screen.ctx;
@@ -312,7 +328,7 @@ function drawMatch() {
     { landing: world.landing, size: SIZE, sprites: showBoxes ? null : sprites, racket: RACKET_SHIFT, art });
   effects.draw(ctx, world, 'front', SIZE, art);
   drawHud(ctx, world, {
-    help: { keys: HELP_KEYS, level: nextLevel ?? world.params.level },
+    help: { keys: layouts.map(helpLines), level: nextLevel ?? world.params.level },  // each side's keys (or the CPU's level)
     footer: `Esc pause     Controllers: A hard  B/X soft  Start pause${
       seats.some(s => s?.pad === null) ? '  (any button joins)' : ''}`,
     slow: SLOW,
@@ -330,10 +346,12 @@ function render() {
 
   if (ui.screen === 'title') drawTitle(ctx, ui);
   else if (ui.screen === 'length' || ui.screen === 'level') drawSetup(ctx, ui);
+  else if (ui.screen === 'options') drawOptions(ctx, ui);
+  else if (ui.screen === 'keytest') drawKeyTest(ctx, kb.heldKeys(), layouts);
   else {
     drawMatch();
     if (ui.screen === 'assign') {
-      drawAssign(ctx, { seats, keys: SEAT_KEYS, name: i => padName(padIds.get(i) ?? ''), level: world.params.level,
+      drawAssign(ctx, { seats, keys: layouts.map(seatLabel), name: i => padName(padIds.get(i) ?? ''), level: world.params.level,
         inMatch: ui.inMatch });
     } else if (ui.screen === 'pause') drawPause(ctx, ui);
     else if (ui.screen === 'result') drawResult(ctx, ui, world);
