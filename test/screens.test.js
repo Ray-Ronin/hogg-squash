@@ -85,7 +85,7 @@ test('back steps through the setup to the title, keeping the selection', () => {
 test('menus wrap up and down; Start works as OK on the menus', () => {
   const ui = makeUi();
   run(ui, ['up']);
-  assert.equal(ui.sel, 3, 'up from 1 PLAYER wraps to RONINRAY.COM');
+  assert.equal(ui.sel, 3, 'up from 1 PLAYER wraps to GO TO HOME');
   run(ui, ['down']);
   assert.equal(ui.sel, 0);
   run(ui, ['start', 'start', 'start']);

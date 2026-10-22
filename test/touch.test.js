@@ -1,6 +1,6 @@
 // Touch controls (node:test, run by npm test): when they show (a touch shows them, a key or a pad hides them; no
 // setting), the stick's directions, the actions and menu moves they give, 2P unavailable while they show, taps on
-// menu items, and the title's RONINRAY.COM.
+// menu items, and the title's GO TO HOME.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -74,9 +74,9 @@ test('2P cannot be picked while the touch controls show; after a key it can', ()
   assert.equal(back.settings.players, 2);
 });
 
-test('the options have no touch setting; RONINRAY.COM on the title goes to the website', () => {
+test('the options have no touch setting; GO TO HOME on the title goes to the website', () => {
   assert.deepEqual(OPTION_ITEMS, ['LAPTOP KEYS FOR P2', 'RESET TO DEFAULTS', 'KEY TEST', 'BACK']);
-  assert.equal(TITLE_ITEMS[3], 'RONINRAY.COM');
+  assert.equal(TITLE_ITEMS[3], 'GO TO HOME');
   assert.equal(SITE_URL, 'https://roninray.com/');
   const ui = makeUi();
   assert.deepEqual(run(ui, ['up', 'ok']), [null, 'site'], 'up from 1 PLAYER wraps to it');

@@ -3,7 +3,7 @@
 // test it (test/screens.test.js). The flow:
 //   title (1P / 2P) → match length → level (1P only) → controllers → match → result → rematch, or back to the title
 // and the pause menu over the match (Resume / Restart match / Quit to title), and from the title the options (each
-// player's six keys, remapped by pressing a key; presets; the key test), and RONINRAY.COM back to the website. main.js turns
+// player's six keys, remapped by pressing a key; presets; the key test), and GO TO HOME back to the website. main.js turns
 // key presses, pad buttons and touch into Navs (a tap on a menu item is tap()), calls navigate, and does what the
 // Effect it returns asks (build the match, start it, …). While the touch controls show, 2P can't be picked (touch is
 // 1P vs CPU only; docs/decisions.md, "Mobile and touch").
@@ -45,7 +45,7 @@ import { ACTIONS, defaultLayouts, refusal, duplicateNote, keyLabel, resetLayouts
 /** The defaults: 1 player, first to 9, level 5 (the plan's suggestion; the owner decides at the end of S10). */
 export const DEFAULT_SETTINGS = Object.freeze({ players: /** @type {1 | 2} */ (1), target: 9, level: DEFAULT_LEVEL });
 
-export const TITLE_ITEMS = ['1 PLAYER', '2 PLAYERS', 'OPTIONS', 'RONINRAY.COM'];
+export const TITLE_ITEMS = ['1 PLAYER', '2 PLAYERS', 'OPTIONS', 'GO TO HOME'];
 /** Where the title's last item goes: the website's start page (the game, and how it was built). */
 export const SITE_URL = 'https://roninray.com/';
 export const PAUSE_ITEMS = ['RESUME', 'RESTART MATCH', 'QUIT TO TITLE'];

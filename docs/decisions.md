@@ -184,7 +184,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - Flow: **title → 1P / 2P → match length (5/7/9/11) → difficulty 1–9 (1P only) → controller assignment → match → result → rematch / menu.**
 - **Pause menu on Esc** (and Start on a gamepad). Pause also triggers automatically when the window loses focus or leaves fullscreen.
 - **Options screen:** key remapping and a key test.
-- **RONINRAY.COM on the title (2026-10-22, the owner's request):** the title's fourth item goes back to the website's start page (https://roninray.com/), where the game and the build log are.
+- **GO TO HOME on the title (2026-10-22, the owner's request; first named RONINRAY.COM):** the title's fourth item goes back to the website's start page (https://roninray.com/), where the game and the build log are.
 
 ## Version numbers (2026-10-22, the owner's call)
 - **`0.<session>.<fix>`**, shown small in the bottom-right corner of every screen (`js/version.js`; `package.json` matches).

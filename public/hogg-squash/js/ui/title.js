@@ -1,6 +1,6 @@
 // @ts-check
 // The title screen: A5's title art (assets/title.png: the front wall, the HOGG SQUASH lettering and the school's
-// shield) with 1 PLAYER / 2 PLAYERS / OPTIONS / RONINRAY.COM (back to the website) in its menu area (MENU: the
+// shield) with 1 PLAYER / 2 PLAYERS / OPTIONS / GO TO HOME (back to the website) in its menu area (MENU: the
 // `menu` slice in art/ui/title.aseprite), and the keys on the red band under the wall (while the touch controls show,
 // 2P is faded and the band says why). The setup, options and key test screens draw on the same background.
 // Without the image the screen is the margin colour with the name in the large font.

@@ -13,7 +13,7 @@
 // Touch (phones and tablets, input/touch.js): on-screen stick, HARD and SOFT for P1, a pause button in a match, and
 // menu items work by tapping. They show on the first touch and hide on a key press or pad use (no setting); 2P can't
 // be picked while they show. A portrait phone is told to turn sideways (and pauses).
-// The title's RONINRAY.COM goes back to the website's start page.
+// The title's GO TO HOME goes back to the website's start page.
 // Debug keys: ` toggles the debug overlay, [ and ] change the level (1P; from the next rally), ' steps the court view:
 // the painted court, the code court (with the code ball and effects), and the painted court with the code's lines
 // over it in cyan, for checking that they match.
