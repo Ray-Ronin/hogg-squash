@@ -322,3 +322,32 @@ test('the version: 0.<session>.<fix> as in package.json, in the font, clear of t
   const footer = measureWith(fonts, 'small-grey', 'Esc pause     Controllers: A hard  B/X soft  Start pause  (any button joins)');
   assert.ok(320 + footer / 2 + 8 <= 636 - measureWith(fonts, 'small-grey', 'v10.99.99'), 'a long version still clears the footer');
 });
+
+test('S12: the touch wording (hints, margins, controllers) and the How to play card: in the font, and they fit', async () => {
+  const fonts = parseFonts(JSON.parse(fs.readFileSync('public/hogg-squash/assets/font.json', 'utf8')));
+  const { SETUP_TOUCH_HINT } = await import('../public/hogg-squash/js/ui/setup.js');
+  const { OPTIONS_TOUCH_HINT } = await import('../public/hogg-squash/js/ui/options.js');
+  const { PAUSE_TOUCH_HINT } = await import('../public/hogg-squash/js/ui/pause.js');
+  const { RESULT_TOUCH_HINT } = await import('../public/hogg-squash/js/ui/result.js');
+  const { TOUCH_HELP } = await import('../public/hogg-squash/js/input/keymap.js');
+  const { HOW_TO_PLAY, MENU } = await import('../public/hogg-squash/js/ui/title.js');
+  const fits = (/** @type {any} */ font, /** @type {string} */ line, /** @type {number} */ max) => {
+    for (const ch of line) if (ch !== ' ') assert.ok(glyphFor(fonts[font], ch), `${font} has ${ch} (${line})`);
+    assert.ok(measureWith(fonts, font, line) <= max, `${font} "${line}" fits in ${max} px`);
+  };
+  fits('small', SETUP_TOUCH_HINT, 620);
+  fits('small-grey', OPTIONS_TOUCH_HINT, OPTIONS_LAYOUT.w - 24);
+  for (const h of [PAUSE_TOUCH_HINT, RESULT_TOUCH_HINT]) fits('small-grey', h, measureWith(fonts, 'large-white', 'RESTART MATCH'));
+  fits('small-grey', KEYTEST_TEXT.touchHint, 600);
+  fits('small', ASSIGN_TEXT.touchPlay, 400);
+  fits('small', ASSIGN_TEXT.touchSeat, 380);
+  for (const line of TOUCH_HELP) fits('small-grey', line, 78);
+  fits('small-grey', 'II (top left): pause', 560);
+  // the card: every line inside it, right of the menu's widest item (its bar), inside the menu area's height
+  const c = HOW_TO_PLAY;
+  for (const line of c.lines) fits(line === c.lines[0] ? 'small-red' : 'small', line, c.w - 8);
+  const widest = Math.max(...TITLE_ITEMS.map(it => measureWith(fonts, 'large-white', it)));
+  assert.ok(c.x > MENU.x + 40 + widest + 6 + 4, 'clear of the menu and its highlight bar');
+  assert.ok(c.x + c.w <= 366, 'clear of the shield');
+  assert.ok(c.y >= MENU.y && c.y + c.lines.length * c.ROW + 12 <= MENU.y + MENU.h, 'inside the menu area\'s height');
+});

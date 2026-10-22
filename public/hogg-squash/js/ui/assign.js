@@ -16,6 +16,7 @@ import { drawPanel } from '../render/ui.js';
  * @property {(index: number) => string} name  a pad's name on screen
  * @property {number} level           the CPU's level (1P)
  * @property {boolean} inMatch        over a match being played (else before it starts)
+ * @property {boolean} [touch]        the touch controls are showing (they play P1; the lines say to tap)
  */
 
 /** The panel's lines that aren't about one player, for the font test. */
@@ -23,6 +24,8 @@ export const ASSIGN_TEXT = {
   join: 'Another controller? Press any button on it to join.',
   swap: 'Left / right on a controller: change sides.',
   play: 'Enter or A: play     Esc or B: back',
+  touchPlay: 'Tap to play     SOFT: back',
+  touchSeat: 'the touch controls',
   carryOn: 'A or Start (Enter on the keyboard) to carry on',
   lost: ['Plug it back in and press any button on it to carry on,', 'or press Enter to carry on with the keyboard.'],
 };
@@ -41,15 +44,15 @@ export function drawAssign(ctx, o) {
     drawText(ctx, side === 0 ? 'small-red' : 'small', side === 0 || seat ? `P${side + 1}` : 'CPU', x + 24, ly);
     const what = !seat ? `level ${o.level}`
       : seat.lost ? `keys ${o.keys[side]}  +  (unplugged controller)`
-      : seat.pad === null ? `keys ${o.keys[side]}`
+      : seat.pad === null ? (o.touch && side === 0 ? ASSIGN_TEXT.touchSeat : `keys ${o.keys[side]}`)
       : `keys ${o.keys[side]}  +  ${o.name(seat.pad)}`;
     drawText(ctx, 'small', what, x + 52, ly);
   });
 
   const lines = lost ? ASSIGN_TEXT.lost : [
-    o.seats.some(s => s && s.pad === null) ? ASSIGN_TEXT.join : '',
+    !o.touch && o.seats.some(s => s && s.pad === null) ? ASSIGN_TEXT.join : '',
     twoPlayer ? ASSIGN_TEXT.swap : '',
-    o.inMatch ? ASSIGN_TEXT.carryOn : ASSIGN_TEXT.play,
+    o.inMatch ? ASSIGN_TEXT.carryOn : o.touch ? ASSIGN_TEXT.touchPlay : ASSIGN_TEXT.play,
   ].filter(Boolean);
   lines.forEach((line, i) => {
     drawText(ctx, i === lines.length - 1 ? 'small' : 'small-grey', line, WIDTH / 2,

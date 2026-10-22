@@ -3,9 +3,11 @@
 // shield) with 1 PLAYER / 2 PLAYERS / OPTIONS / GO TO HOME (back to the website) in its menu area (MENU: the
 // `menu` slice in art/ui/title.aseprite), and the keys on the red band under the wall (while the touch controls show,
 // 2P is faded and the band says why). The setup, options and key test screens draw on the same background.
+// A small "How to play" card sits beside the menu, between it and the shield (S12).
 // Without the image the screen is the margin colour with the name in the large font.
 import { WIDTH } from '../engine/screen.js';
-import { drawText } from '../render/text.js';
+import { drawText, lineHeight } from '../render/text.js';
+import { drawPanel } from '../render/ui.js';
 import { drawList } from './menu.js';
 import { TITLE_ITEMS, TOUCH_2P_NOTE, titleOff } from './screens.js';
 
@@ -17,6 +19,14 @@ export const TITLE_TOP = 2;
 const HINT_Y = 305;
 
 export const TITLE_HINT = 'Up / down: choose     Enter or A: OK';
+
+/** The "How to play" card: its lines (the first is the heading) and its place, right of the menu's widest item
+ * (GO TO HOME's bar ends at x 198) and clear of the shield. */
+export const HOW_TO_PLAY = {
+  lines: ['HOW TO PLAY', 'Run to the landing marker', 'HARD: a fast, deep shot', 'SOFT: a short drop',
+    'Hit early or late to angle it'],
+  x: 210, y: 214, w: 152, ROW: 11,
+};
 
 /** The title image, once loaded. @type {CanvasImageSource | null} */
 let image = null;
@@ -46,5 +56,8 @@ export function drawHint(ctx, str) {
 export function drawTitle(ctx, ui) {
   drawTitleBack(ctx);
   drawList(ctx, TITLE_ITEMS, ui.sel, MENU.x + 40, MENU.y + TITLE_TOP, { off: titleOff(ui) });
+  const c = HOW_TO_PLAY, h = c.lines.length * c.ROW + 12 - (c.ROW - lineHeight('small'));
+  drawPanel(ctx, 'panel dark', c.x, c.y, c.w, h);
+  c.lines.forEach((l, i) => drawText(ctx, i === 0 ? 'small-red' : 'small', l, c.x + c.w / 2, c.y + 6 + i * c.ROW, 'center'));
   drawHint(ctx, ui.touch ? TOUCH_2P_NOTE : TITLE_HINT);   // touch is 1P only (2P is faded)
 }

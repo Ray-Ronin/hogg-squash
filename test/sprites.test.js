@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { parseSheet, frameAt, createAnimator, stepAnimator, racketShift, RACKET, MS_PER_FRAME } from '../public/hogg-squash/js/render/sprites.js';
+import { parseSheet, frameAt, createAnimator, stepAnimator, racketShift, racketSideShift, RACKET, MS_PER_FRAME } from '../public/hogg-squash/js/render/sprites.js';
 import { SWING, DIVE, swingLength, makePlayer } from '../public/hogg-squash/js/sim/player.js';
 import { FP } from '../public/hogg-squash/js/squash-physics.js';
 import { SERVE_WINDUP } from '../public/hogg-squash/js/sim/world.js';
@@ -155,7 +155,18 @@ test('every swing tag has a racket point (the "racket <tag>" slice) inside its f
   assert.ok(sheet.tags.dive.racket.y > sheet.pivot.y - 30, 'the dive has it on the floor');
 });
 
-test('the racket shift: 0 at the press, the whole gap on the contact frame (capped), 0 again RACKET.OUT frames later', () => {
+/** Run fn with the racket shift's caps set (the mechanism is tested at S8b's 12%, so the gaps aren't all capped). */
+function withCaps(/** @type {number} */ max, /** @type {number} */ side, /** @type {() => void} */ fn) {
+  const keep = [RACKET.MAX, RACKET.SIDE];
+  [RACKET.MAX, RACKET.SIDE] = [max, side];
+  try { fn(); } finally { [RACKET.MAX, RACKET.SIDE] = keep; }
+}
+
+test('the racket shift\'s caps are the owner\'s S12 pick: 1% up / down and 1% across', () => {
+  assert.deepEqual([RACKET.MAX, RACKET.SIDE], [0.01, 0.01]);
+});
+
+test('the racket shift: 0 at the press, the whole gap on the contact frame (capped), 0 again RACKET.OUT frames later', () => withCaps(0.12, 0, () => {
   const fore = sheet.tags.forehand, h = 100, sy = 300;
   const racketY = sy - (sheet.pivot.y - fore.racket.y);           // at 100 px, 1:1
   const a = { ...createAnimator(), tag: 'forehand', contact: { x: 0, y: 19, z: 100 } };
@@ -175,7 +186,7 @@ test('the racket shift: 0 at the press, the whole gap on the contact frame (capp
   }
   assert.equal(at(SWING.CONTACT, null), 0, 'no ball: no shift');
   assert.equal(racketShift(sheet, { ...a, contact: null, t: SWING.CONTACT }, sy, h, racketY + 8), 0, 'a miss: no shift');
-});
+}));
 
 test('the animator keeps the contact: the ghost ball for a swing, the held ball for a serve, none when running', () => {
   const ghost = { x: 30 * FP, y: 12 * FP, z: 90 * FP };
@@ -189,11 +200,32 @@ test('the animator keeps the contact: the ghost ball for a swing, the held ball 
   assert.equal(run[1].contact, null);
 });
 
-test('the racket shift on a serve is back to 0 before a running server can cut the follow-through short', () => {
+test('the racket shift on a serve is back to 0 before a running server can cut the follow-through short', () => withCaps(0.12, 0, () => {
   const serve = sheet.tags.serve, h = 100, sy = 300;
   const racketY = sy - (sheet.pivot.y - serve.racket.y);
   const a = { ...createAnimator(), tag: 'serve', contact: { x: 18, y: 30, z: 120 } };
   const cut = serve.starts[/** @type {number} */ (serve.contact) + 1];
   assert.equal(racketShift(sheet, { ...a, t: SERVE_WINDUP }, sy, h, racketY + 30), Math.round(RACKET.MAX * h));
   assert.equal(racketShift(sheet, { ...a, t: cut - 1 }, sy, h, racketY + 30), 0, 'the last frame before the cut');
+}));
+
+test('the sideways racket shift: off while RACKET.SIDE is 0; else towards the ball, capped, eased like the height', () => {
+  const fore = sheet.tags.forehand, h = 100, sx = 320;
+  const racketX = sx + (fore.racket.x - sheet.pivot.x);          // at 100 px, 1:1
+  const a = { ...createAnimator(), tag: 'forehand', contact: { x: 0, y: 19, z: 100 }, t: SWING.CONTACT };
+  const side = RACKET.SIDE;
+  try {
+    RACKET.SIDE = 0;
+    assert.equal(racketSideShift(sheet, a, sx, h, racketX + 5), 0, 'off');
+    RACKET.SIDE = 0.06;
+    assert.equal(racketSideShift(sheet, a, sx, h, racketX + 4), 4, 'right to a ball beyond the racket');
+    assert.equal(racketSideShift(sheet, a, sx, h, racketX - 50), -6, 'capped at 6% of the height');
+    const m = { ...a, mirror: true }, mirroredX = sx - (fore.racket.x - sheet.pivot.x);
+    assert.equal(racketSideShift(sheet, m, sx, h, mirroredX - 3), -3, 'mirrored: the racket is on the other side');
+    assert.equal(racketSideShift(sheet, { ...a, t: 0 }, sx, h, racketX + 4), 0, 'nothing at the press');
+    assert.equal(racketSideShift(sheet, { ...a, t: SWING.CONTACT + RACKET.OUT }, sx, h, racketX + 4), 0, 'eased out');
+    assert.equal(racketSideShift(sheet, { ...a, contact: null }, sx, h, racketX + 4), 0, 'a miss: none');
+  } finally {
+    RACKET.SIDE = side;
+  }
 });

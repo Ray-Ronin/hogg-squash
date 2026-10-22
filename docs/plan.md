@@ -39,7 +39,8 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S10** Screens, match flow and pause menu
 - [x] **S11** Options: key remapping and key test
 - [x] **S11b** Touch controls (mobile mode): on-screen buttons, Auto / On / Off setting
-- [ ] **S12** Polish and release prep
+- [x] **S12** Polish and release prep
+- [ ] **S12b** The hitting range: a smaller reach for the human player (the owner's request after S12)
 - [ ] **CP-F** Release play-test and go-live *(you)*
 
 ---
@@ -1122,6 +1123,20 @@ Build S12's "In scope" list only. No new features.
 Go through "Done when", tick S12, add a Session log entry, and commit. Ask me before pushing.
 ```
 
+## S12b: The hitting range (a smaller reach for the human)
+
+**Goal:** the owner feels the area where a player can hit the ball is too big. Make it smaller, by an amount the owner picks after trying sizes in the running game.
+
+**In scope**
+- Give the human player a reach share, using the CPU's existing `shrinkReach` in `js/sim/player.js` (the arcade's classifier run on the ball moved further from the feet by 1 ÷ reach, so the clean, stretch, dive and out-of-reach bands all shrink around the player). No new hitting rules.
+- A local `?reach=<share>` switch (e.g. `?reach=0.9`) so the owner can play several sizes before one is chosen; then the chosen value becomes the default, and the switch stays for comparing.
+- Decide with the owner whether the CPU's reach (a share of a human's, 0.95–0.99 by level) shrinks with it, stays as it is, or is re-tuned. Re-measure the level win rates with `test/reference-player.js` as S6b did, and record them.
+- Tests: the human's bands shrink by the chosen share; the arcade's golden/flight/shot/hit numbers are unchanged (they don't use the human's reach).
+
+**Not in scope:** new art, changing the arcade classifier's tables, touch or menu changes.
+
+**Done when…** `npm test` passes; the owner has picked a size by playing; `docs/decisions.md` ("Hitting") records it with the measured numbers.
+
 ## CP-F: Release play-test and go-live *(you)*
 
 1. Play a full 1P match and a full 2P match from the title screen, the way a new player would.
@@ -1443,3 +1458,13 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Checked in the browser:** the four title rows fit the menu area; Enter on RONINRAY.COM opened https://roninray.com/; the options show four buttons; a touch still shows the controls, and on a desktop they stay hidden; no console errors.
 - 2026-10-22 (owner's request): the title's website item is now called **GO TO HOME** (was RONINRAY.COM); it still goes to https://roninray.com/. Version 0.11.3. Checked in the browser on the title; tests and typecheck pass.
 - 2026-10-22 (owner's request): **[ and ] no longer change the CPU's level.** The debug keys, the level waiting for the next rally (`nextLevel`) and its line in the debug overlay are gone; the level is only chosen on the LEVEL screen (or `?level=`). [ and ] are now ordinary keys a player may remap to. Version 0.11.4. Checked in the browser (a 1P match at level 5 stayed at 5 after [ and ] presses; the debug overlay draws); tests and typecheck pass.
+- 2026-10-22, S12: polish and release prep. `squash-physics.js` and `js/sim/` unchanged; `npm test` golden/flight/shot/hit numbers exactly as the P0 baseline; unit tests 129 → 133; `npm run typecheck` clean. Version 0.12.0.
+  - **The CP-E fix: the racket at contact.** A sideways shift towards the ball was added beside the S8b height shift (`racketSideShift` in `render/sprites.js`, same easing, cap `RACKET.SIDE`). The owner saw S8b's 12% / none, 16% / 6% and 20% / 10% side by side at the same contact frames (`art/mockups/s12-racket.png`), then played 12/12, 6/12, 5/6, 3/4 and 1/1 locally and **picked 1% / 1%** (the player stays on their spot). Measured over 90 contacts (seed 5): median racket-to-ball gap 34 → 39 px, feet sink at most 1 px (was 12). `docs/decisions.md`, "Racket height at contact". `?racket=s8b|a|off` compare.
+  - **Touch wording:** while the touch controls show, the setup, options, key test, pause, result and controllers screens say what to tap (or "SOFT: back"); the controllers screen says P1 plays with "the touch controls"; the match margins read "P1 touch / stick: move / HARD button / SOFT button" and the footer "II (top left): pause". The title keeps S11b's 2P note.
+  - **Fullscreen:** `toggleFullscreen` in `input/touch.js` (the touch button's code, `requestFullscreen` on the page). `#full` moved out of `#touch`: it also shows on the title, setup, options and key test screens for a mouse (smaller and dark), hidden over the match unless touch shows. No key: F is P1's HARD, and a new key would clash with remapping.
+  - **Loading:** a "Loading…" line in `index.html` until `main.js` has loaded (the S9 bar takes over). **Favicon:** `favicon.png` (32 px) and `apple-touch-icon.png` (180 px), a Hogg red tile with the font's "H", made by `art/tools/favicon.mjs`.
+  - **How to play:** a dark card on the title between the menu and the shield (`HOW_TO_PLAY` in `ui/title.js`): run to the landing marker; HARD a fast, deep shot; SOFT a short drop; hit early or late to angle it. A test checks it clears GO TO HOME's bar and the shield.
+  - **Point flash:** the scorer's new score lights white and fades over 24 frames (≈0.4 s), once, not a blink (`pointFlash` in `render/hud.js`). **Celebrate / dejected:** deferred, A3 didn't make those tags.
+  - **Caching:** checked, no change. The live site sends `Cache-Control: public, max-age=0, must-revalidate` with ETags, and was serving 0.11.4's files exactly, so a deploy isn't stuck behind old modules; no `_headers` needed.
+  - **Checked in the browser** (the app's Chromium pane, `npm run dev` on 8789): the title, card, fullscreen button and favicon at 1280×720; at 844×390 by synthetic touches, every screen's touch wording, a 1P match played to the result (P1 driven by a CPU brain) with the point flash measured in the buffer (bright on the point frame, fading by frame 24); the fullscreen button calls `requestFullscreen` (the pane doesn't grant it); no console errors from a cold load to the result. **Edge:** headless, loads and draws the title. **Not checked:** Firefox (not installed), real fullscreen, a high-refresh display, a real phone (the owner's check), full play in Edge.
+  - **Left for later:** S12b (the owner asked after S12 for a smaller hitting range). `?cam=zoom|old` and `?curve=old|half|true` are still there as debug options; harmless, not removed.

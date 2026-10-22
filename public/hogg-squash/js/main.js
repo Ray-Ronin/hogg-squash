@@ -22,7 +22,7 @@
 // 2P first server and the CPU's choices (default random),
 // ?h=<px> character height at the back, ?curve=true|half|old the true-scale, CP-B or S3 height curve (for comparing),
 // ?cam=zoom|old the S8b camera candidates the owner didn't pick, for comparison (the frozen camera is wide; old is S1's),
-// ?racket=off draws the swings without the racket shift (for comparing),
+// ?racket=off draws the swings without the racket shift, ?racket=s8b|a with S8b's shift or S12's candidate A (for comparing),
 // ?scale=int whole-number scaling only (default: fill the window),
 // ?slow=<n> slow motion (the sim runs n times slower), ?dev exposes the game as window.hogg for testing,
 // ?court=code|lines starts on that court view, ?logo=on shows the logo slot (LOGO in render/hud.js) for testing.
@@ -38,7 +38,7 @@ import { layoutCodes, readActions, padActions, combineActions, makeSeats, seatOf
 import { createPads, padName } from './input/gamepad.js';
 import { createTouchControls, makeTouchState, touchShowing, noteTouch, noteKeyOrPad, touchActions, touchNavs }
   from './input/touch.js';
-import { browserStore, loadLayouts, saveLayouts, helpLines, seatLabel } from './input/keymap.js';
+import { browserStore, loadLayouts, saveLayouts, helpLines, seatLabel, TOUCH_HELP } from './input/keymap.js';
 import { makeWorld, stepWorld } from './sim/world.js';
 import { makeCpu, cpuActions } from './sim/cpu.js';
 import { paramsFor, toLevel } from './sim/difficulty.js';
@@ -47,7 +47,7 @@ import { useCamera } from './render/projection.js';
 import { drawCourt, useCourt, COURT_VIEWS } from './render/court.js';
 import { drawActors, heights, shifts } from './render/actors.js';
 import { loadAssets } from './engine/assets.js';
-import { parseSheet, buildAtlas, createAnimator, stepAnimator, frameAt, KIT_SWAP } from './render/sprites.js';
+import { parseSheet, buildAtlas, createAnimator, stepAnimator, frameAt, KIT_SWAP, RACKET } from './render/sprites.js';
 import { createEffects } from './render/effects.js';
 import { drawHud, loadLogo, LOGO } from './render/hud.js';
 import { useFont, drawText, lineHeight } from './render/text.js';
@@ -79,6 +79,10 @@ if (cam === 'wide' || cam === 'zoom' || cam === 'old') useCamera(cam);
 const PAINTED_FITS = cam !== 'zoom' && cam !== 'old';
 const SLOW = Math.max(1, Number(query.get('slow')) || 1);
 const RACKET_SHIFT = query.get('racket') !== 'off';
+/** Racket shifts to compare with the S12 pick (1% / 1%): [height cap, sideways cap]. s8b: S8b's; a: S12's candidate A. */
+const RACKET_TRY = /** @type {Record<string, [number, number]>} */ ({ s8b: [0.12, 0], a: [0.16, 0.06] });
+const racketTry = RACKET_TRY[query.get('racket') ?? ''];
+if (racketTry) [RACKET.MAX, RACKET.SIDE] = racketTry;
 /** ?mode, ?level or ?to: straight into that match, skipping the menus. */
 const SHORTCUT = query.has('mode') || query.has('level') || query.has('to');
 /** Steps that GAME shows on the wall before the result screen comes up (0.7 s). */
@@ -324,7 +328,7 @@ function simStep() {
       doEffect(from, tap(ui, hitAt(x, y)));
     }
   }
-  touch.show(ui.touch, ui.screen === 'match');
+  touch.show(ui.touch, ui.screen === 'match', showsMatch(ui));
   kb.grab(ui.screen === 'keytest' || ui.listen);
   if (!wasMatch || !playing()) return;  // a press that closes a menu or opens one doesn't also play
 
@@ -361,6 +365,9 @@ const canvas = gameCanvas;
 const screen = createScreen(canvas, { mode: query.get('scale') === 'int' ? 'int' : 'fill' });
 const ctx = screen.ctx;
 
+/** The line under the court while the touch controls show. */
+const TOUCH_FOOTER = 'II (top left): pause';
+
 /** The match as it stands: the court, the players and ball, the effects and the HUD. */
 function drawMatch() {
   const art = artOn();
@@ -370,8 +377,9 @@ function drawMatch() {
     { landing: world.landing, size: SIZE, sprites: showBoxes ? null : sprites, racket: RACKET_SHIFT, art });
   effects.draw(ctx, world, 'front', SIZE, art);
   drawHud(ctx, world, {
-    help: { keys: layouts.map(helpLines), level: world.params.level },  // each side's keys (or the CPU's level)
-    footer: `Esc pause     Controllers: A hard  B/X soft  Start pause${
+    // each side's keys (or the CPU's level); touch plays P1
+    help: { keys: layouts.map((l, p) => (ui.touch && p === 0 ? TOUCH_HELP : helpLines(l, p))), level: world.params.level },
+    footer: ui.touch ? TOUCH_FOOTER : `Esc pause     Controllers: A hard  B/X soft  Start pause${
       seats.some(s => s?.pad === null) ? '  (any button joins)' : ''}`,
     slow: SLOW,
   });
@@ -390,12 +398,12 @@ function render() {
   if (ui.screen === 'title') drawTitle(ctx, ui);
   else if (ui.screen === 'length' || ui.screen === 'level') drawSetup(ctx, ui);
   else if (ui.screen === 'options') drawOptions(ctx, ui);
-  else if (ui.screen === 'keytest') drawKeyTest(ctx, kb.heldKeys(), layouts);
+  else if (ui.screen === 'keytest') drawKeyTest(ctx, kb.heldKeys(), layouts, ui.touch);
   else {
     drawMatch();
     if (ui.screen === 'assign') {
       drawAssign(ctx, { seats, keys: layouts.map(seatLabel), name: i => padName(padIds.get(i) ?? ''), level: world.params.level,
-        inMatch: ui.inMatch });
+        inMatch: ui.inMatch, touch: ui.touch });
     } else if (ui.screen === 'pause') drawPause(ctx, ui);
     else if (ui.screen === 'result') drawResult(ctx, ui, world);
     if (showDebug) {
@@ -459,6 +467,7 @@ const art = loadAssets({
   title: { kind: 'image', url: 'assets/title.png' },
 });
 let loading = true;
+document.getElementById('loading')?.remove();           // index.html's text, until this module had loaded
 (function drawLoading() {
   if (!loading) return;
   const done = assets.state.done + art.state.done, total = assets.state.total + art.state.total;

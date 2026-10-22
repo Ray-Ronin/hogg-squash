@@ -68,3 +68,18 @@ test('the font has every character of the HUD text, and measures it', () => {
   assert.ok(measureWith(fonts, 'small', 'Esc pause     Controllers: A hard  B/X soft  Start pause  (any button joins)') <= 560,
     'the footer fits under the court');
 });
+
+test('S12: the point flash lights the scorer\'s side only, once, fading out over POINT_FLASH frames', async () => {
+  const { pointFlash, POINT_FLASH } = await import('../public/hogg-squash/js/render/hud.js');
+  const w = /** @type {any} */ ({ phase: 'point', result: { winner: 1 }, timer: 0 });
+  assert.equal(pointFlash(w, 1), 1);
+  assert.equal(pointFlash(w, 0), 0, 'not the loser');
+  let prev = 1;
+  for (let t = 1; t <= POINT_FLASH; t++) {
+    const f = pointFlash({ ...w, timer: t }, 1);
+    assert.ok(f < prev, `fades (t ${t})`);
+    prev = f;
+  }
+  assert.equal(prev, 0, 'gone by POINT_FLASH');
+  assert.equal(pointFlash({ ...w, phase: 'serve' }, 1), 0, 'only after a point');
+});

@@ -41,3 +41,4 @@ The input layer turns keyboard keys or gamepad buttons into these actions, so th
 - Arrows/WASD + Enter/Space, or the D-pad + A. (Built in S10: a player's HARD key also means OK and SOFT means back, as do A and B/X on a pad; Esc goes back a step.)
 - **Esc pauses** (and Start on a gamepad).
 - **Fullscreen catch:** while the game is fullscreen, the browser uses Esc to exit fullscreen and the page may never see the key. So the game also pauses whenever it leaves fullscreen or the window loses focus.
+- *S12:* while the touch controls show, the menus' hint lines, the controllers screen and the match margins say what to tap instead of naming keys. The fullscreen button (top-right) also shows on the title, setup and options screens for a mouse, smaller and dark; it goes fullscreen the same way (`requestFullscreen` on the page), and leaving fullscreen pauses a match.

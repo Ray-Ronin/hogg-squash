@@ -8,6 +8,8 @@ import { drawRow } from './menu.js';
 import { MENU, drawTitleBack, drawHint } from './title.js';
 
 export const SETUP_HINT = 'Left / right: choose     Enter or A: OK     Esc or B: back';
+/** …while the touch controls show. */
+export const SETUP_TOUCH_HINT = 'Tap a number to choose it     SOFT: back';
 
 /** What a level means, for the line under the row (the level sets the CPU's skill and, in 1P, the game's pace). @param {number} level */
 export function levelNote(level) {
@@ -36,5 +38,5 @@ export function drawSetup(ctx, ui) {
   drawRow(ctx, items, ui.sel, cx, MENU.y + 46, { gap: length ? 24 : 14 });
   const sel = Number(items[ui.sel]);
   drawText(ctx, 'small-dark', length ? lengthNote(sel) : `Level ${sel}: ${levelNote(sel)}`, cx, MENU.y + 78, 'center');
-  drawHint(ctx, SETUP_HINT);
+  drawHint(ctx, ui.touch ? SETUP_TOUCH_HINT : SETUP_HINT);
 }

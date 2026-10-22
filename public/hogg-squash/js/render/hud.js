@@ -3,6 +3,7 @@
 // side margin (P1 left in Hogg red, P2 / the CPU right in white) with the serve tag under the server's score, the
 // match length on a dark panel under P1's, each side's controls at the foot of its margin, and on the front wall the
 // rally callouts (the reason's word, the winner's point under it), the score, GAME at the end and the serve notice.
+// The scorer's new score flashes white once when a point is won (pointFlash).
 // The pause menu and the result are screens of their own (js/ui/). The optional logo slot (LOGO) is in the right margin.
 import { project } from './projection.js';
 import { WIDTH, HEIGHT } from '../engine/screen.js';
@@ -34,6 +35,18 @@ const LAYOUT = {
   NOTE_Y: 118,          // the line under a callout ("P1's point", "P1 to serve")
   KEYS_Y: 306,          // the first line of each margin's controls
 };
+
+/** Sim frames the point flash lasts (S12): the winner's new score lights up white and fades, about 0.4 s. */
+export const POINT_FLASH = 24;
+
+/**
+ * How bright the point flash is over a side's score: 1 on the frame the point is scored, fading to 0. 0 otherwise.
+ * @param {World} w @param {number} side
+ */
+export function pointFlash(w, side) {
+  if (w.phase !== 'point' || w.result?.winner !== side || w.timer >= POINT_FLASH) return 0;
+  return 1 - w.timer / POINT_FLASH;
+}
 
 /** Each side margin's width beside the floor at the glass (100 px with the S1 camera, 78 with wide or zoom). */
 const marginW = () => Math.floor(project(-LINES.SIDE, 0, LINES.BACK).sx);
@@ -74,7 +87,13 @@ function scorePanel(ctx, w, side, x, y) {
   };
   drawSlice(ctx, key, x, y);
   textIn(ctx, side === 0 ? 'large-white' : 'large-red', name(w, side), part('name', 2, 20));
-  textIn(ctx, 'huge-white', String(w.match.scores[side]), part('score', 24, 42));
+  const score = part('score', 24, 42);
+  textIn(ctx, 'huge-white', String(w.match.scores[side]), score);
+  const f = pointFlash(w, side);
+  if (f > 0) {                                  // one white flash over the new score, fading out (not a blink)
+    ctx.fillStyle = `rgba(255, 255, 255, ${(0.8 * f).toFixed(3)})`;
+    ctx.fillRect(score.x, score.y, score.w, score.h);
+  }
   if (w.match.server === side && w.match.winner === null) {
     const s = part('serve', 68, 14);
     sliceAt(ctx, 'serve', s.x + s.w / 2, s.y + s.h / 2);

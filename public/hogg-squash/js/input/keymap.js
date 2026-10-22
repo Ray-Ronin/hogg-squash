@@ -117,6 +117,9 @@ export function helpLines(l, p) {
   return [`P${p + 1} keys`, `${moveLabel(l)} move`, `${keyLabel(l.hard)} hard`, `${keyLabel(l.soft)} soft`];
 }
 
+/** P1's margin lines in place of helpLines while the touch controls show (touch plays P1). */
+export const TOUCH_HELP = ['P1 touch', 'stick: move', 'HARD button', 'SOFT button'];
+
 /** A player's keys on one line for the controllers screen: "WASD F G". @param {KeyLayout} l */
 export function seatLabel(l) {
   return `${moveLabel(l)} ${keyLabel(l.hard)} ${keyLabel(l.soft)}`;

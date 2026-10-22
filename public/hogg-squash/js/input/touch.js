@@ -78,12 +78,28 @@ const noButtons = () => ({ ...noDirs(), hard: false, soft: false, pause: false }
 /**
  * @typedef {object} TouchControls
  * @property {() => TouchInput} take  this step's input (presses since the last call, then forgotten)
- * @property {(on: boolean, inMatch: boolean) => void} show  show or hide them (the pause button only in a match)
+ * @property {(on: boolean, inMatch: boolean, overCourt?: boolean) => void} show  show or hide them (the pause button
+ *   only in a match). The fullscreen button shows with them, and on its own on the screens that aren't over the court
+ *   (the title, setup and options), so it can be clicked with a mouse too.
  * @property {() => void} release  let go of everything (the window lost focus)
  */
 
 /**
- * The on-screen controls: index.html's #touch with #stick (and its .knob), #hard, #soft, #pause and #full.
+ * Go fullscreen (the whole page, landscape where the browser can lock it), or leave it. Leaving it pauses a match
+ * (main.js's fullscreenchange). Must be called from a click or a touch's release.
+ * @param {Document} [doc]
+ */
+export function toggleFullscreen(doc = document) {
+  if (doc.fullscreenElement) doc.exitFullscreen().catch(() => {});
+  else {
+    doc.documentElement.requestFullscreen()
+      .then(() => /** @type {any} */ (screen.orientation)?.lock?.('landscape'))
+      .catch(() => {});
+  }
+}
+
+/**
+ * The on-screen controls: index.html's #touch with #stick (and its .knob), #hard, #soft and #pause, and #full beside it.
  * @param {Document} [doc]
  * @returns {TouchControls}
  */
@@ -157,17 +173,11 @@ export function createTouchControls(doc = document) {
     on(e, 'touchcancel', up);
   }
 
-  // fullscreen on the finger's release (touchend can start fullscreen; touchstart can't), landscape if it can lock
-  if (!doc.fullscreenEnabled) fullBtn.hidden = true;
+  // fullscreen on the finger's release (touchend can start fullscreen; touchstart can't), or a mouse click; hidden where
+  // the browser has none (iPhone Safari)
   on(fullBtn, 'touchstart', () => {});
-  on(fullBtn, 'touchend', () => {
-    if (doc.fullscreenElement) doc.exitFullscreen().catch(() => {});
-    else {
-      doc.documentElement.requestFullscreen()
-        .then(() => /** @type {any} */ (screen.orientation)?.lock?.('landscape'))
-        .catch(() => {});
-    }
-  });
+  on(fullBtn, 'touchend', () => toggleFullscreen(doc));
+  fullBtn.addEventListener('click', () => toggleFullscreen(doc));
 
   function release() {
     stickFinger = null;
@@ -182,13 +192,14 @@ export function createTouchControls(doc = document) {
       pressed = noButtons();
       return out;
     },
-    show(showing, inMatch) {
+    show(showing, inMatch, overCourt = inMatch) {
       if (root.hidden === showing) {
         root.hidden = !showing;
         doc.documentElement.classList.toggle('touch', showing);
         if (!showing) release();
       }
       pauseBtn.hidden = !inMatch;
+      fullBtn.hidden = !doc.fullscreenEnabled || !(showing || !overCourt);
     },
     release,
   };

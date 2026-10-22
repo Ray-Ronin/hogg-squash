@@ -13,6 +13,7 @@ export const KEYTEST_TEXT = {
   lines: ['Hold your keys down together: each one lights up while it is held.',
     "One that doesn't light up is a key your keyboard can't register with the others."],
   hint: 'Esc or B: back',
+  touchHint: 'Tap to go back',
 };
 
 /** One key unit (px), the gap between keys, a row's height, and the drawing's top-left. */
@@ -71,8 +72,9 @@ export function keyBox([, , x, row, w, h]) {
  * @param {CanvasRenderingContext2D} ctx
  * @param {string[]} held  every key held (KeyboardEvent.code)
  * @param {import('../input/keymap.js').KeyLayout[]} layouts
+ * @param {boolean} [touch]  the touch controls are showing (the hint says to tap)
  */
-export function drawKeyTest(ctx, held, layouts) {
+export function drawKeyTest(ctx, held, layouts, touch = false) {
   const cx = WIDTH / 2, on = new Set(held), used = new Set(layouts.flatMap(l => Object.values(l)));
   drawTitleBack(ctx);
   drawPanel(ctx, 'panel dark', 16, 10, WIDTH - 32, 338);
@@ -105,5 +107,5 @@ export function drawKeyTest(ctx, held, layouts) {
   const drawn = new Set(KEYS.map(k => k[0])), others = held.filter(c => !drawn.has(c)).map(keyLabel);
   const count = `Keys held: ${held.length}${others.length ? `   (also ${others.join(', ')})` : ''}`;
   drawText(ctx, 'small', count, cx, top + 40, 'center');
-  drawText(ctx, 'small-grey', KEYTEST_TEXT.hint, cx, 330, 'center');
+  drawText(ctx, 'small-grey', touch ? KEYTEST_TEXT.touchHint : KEYTEST_TEXT.hint, cx, 330, 'center');
 }

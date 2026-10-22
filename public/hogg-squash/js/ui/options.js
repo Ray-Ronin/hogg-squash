@@ -11,6 +11,8 @@ import { drawTitleBack } from './title.js';
 import { OPTION_ITEMS, KEY_CELLS, keyCell } from './screens.js';
 
 export const OPTIONS_HINT = 'Arrows: choose     Enter or A: change     Esc or B: back';
+/** …while the touch controls show (the keys can't be changed by tapping: there's no keyboard to press). */
+export const OPTIONS_TOUCH_HINT = 'Keys are changed on a keyboard     SOFT: back';
 
 /** The panel, the action names' column, and the centres of P1's and P2's key columns. */
 export const OPTIONS_LAYOUT = { x: 60, y: 10, w: 520, h: 338, NAMES_X: 120, COLS: [280, 420] };
@@ -45,5 +47,5 @@ export function drawOptions(ctx, ui) {
   drawList(ctx, OPTION_ITEMS, ui.sel - KEY_CELLS, cx, L.y + 46 + ACTIONS.length * BAR.ROW + 8,
     { font: 'large-white', center: true, base: KEY_CELLS });
   drawText(ctx, warning(ui) ? 'small-red' : 'small', ui.note, cx, L.y + L.h - 34, 'center');
-  drawText(ctx, 'small-grey', OPTIONS_HINT, cx, L.y + L.h - 18, 'center');
+  drawText(ctx, 'small-grey', ui.touch ? OPTIONS_TOUCH_HINT : OPTIONS_HINT, cx, L.y + L.h - 18, 'center');
 }

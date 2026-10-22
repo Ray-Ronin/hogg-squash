@@ -19,7 +19,8 @@
 // Racket height at contact (S8b, CP-D): every contact frame holds the racket at one height, but the ball meets it
 // anywhere from the floor to overhead. So a swinging sprite is drawn shifted up or down (racketShift) to put the
 // racket head's point (the sheet's "racket <tag>" slices) on the ball at contact, eased in over the wind-up and out
-// over the follow-through, and capped (RACKET). Vertical only; no new art.
+// over the follow-through, and capped (RACKET). A smaller sideways shift (racketSideShift) moves it across towards
+// the ball the same way. No new art.
 // Node can import this file: only buildAtlas and drawSprite touch a canvas, and only when called.
 import { SIM_HZ } from '../engine/loop.js';
 import { FP } from '../squash-physics.js';
@@ -52,7 +53,9 @@ const RUN_HOLD = 3;
 
 /**
  * The racket shift (racketShift). Tunables.
- *  - MAX: the cap, as a share of the drawn height (12 px at the back), so the feet never leave the shadow far behind.
+ *  - MAX: the cap, as a share of the drawn height (1 px at the back), so the feet stay on their spot. S8b had 12%;
+ *    S12 tried 16% and 20% with a sideways shift, and the owner picked 1% / 1% after playing them (CP-E).
+ *  - SIDE: the sideways shift's cap (racketSideShift), as a share of the drawn height (0 was none, as in S8b).
  *  - OUT: sim frames after contact over which the shift eases back to 0. A swing is planted for 11 frames from contact
  *    (SWING.RECOVERY), so 10 is 0 on its last locked frame and nothing jumps when it ends; a dive gets the same, so
  *    the player doesn't hang in the air while lying down. The serve's follow-through can be cut short by running off
@@ -60,7 +63,8 @@ const RUN_HOLD = 3;
  *  - ease: the 0 → 1 shape, used in over the wind-up (0 at the press, full on the contact frame) and out over OUT.
  */
 export const RACKET = {
-  MAX: 0.12,
+  MAX: 0.01,
+  SIDE: 0.01,
   OUT: 10,
   ease: (/** @type {number} */ f) => f * f * (3 - 2 * f),   // smoothstep
 };
@@ -223,16 +227,45 @@ export function stepAnimator(a, sheet, pl, serveBall) {
  * @returns {number}
  */
 export function racketShift(sheet, a, sy, h, ballY) {
+  const racket = sheet.tags[a.tag].racket, f = racketEase(sheet, a);
+  if (ballY === null || !racket || f === 0) return 0;
+  const racketY = sy - (sheet.pivot.y - racket.y) * h / ART_HEIGHT;
+  return Math.round(clamp(ballY - racketY, RACKET.MAX * h) * f);
+}
+
+/**
+ * The same across: how far to draw a swinging sprite right (+) or left (−), in whole px, capped at RACKET.SIDE of the
+ * height, with the same easing.
+ * @param {Sheet} sheet
+ * @param {Animator} a
+ * @param {number} sx  projected feet point, screen x
+ * @param {number} h   character height in whole px
+ * @param {number | null} ballX  the contact ball's drawn centre, screen x (null: no contact)
+ * @returns {number}
+ */
+export function racketSideShift(sheet, a, sx, h, ballX) {
+  const racket = sheet.tags[a.tag].racket, f = racketEase(sheet, a);
+  if (ballX === null || !racket || !RACKET.SIDE || f === 0) return 0;
+  const rx = (racket.x - sheet.pivot.x) * h / ART_HEIGHT;
+  return Math.round(clamp(ballX - (sx + (a.mirror ? -rx : rx)), RACKET.SIDE * h) * f);
+}
+
+/**
+ * How much of the racket shift applies where the tag is: 0 at the press, 1 on the contact frame, 0 again RACKET.OUT
+ * frames after it (sooner on a serve). 0 when nothing is being met.
+ * @param {Sheet} sheet @param {Animator} a
+ */
+function racketEase(sheet, a) {
   const tag = sheet.tags[a.tag];
-  if (ballY === null || !a.contact || tag.contact === null || !tag.racket) return 0;
+  if (!a.contact || tag.contact === null || !tag.racket) return 0;
   const c = tag.starts[tag.contact];
   const out = a.tag === 'serve' ? Math.min(RACKET.OUT, serveCut(tag) - 1 - c) : RACKET.OUT;
   const f = a.t <= c ? a.t / c : 1 - (a.t - c) / out;
-  if (f <= 0) return 0;
-  const racketY = sy - (sheet.pivot.y - tag.racket.y) * h / ART_HEIGHT;
-  const max = RACKET.MAX * h;
-  return Math.round(Math.max(-max, Math.min(max, ballY - racketY)) * RACKET.ease(f));
+  return f <= 0 ? 0 : RACKET.ease(f);
 }
+
+/** @param {number} gap @param {number} max */
+const clamp = (gap, max) => Math.max(-max, Math.min(max, gap));
 
 /**
  * A sheet repacked with a transparent gutter around each frame (so smoothing never samples a neighbour), optionally
@@ -292,14 +325,15 @@ export function buildAtlas(img, sheet, swap = []) {
  * @param {number} sy  projected feet point, screen y
  * @param {number} h   character height in whole px (heightAt)
  * @param {number} [shift]  px down (+) or up (−): the racket shift (racketShift)
+ * @param {number} [shiftX]  px right (+) or left (−): the sideways racket shift (racketSideShift)
  */
-export function drawSprite(ctx, sheet, atlas, a, sx, sy, h, shift = 0) {
+export function drawSprite(ctx, sheet, atlas, a, sx, sy, h, shift = 0, shiftX = 0) {
   const tag = sheet.tags[a.tag];
   const cell = atlas.cells[tag.from + frameAt(tag, a.t)];
   const k = h / ART_HEIGHT;
   const { frameW: w, frameH: fh, pivot } = sheet;
   const px = a.mirror ? w - pivot.x : pivot.x;          // mirrored about the pivot: x → 2 × pivot − x
-  const dx = Math.round(sx - px * k), dy = Math.round(sy - pivot.y * k) + shift;   // whole pixels: exact at 1:1
+  const dx = Math.round(sx - px * k) + shiftX, dy = Math.round(sy - pivot.y * k) + shift;   // whole pixels: exact at 1:1
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   if (a.mirror) {

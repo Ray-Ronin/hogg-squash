@@ -12,7 +12,7 @@
 import { FP } from '../squash-physics.js';
 import { SWING, DIVE, swingPhase } from '../sim/player.js';
 import { project, UNITS_PER_M } from './projection.js';
-import { drawSprite, racketShift } from './sprites.js';
+import { drawSprite, racketShift, racketSideShift } from './sprites.js';
 import { fxSheet, drawFx, ballFrame, nearest } from './fx.js';
 
 const BALL_RADIUS_M = 0.05;           // drawn larger than a real ball (0.02 m) so it reads at 640×360
@@ -105,6 +105,8 @@ export const heights = [0, 0];
 
 /** Each player's racket shift at the last draw, px (for the debug overlay and testing). @type {[number, number]} */
 export const shifts = [0, 0];
+/** …and the sideways one. @type {[number, number]} */
+export const sideShifts = [0, 0];
 
 /**
  * The ball's drawn centre on screen (it is drawn resting on its projected point: a circle of BALL_RADIUS_M, at least
@@ -170,9 +172,10 @@ export function drawActors(ctx, ball, players, opts) {
     const sp = opts.sprites;
     items.push({ z, draw: sp ? () => {
       const p = project(pl.x / FP, 0, z), a = sp.anims[i], c = a.contact;
-      const ballY = c && opts.racket !== false ? ballCentre(c.x, c.y, c.z).sy : null;
-      shifts[i] = racketShift(sp.sheet, a, p.sy, heights[i], ballY);
-      drawSprite(ctx, sp.sheet, sp.atlases[i], a, p.sx, p.sy, heights[i], shifts[i]);
+      const ball = c && opts.racket !== false ? ballCentre(c.x, c.y, c.z) : null;
+      shifts[i] = racketShift(sp.sheet, a, p.sy, heights[i], ball?.sy ?? null);
+      sideShifts[i] = racketSideShift(sp.sheet, a, p.sx, heights[i], ball?.sx ?? null);
+      drawSprite(ctx, sp.sheet, sp.atlases[i], a, p.sx, p.sy, heights[i], shifts[i], sideShifts[i]);
     } : () => drawBox(ctx, pl, hExact, COLOURS.players[i]) });
   });
   items.sort((a, b) => a.z - b.z).forEach(it => it.draw());

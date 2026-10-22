@@ -8,6 +8,8 @@ import { drawList, BAR } from './menu.js';
 import { RESULT_ITEMS } from './screens.js';
 
 export const RESULT_HINT = 'Up / down: choose     Enter or A: OK';
+/** …while the touch controls show. */
+export const RESULT_TOUCH_HINT = 'Tap one to choose it';
 
 /**
  * The panel's heading: who won and the final score, winner's first ("P1 WINS 9–5").
@@ -35,5 +37,5 @@ export function drawResult(ctx, ui, world) {
   drawText(ctx, 'large-white', head, cx, y + 8, 'center');
   drawText(ctx, 'small-grey', matchLine(ui.settings), cx, y + 30, 'center');
   drawList(ctx, RESULT_ITEMS, ui.sel, cx, listY, { font: 'large-white', center: true });
-  drawText(ctx, 'small-grey', RESULT_HINT, cx, y + h - 16, 'center');
+  drawText(ctx, 'small-grey', ui.touch ? RESULT_TOUCH_HINT : RESULT_HINT, cx, y + h - 16, 'center');
 }

@@ -8,6 +8,8 @@ import { drawList, BAR } from './menu.js';
 import { PAUSE_ITEMS } from './screens.js';
 
 export const PAUSE_HINT = 'Esc or Start: resume';
+/** …while the touch controls show. */
+export const PAUSE_TOUCH_HINT = 'Tap one to choose it';
 
 /** @param {CanvasRenderingContext2D} ctx @param {import('./screens.js').Ui} ui */
 export function drawPause(ctx, ui) {
@@ -17,5 +19,5 @@ export function drawPause(ctx, ui) {
   drawPanel(ctx, 'panel dark', Math.round(cx - w / 2), y, w, h);
   drawText(ctx, 'large-red', 'PAUSED', cx, y + 8, 'center');
   drawList(ctx, PAUSE_ITEMS, ui.sel, cx, listY, { font: 'large-white', center: true });
-  drawText(ctx, 'small-grey', PAUSE_HINT, cx, y + h - 16, 'center');
+  drawText(ctx, 'small-grey', ui.touch ? PAUSE_TOUCH_HINT : PAUSE_HINT, cx, y + h - 16, 'center');
 }

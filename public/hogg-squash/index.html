@@ -5,6 +5,8 @@
   <!-- no zooming or scrolling on phones (S11b); viewport-fit so the controls can keep clear of a notch -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Hogg Squash</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <style>
     /* the page matches the court's margin colour, so the bars around a 16:9 game don't show as a box */
     html, body { margin: 0; height: 100%; overflow: hidden; background: #16161a; }
@@ -15,9 +17,10 @@
 
     /* touch controls (js/input/touch.js): over the canvas, see-through so the court shows under them */
     #touch { position: fixed; inset: 0; pointer-events: none; font: bold 15px system-ui, sans-serif; color: #fff; }
-    #touch > * { position: absolute; pointer-events: auto; box-sizing: border-box; border-radius: 50%;
+    #touch > *, #full { position: absolute; pointer-events: auto; box-sizing: border-box; border-radius: 50%;
       display: grid; place-items: center; border: 2px solid rgba(255, 255, 255, 0.45);
-      background: rgba(255, 255, 255, 0.12); text-shadow: 0 1px 2px #000; }
+      background: rgba(255, 255, 255, 0.12); text-shadow: 0 1px 2px #000; font: bold 16px system-ui, sans-serif;
+      color: #fff; }
     #touch > .on { background: rgba(255, 255, 255, 0.35); }
     #stick { --d: min(42vh, 170px); width: var(--d); height: var(--d);
       left: calc(14px + env(safe-area-inset-left)); bottom: calc(14px + env(safe-area-inset-bottom)); }
@@ -31,14 +34,22 @@
       bottom: calc(14px + env(safe-area-inset-bottom) + var(--d) * 0.55); }
     #pause, #full { width: 44px; height: 44px; top: calc(8px + env(safe-area-inset-top)); font-size: 16px; }
     #pause { left: calc(8px + env(safe-area-inset-left)); }
-    #full { right: calc(8px + env(safe-area-inset-right)); }
+    #full { position: fixed; right: calc(8px + env(safe-area-inset-right)); }
+    /* the fullscreen button also shows on the menus for a mouse (S12): smaller, and dark so it shows on the white wall */
+    html:not(.touch) #full { width: 32px; height: 32px; top: 6px; right: 6px; font-size: 12px; cursor: pointer;
+      background: rgba(22, 22, 26, 0.55); border-color: rgba(22, 22, 26, 0.3); }
+    html:not(.touch) #full:hover { background: rgba(200, 16, 46, 0.85); }
+
+    /* until main.js has loaded (the game then draws its own loading bar) */
+    #loading { position: fixed; inset: 0; display: grid; place-items: center; color: #8a8a94;
+      font: bold 16px system-ui, sans-serif; pointer-events: none; }
 
     /* touch is played sideways: a portrait phone gets a message instead of the game */
     #turn { display: none; }
     @media (orientation: portrait) {
       html.touch #turn { display: grid; place-items: center; position: fixed; inset: 0; background: #16161a;
         color: #eee; font: bold 22px system-ui, sans-serif; text-align: center; padding: 24px; }
-      html.touch #touch { display: none; }
+      html.touch #touch, html.touch #full { display: none; }
     }
   </style>
 </head>
@@ -49,8 +60,9 @@
     <div id="soft">SOFT</div>
     <div id="hard">HARD</div>
     <div id="pause" aria-label="Pause">II</div>
-    <div id="full" aria-label="Fullscreen">[ ]</div>
   </div>
+  <div id="full" role="button" aria-label="Fullscreen" title="Fullscreen" hidden>[ ]</div>
+  <div id="loading">Loading…</div>
   <div id="turn">Turn your phone sideways to play</div>
   <noscript><p style="color:#eee;font-family:system-ui">Hogg Squash needs JavaScript.</p></noscript>
   <script type="module" src="js/main.js"></script>
