@@ -2,8 +2,9 @@
 // The ball, its shadow, the landing marker and the two players, drawn in depth order (far first). The players are the
 // animated sprites (sprites.js), P2 in the swapped kit; the S1–S7 placeholder boxes stay behind a debug toggle, and
 // are drawn if the sprites failed to load.
-// Character height is true to scale: a 1.75 m player at the feet z, so the head is just under the 1.78 m service line
-// (docs/decisions.md, "Camera and character size"); ?curve=half and ?curve=old show the CP-B and S3 curves for comparison.
+// Character height follows one smooth perspective curve with the feet z, 57 px at the front wall (true to scale there:
+// the head just under the 1.78 m service line) to 100 px at the back (docs/decisions.md, "Camera and character size");
+// ?curve=true, ?curve=half and ?curve=old show the true-scale, CP-B and S3 curves for comparison.
 // Boxes: while swinging, a racket stub on the box shows the side of the swing (right = forehand, left = backhand) and
 // moves from raised (wind-up) through level (contact) to low (recovery). A diving box lies on the floor on the dive side.
 import { FP } from '../squash-physics.js';
@@ -18,24 +19,29 @@ const COLOURS = {
 };
 
 /**
- * Character height by feet depth (2026-10-21): true to scale, height = METRES × scale(z), where scale is project()'s
- * pixels per metre at that depth: about 57 px at the front wall (z 12), 78 at mid-court and 117 at the back (z 179).
- * It is drawn rounded to a whole pixel (it changes 1 px at a time, at most about 0.95 px per frame when running).
- * BACK is the CP-B half-strength curve, BACK × √(scale(z) ÷ scale(BACK_Z)), kept for ?curve=half.
+ * Character height by feet depth (2026-10-21): height = BACK × (scale(z) ÷ scale(BACK_Z))^k, where scale is project()'s
+ * pixels per metre at that depth and k (≈0.77) is set so the curve passes through FRONT at FRONT_Z: 57 px at the front
+ * wall (z 12), 73 at mid-court and 100 at the back (z 179), so the 100 px art is never enlarged. FRONT is a 1.75 m
+ * player there; behind it the player is drawn a little smaller than true scale, so the head stays under the service line.
+ * It grows the whole way, with no flat ends and no bend, and is drawn rounded to a whole pixel (at most about 0.62 px
+ * of change per frame when running).
+ * METRES × scale(z) is true scale, kept for ?curve=true; BACK × √(…) is the CP-B half-strength curve, for ?curve=half.
  * OLD_POINTS is the S3 curve ([feet z, px], straight lines between, flat outside), kept for ?curve=old.
  */
 export const CHARACTER_HEIGHT = {
-  METRES: 1.75,         // an average adult man (US average 5 ft 9 in), just under the 1.78 m service line
-  BACK: 100,            // px at BACK_Z on the half-strength curve
+  FRONT: 57,            // px at FRONT_Z
+  FRONT_Z: 12,          // the nearest the feet go to the front wall (PLAYER_LIMITS.zMin)
+  BACK: 100,            // px at BACK_Z (the art's height, drawn 1:1)
   BACK_Z: 179,          // the deepest the feet go (PLAYER_LIMITS.zMax)
+  METRES: 1.75,         // an average adult man (US average 5 ft 9 in), just under the 1.78 m service line
   WIDTH_RATIO: 0.36,    // box width / height
   OLD_POINTS: /** @type {[number, number][]} */ ([[39, 68], [100, 84], [155, 100]]),
 };
 
 /**
  * How the boxes are sized: backHeight overrides the height at the back (?h=; the curve keeps its shape), and
- * curve 'half' picks the CP-B curve (?curve=half) and 'old' the S3 curve (?curve=old).
- * @typedef {{ backHeight?: number, curve?: 'true' | 'half' | 'old' }} SizeOpts
+ * curve 'true' picks true scale (?curve=true), 'half' the CP-B curve (?curve=half) and 'old' the S3 curve (?curve=old).
+ * @typedef {{ backHeight?: number, curve?: 'fit' | 'true' | 'half' | 'old' }} SizeOpts
  */
 
 /** The placeholder dive: the box lies on the floor, this much of its standing size, shifted to the dive side. */
@@ -58,10 +64,12 @@ export function exactHeightAt(z, size = {}) {
       const [z0, h0] = P[i - 1], [z1, h1] = P[i];
       if (z < z1) { h = z <= z0 ? h0 : h0 + (h1 - h0) * (z - z0) / (z1 - z0); break; }
     }
-  } else if (size.curve === 'half') {
-    h = C.BACK * Math.sqrt(project(0, 0, z).scale / project(0, 0, C.BACK_Z).scale);
-  } else {
+  } else if (size.curve === 'true') {
     h = C.METRES * project(0, 0, z).scale;
+  } else {
+    const back = project(0, 0, C.BACK_Z).scale;
+    const k = size.curve === 'half' ? 0.5 : Math.log(C.FRONT / C.BACK) / Math.log(project(0, 0, C.FRONT_Z).scale / back);
+    h = C.BACK * (project(0, 0, z).scale / back) ** k;
   }
   return size.backHeight ? h * size.backHeight / exactHeightAt(C.BACK_Z, { curve: size.curve }) : h;
 }
