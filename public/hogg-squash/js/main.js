@@ -8,7 +8,7 @@
 // URL options: ?mode=2p versus, ?level=1..9 difficulty (default 5: the CPU's skill and, in 1P, the game's pace; 2P
 // always plays at level 5's pace), ?to=5|7|9|11 match length (default 9), ?seed=<n> seed for the 2P first server and
 // the CPU's choices (default random),
-// ?h=<px> box height at the back, ?curve=old the S3 height curve (for comparing),
+// ?h=<px> character height at the back, ?curve=half|old the CP-B or S3 height curve (for comparing),
 // ?scale=int whole-number scaling only (default: fill the window),
 // ?slow=<n> slow motion (the sim runs n times slower), ?dev exposes the world as window.hogg for testing.
 // The players are the animated sprites (assets/player-100.png + .json, loaded before the game starts; P2 / the CPU in
@@ -37,7 +37,7 @@ const to = Number(query.get('to'));
 const target = MATCH_LENGTHS.includes(to) ? to : 9;
 const seed = query.has('seed') ? Number(query.get('seed')) | 0 : crypto.getRandomValues(new Uint32Array(1))[0] | 0;
 /** @type {import('./render/actors.js').SizeOpts} */
-const SIZE = { backHeight: Number(query.get('h')) || undefined, curve: query.get('curve') === 'old' ? 'old' : 'smooth' };
+const SIZE = { backHeight: Number(query.get('h')) || undefined, curve: query.get('curve') === 'old' ? 'old' : query.get('curve') === 'half' ? 'half' : 'true' };
 const SLOW = Math.max(1, Number(query.get('slow')) || 1);
 const TWO_PLAYER = query.get('mode') === '2p';
 const LEVEL = toLevel(query.get('level') ?? undefined);

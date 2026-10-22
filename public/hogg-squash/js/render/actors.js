@@ -2,8 +2,8 @@
 // The ball, its shadow, the landing marker and the two players, drawn in depth order (far first). The players are the
 // animated sprites (sprites.js), P2 in the swapped kit; the S1–S7 placeholder boxes stay behind a debug toggle, and
 // are drawn if the sprites failed to load.
-// Character height follows one smooth curve with the feet z, half-strength perspective (docs/decisions.md, "Camera and
-// character size"); ?curve=old shows the S3 curve for comparison.
+// Character height is true to scale: a 1.75 m player at the feet z, so the head is just under the 1.78 m service line
+// (docs/decisions.md, "Camera and character size"); ?curve=half and ?curve=old show the CP-B and S3 curves for comparison.
 // Boxes: while swinging, a racket stub on the box shows the side of the swing (right = forehand, left = backhand) and
 // moves from raised (wind-up) through level (contact) to low (recovery). A diving box lies on the floor on the dive side.
 import { FP } from '../squash-physics.js';
@@ -18,14 +18,15 @@ const COLOURS = {
 };
 
 /**
- * Character height by feet depth (CP-B): one smooth curve over the whole court, half-strength perspective.
- * height = BACK × √(scale(z) ÷ scale(BACK_Z)), where scale is project()'s pixels per metre at that depth: about 70 px
- * at the front wall (z 12), 82 at mid-court and 100 at the back (z 179). It grows the whole way, with no flat ends and
- * no bend, and is drawn rounded to a whole pixel (it changes 1 px at a time, at most 0.4 px per frame when running).
+ * Character height by feet depth (2026-10-21): true to scale, height = METRES × scale(z), where scale is project()'s
+ * pixels per metre at that depth: about 57 px at the front wall (z 12), 78 at mid-court and 117 at the back (z 179).
+ * It is drawn rounded to a whole pixel (it changes 1 px at a time, at most about 0.95 px per frame when running).
+ * BACK is the CP-B half-strength curve, BACK × √(scale(z) ÷ scale(BACK_Z)), kept for ?curve=half.
  * OLD_POINTS is the S3 curve ([feet z, px], straight lines between, flat outside), kept for ?curve=old.
  */
 export const CHARACTER_HEIGHT = {
-  BACK: 100,            // px at BACK_Z
+  METRES: 1.75,         // an average adult man (US average 5 ft 9 in), just under the 1.78 m service line
+  BACK: 100,            // px at BACK_Z on the half-strength curve
   BACK_Z: 179,          // the deepest the feet go (PLAYER_LIMITS.zMax)
   WIDTH_RATIO: 0.36,    // box width / height
   OLD_POINTS: /** @type {[number, number][]} */ ([[39, 68], [100, 84], [155, 100]]),
@@ -33,8 +34,8 @@ export const CHARACTER_HEIGHT = {
 
 /**
  * How the boxes are sized: backHeight overrides the height at the back (?h=; the curve keeps its shape), and
- * curve 'old' picks the S3 curve (?curve=old).
- * @typedef {{ backHeight?: number, curve?: 'smooth' | 'old' }} SizeOpts
+ * curve 'half' picks the CP-B curve (?curve=half) and 'old' the S3 curve (?curve=old).
+ * @typedef {{ backHeight?: number, curve?: 'true' | 'half' | 'old' }} SizeOpts
  */
 
 /** The placeholder dive: the box lies on the floor, this much of its standing size, shifted to the dive side. */
@@ -57,10 +58,12 @@ export function exactHeightAt(z, size = {}) {
       const [z0, h0] = P[i - 1], [z1, h1] = P[i];
       if (z < z1) { h = z <= z0 ? h0 : h0 + (h1 - h0) * (z - z0) / (z1 - z0); break; }
     }
-  } else {
+  } else if (size.curve === 'half') {
     h = C.BACK * Math.sqrt(project(0, 0, z).scale / project(0, 0, C.BACK_Z).scale);
+  } else {
+    h = C.METRES * project(0, 0, z).scale;
   }
-  return size.backHeight ? h * size.backHeight / C.BACK : h;
+  return size.backHeight ? h * size.backHeight / exactHeightAt(C.BACK_Z, { curve: size.curve }) : h;
 }
 
 /**
