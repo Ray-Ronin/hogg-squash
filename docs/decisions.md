@@ -48,6 +48,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - The game is themed on **Hogg Middle School** (Houston ISD), whose squash courts are used by **Mission Success** (Mission Squash Academy). The school's **colours and logos can be used**. See `theme.md`.
 - References are a general guide only. Nothing has to match or be copied exactly.
 - **The school's shield is on the title screen (2026-10-22, A5, the owner's call).** The owner supplied the Hogg Razorbacks shield ("HOGG RAZORBACKS IB STEM" over a red boar's head) and asked for it in place of the title mascot. This settles open question 6 for the title: the shield goes public with the next push. It is pixelated onto the palette in `assets/title.png` (`art/ui/hogg-logo-source.png` is the owner's file). Elsewhere (the court, the HUD) the game still uses only the colours and our own lettering. The original SpriteCook mascot is kept, unused, as a hidden layer in `art/ui/title.aseprite`.
+- **The match's logo slot (2026-10-22, S9):** `LOGO` in `js/render/hud.js`, **off by default** (no file, no request). It sits in the right margin under P2's score panel, at most 66 px. To put a logo in the match: add `assets/logo.png` and set `on: true`. `?logo=on` previews it.
 
 ## Match rules (2026-10-18)
 - **One match = one game.** Before the match, players choose **first to 5, 7, 9 or 11**.

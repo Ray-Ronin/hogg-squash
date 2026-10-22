@@ -1,7 +1,8 @@
 // @ts-check
 // The ball, its shadow, the landing marker and the two players, drawn in depth order (far first). The players are the
 // animated sprites (sprites.js), P2 in the swapped kit; the S1–S7 placeholder boxes stay behind a debug toggle, and
-// are drawn if the sprites failed to load.
+// are drawn if the sprites failed to load. The ball, shadow and landing marker are A4's art (fx.js), the ball's size
+// picked by depth; the code shapes are kept for the debug court and as the fallback if the art failed to load.
 // Character height follows one smooth perspective curve with the feet z, 57 px at the front wall (true to scale there:
 // the head just under the 1.78 m service line) to 100 px at the back (docs/decisions.md, "Camera and character size");
 // ?curve=true, ?curve=half and ?curve=old show the true-scale, CP-B and S3 curves for comparison.
@@ -12,6 +13,7 @@ import { FP } from '../squash-physics.js';
 import { SWING, DIVE, swingPhase } from '../sim/player.js';
 import { project, UNITS_PER_M } from './projection.js';
 import { drawSprite, racketShift } from './sprites.js';
+import { fxSheet, drawFx, ballFrame, nearest } from './fx.js';
 
 const BALL_RADIUS_M = 0.05;           // drawn larger than a real ball (0.02 m) so it reads at 640×360
 const COLOURS = {
@@ -127,26 +129,34 @@ export function ballCentre(x, y, z) {
  * @param {CanvasRenderingContext2D} ctx
  * @param {{ x: number, y: number, z: number }} ball  16.16
  * @param {Player[]} players  P1 first
- * @param {{ landing: { x: number, z: number } | null, size?: SizeOpts, sprites?: Sprites | null, racket?: boolean }} opts
- *   sprites: null or missing draws the placeholder boxes; racket: false turns the racket shift off (?racket=off)
+ * @param {{ landing: { x: number, z: number } | null, size?: SizeOpts, sprites?: Sprites | null, racket?: boolean,
+ *   art?: boolean }} opts
+ *   sprites: null or missing draws the placeholder boxes; racket: false turns the racket shift off (?racket=off);
+ *   art: false draws the ball, shadow and marker as code shapes (the debug court), as does a missing fx sheet
  */
 export function drawActors(ctx, ball, players, opts) {
   const bx = ball.x / FP, by = Math.max(0, ball.y / FP), bz = ball.z / FP;
+  const fx = opts.art === false ? null : fxSheet();
 
-  if (opts.landing) drawLanding(ctx, opts.landing.x, opts.landing.z);
+  if (opts.landing) drawLanding(ctx, opts.landing.x, opts.landing.z, fx !== null);
 
   const shadow = project(bx, 0, bz);
   const r = Math.max(1, BALL_RADIUS_M * shadow.scale);
-  ctx.fillStyle = COLOURS.shadow;
-  ctx.beginPath();
-  ctx.ellipse(shadow.sx, shadow.sy, r * 1.2, r * 0.5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  const size = fx ? ballFrame(fx, 2 * r) : 0;           // the ball and its shadow share a size, picked by depth
+  if (fx) drawFx(ctx, 'shadow', size, shadow.sx, shadow.sy);
+  else {
+    ctx.fillStyle = COLOURS.shadow;
+    ctx.beginPath();
+    ctx.ellipse(shadow.sx, shadow.sy, r * 1.2, r * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   /** @type {{ z: number, draw: () => void }[]} */
   const items = [{
     z: bz,
     draw() {
       const p = ballCentre(bx, by, bz);
+      if (fx) { drawFx(ctx, 'ball', size, p.sx, p.sy); return; }
       ctx.fillStyle = COLOURS.ball;
       ctx.beginPath();
       ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
@@ -224,10 +234,17 @@ function drawRacket(ctx, sx, sy, h, dir, t) {
 }
 
 /**
- * A ring on the floor where the ball will land, with a dot in the middle.
- * @param {CanvasRenderingContext2D} ctx @param {number} x @param {number} z  game units
+ * A ring on the floor where the ball will land, with a dot in the middle: A4's marker, foreshortened for the nearest
+ * of its depths, or the code's ring.
+ * @param {CanvasRenderingContext2D} ctx @param {number} x @param {number} z  game units @param {boolean} art
  */
-function drawLanding(ctx, x, z) {
+function drawLanding(ctx, x, z, art) {
+  const fx = fxSheet();
+  if (art && fx) {
+    const c = project(x, 0, z);
+    drawFx(ctx, 'landing', nearest(fx.tags.landing.data, z), c.sx, c.sy);
+    return;
+  }
   const R_M = 0.3, STEPS = 16;        // a circle of this radius in metres on the floor
   ctx.strokeStyle = COLOURS.landing;
   ctx.lineWidth = 1.5;

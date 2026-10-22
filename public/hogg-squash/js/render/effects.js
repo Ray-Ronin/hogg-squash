@@ -1,16 +1,20 @@
 // @ts-check
-// Placeholder hit feedback, fed by the world's events: a ring where the ball hits the front wall, a flash where the
-// racket meets the ball, and a MISS label over a player whose swing finds nothing (shown at the moment the racket
-// would have met the ball). Effects age by sim frames, so they slow down in ?slow and stop while the game is frozen.
+// Hit feedback, fed by the world's events: a ring where the ball hits the front wall, a sparkle where the racket
+// meets the ball (A4's `ring` and `sparkle`, their frames spread over each effect's life), and a MISS label over a
+// player whose swing finds nothing (shown at the moment the racket would have met the ball), in the bitmap font.
+// Effects age by sim frames, so they slow down in ?slow and stop while the game is frozen. With art off (the debug
+// court) or no fx sheet, the ring and the flash are the S4 code shapes.
 import { FP } from '../squash-physics.js';
 import { SWING } from '../sim/player.js';
 import { project } from './projection.js';
-import { heightAt } from './actors.js';
+import { heightAt, ballCentre } from './actors.js';
+import { fxSheet, drawFx } from './fx.js';
+import { drawText } from './text.js';
 
 /** Lifetimes in sim frames. */
 export const EFFECT_FRAMES = { RING: 20, FLASH: 8, MISS: 30 };
 
-const COLOURS = { ring: '200, 16, 46', flash: '255, 236, 140', miss: '#f4f4f0', outline: '#000' };
+const COLOURS = { ring: '200, 16, 46', flash: '255, 236, 140' };
 
 /**
  * @typedef {(
@@ -50,15 +54,18 @@ export function createEffects() {
      * @param {World} w
      * @param {'wall' | 'front'} layer  'wall' under the players and ball, 'front' over them
      * @param {import('./actors.js').SizeOpts} [size]  ?h= and ?curve=, so the MISS label sits on the box
+     * @param {boolean} [art]  false: the code shapes (the debug court)
      */
-    draw(ctx, w, layer, size) {
+    draw(ctx, w, layer, size, art = true) {
       list = list.filter(e => w.frame - e.start < life(e));
+      const fx = art ? fxSheet() : null;
       for (const e of list) {
         const age = w.frame - e.start;
         if (age < 0) continue;
         const k = age / life(e);                       // 0 → 1 over the effect's life
         if (layer === 'wall' && e.kind === 'ring') {
           const p = project(e.x, e.y, 0);
+          if (fx) { drawFx(ctx, 'ring', Math.floor(k * fx.tags.ring.frames.length), p.sx, p.sy); continue; }
           ctx.strokeStyle = `rgba(${COLOURS.ring}, ${1 - k})`;
           ctx.lineWidth = 1.5;
           ctx.beginPath();
@@ -67,6 +74,11 @@ export function createEffects() {
           ctx.lineWidth = 1;
         } else if (layer === 'front' && e.kind === 'flash') {
           const p = project(e.x, e.y, e.z);
+          if (fx) {                                      // on the ball as drawn
+            const c = ballCentre(e.x, e.y, e.z);
+            drawFx(ctx, 'sparkle', Math.floor(k * fx.tags.sparkle.frames.length), c.sx, c.sy);
+            continue;
+          }
           const r = 6 + 8 * k;
           ctx.strokeStyle = `rgba(${COLOURS.flash}, ${1 - k})`;
           ctx.lineWidth = 2;
@@ -81,17 +93,11 @@ export function createEffects() {
         } else if (layer === 'front' && e.kind === 'miss') {
           const pl = w.players[e.side];
           const z = pl.z / FP, p = project(pl.x / FP, 0, z);
-          const y = Math.round(p.sy - heightAt(z, size) - 6 - 6 * k);
-          ctx.font = 'bold 10px monospace';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'bottom';
+          const y = Math.round(p.sy - heightAt(z, size) - 13 - 6 * k);   // the label's top; it rises as it fades
           ctx.globalAlpha = 1 - k * k;
-          ctx.fillStyle = COLOURS.outline;
-          ctx.fillText('MISS', Math.round(p.sx) + 1, y + 1);
-          ctx.fillStyle = COLOURS.miss;
-          ctx.fillText('MISS', Math.round(p.sx), y);
+          drawText(ctx, 'small-dark', 'MISS', p.sx + 1, y + 1, 'center');   // a drop shadow, for the wood and walls
+          drawText(ctx, 'small', 'MISS', p.sx, y, 'center');
           ctx.globalAlpha = 1;
-          ctx.textAlign = 'left';
         }
       }
     },

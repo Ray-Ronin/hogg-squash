@@ -157,6 +157,7 @@ export function drawDebug(ctx, d) {
     ? `serve aim  HARD ${xz(serveTarget(m.box, b.x / FP, b.z / FP, 'hard'))}  SOFT ${xz(serveTarget(m.box, b.x / FP, b.z / FP, 'soft'))}`
     : `serve aimed ${xz(w.serveTarget)}   landing ${xz(w.landing)}`;
   const lines = [
+    'keys  ` this overlay   [ ] level   \\ boxes   \' court view (painted, code, lines)',
     `sim ${d.stepsPerSec.toFixed(1)} steps/s   frame ${w.frame}   ${w.phase} ${w.timer}`,
     `ball x${f1(b.x / FP)} y${f1(b.y / FP)} z${f1(b.z / FP)}`,
     `level ${w.params.level}${d.nextLevel != null ? ` (next ${d.nextLevel})` : ''}  pace ${w.params.speed} gravity ${hex(w.params.gravity)}` +
