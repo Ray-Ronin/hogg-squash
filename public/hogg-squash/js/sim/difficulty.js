@@ -66,7 +66,15 @@ export const LEVEL_TABLE = {
  * @property {number} cpuSoftScale  0…1
  * @property {number} cpuVolley     0 or 1
  * @property {number} cpuReach      0…1
+ * @property {number} [humanReach]  0…1: a human's hit zones as a share of the arcade's (S12b: HUMAN_REACH; missing = 1);
+ *   a CPU's are cpuReach of that
  */
+
+/**
+ * A human's hit zones as a share of the arcade's (S12b, the owner's pick after playing 100/90/80/70%): every level and
+ * 2P. A CPU's are its cpuReach of this. ?reach= overrides it for trying sizes.
+ */
+export const HUMAN_REACH = 0.9;
 
 /**
  * A level number from anything (a URL value, say): a whole number 1–9, else the default.
@@ -90,7 +98,7 @@ export function levelParams(level) {
     powerMult: t.powerMult[i], latMult: t.powerMult[i],
     cpuReaction: t.cpuReaction[i], cpuErrorStep: t.cpuErrorStep[i], cpuSense: t.cpuSense[i],
     cpuTiming: t.cpuTiming[i], cpuAimJitter: t.cpuAimJitter[i], cpuSoftScale: t.cpuSoftScale[i], cpuVolley: t.cpuVolley[i],
-    cpuReach: t.cpuReach[i],
+    cpuReach: t.cpuReach[i], humanReach: HUMAN_REACH,
   };
 }
 

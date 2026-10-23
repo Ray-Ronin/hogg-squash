@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FP, makeBall, step, applyShot, shotEntry, SHOT_TABLES, aimFromTiming } from '../public/hogg-squash/js/squash-physics.js';
-import { makePlayer, stepPlayer, swingPhase, swingLength, shotFor, SWING, DIVE, DROP, PLAYER_LIMITS } from '../public/hogg-squash/js/sim/player.js';
+import { makePlayer, stepPlayer, swingPhase, swingLength, shotFor, SWING, DIVE, DROP, PLAYER_LIMITS, REACH_TOP, CRAMP, crampedAim } from '../public/hogg-squash/js/sim/player.js';
 import { defaultParams } from '../public/hogg-squash/js/sim/world.js';
 
 const P = defaultParams();
@@ -170,7 +170,7 @@ test('a CPU\'s reach is smaller by params.cpuReach: a ball a human hits clean is
   const press = (dx, cpu, reach) => {
     const { pl, ball } = setup(dx);
     if (cpu) pl.flags1b = 0x40;
-    return stepPlayer(pl, keys('hard'), ball, { ...P, cpuReach: reach }, 0, MY_TURN);
+    return stepPlayer(pl, keys('hard'), ball, { ...P, cpuReach: reach, humanReach: 1 }, 0, MY_TURN);   // the arcade's size
   };
   // the forehand bands for a human: clean below 52, stretch to 76, dive to 96, then out of reach
   const band = e => (!e.reach ? 'out' : e.kind === 'dive' ? 'dive' : e.flags & 2 ? 'stretch' : 'clean');
@@ -181,4 +181,88 @@ test('a CPU\'s reach is smaller by params.cpuReach: a ball a human hits clean is
   }
   // the shot table zone is the real one
   assert.equal(press(50, true, 0.95).zone, press(50, false, 1).zone);
+});
+
+test('S12b: a human\'s reach can be smaller too (params.humanReach), the same way; missing or 1 is the arcade\'s', () => {
+  const press = (/** @type {number} */ dx, /** @type {number | undefined} */ reach) => {
+    const { pl, ball } = setup(dx);
+    return stepPlayer(pl, keys('hard'), ball, { ...P, humanReach: reach }, 0, MY_TURN);
+  };
+  const band = (/** @type {any} */ e) => (!e.reach ? 'out' : e.kind === 'dive' ? 'dive' : e.flags & 2 ? 'stretch' : 'clean');
+  for (const [dx, full, at95] of [[30, 'clean', 'clean'], [50, 'clean', 'stretch'], [74, 'stretch', 'dive'], [93, 'dive', 'out']]) {
+    assert.equal(band(press(dx, undefined)), full, `no humanReach at ${dx}`);
+    assert.equal(band(press(dx, 1)), full, `humanReach 1 at ${dx}`);
+    assert.equal(band(press(dx, 0.95)), at95, `humanReach 0.95 at ${dx}`);
+  }
+});
+
+test('S12b: nobody reaches a ball above REACH_TOP (2.4 m); just under it is an overhead as before', () => {
+  assert.equal(REACH_TOP, 84);
+  const still = { ...P, speed: 0 };                                  // the ball stays where it is for the look-ahead
+  const press = (/** @type {number} */ y, /** @type {boolean} */ cpu) => {
+    const pl = makePlayer(0, 100);
+    if (cpu) pl.flags1b = 0x40;
+    return stepPlayer(pl, keys('hard'), makeBall({ x: 30 * FP, y: y * FP, z: 100 * FP }), still, 0, MY_TURN);
+  };
+  for (const cpu of [false, true]) {
+    const under = press(REACH_TOP, cpu), over = press(REACH_TOP + 1, cpu);
+    assert.ok(under?.type === 'swing' && under.reach && (under.flags & 8), `${cpu ? 'CPU' : 'human'}: an overhead at the top`);
+    assert.ok(over?.type === 'swing' && !over.reach, `${cpu ? 'CPU' : 'human'}: a miss just above it`);
+  }
+});
+
+test('S12b: a CPU\'s reach is its share of the human\'s, so it shrinks with a smaller humanReach', () => {
+  const press = (/** @type {number} */ dx, /** @type {boolean} */ cpu, /** @type {number} */ human, /** @type {number} */ share) => {
+    const { pl, ball } = setup(dx);
+    if (cpu) pl.flags1b = 0x40;
+    return stepPlayer(pl, keys('hard'), ball, { ...P, humanReach: human, cpuReach: share }, 0, MY_TURN);
+  };
+  const band = (/** @type {any} */ e) => (!e.reach ? 'out' : e.kind === 'dive' ? 'dive' : e.flags & 2 ? 'stretch' : 'clean');
+  // 0.95 × 1 and 1 × 0.95 shrink the same; a CPU at 0.95 of a 0.95 human is at 0.9025
+  for (const dx of [30, 50, 74, 93]) {
+    assert.equal(band(press(dx, true, 0.95, 1)), band(press(dx, false, 0.95, 1)), `CPU with full share = human at ${dx}`);
+    assert.equal(band(press(dx, true, 1, 0.95)), band(press(dx, false, 0.95, 1)), `CPU 0.95 = human 0.95 at ${dx}`);
+  }
+  assert.equal(band(press(88, false, 0.95, 1)), 'dive', 'a 0.95 human still dives at 88');
+  assert.equal(band(press(88, true, 0.95, 0.95)), 'out', '…a CPU at 0.95 of that can\'t');
+});
+
+test('S12b: a ball met within CRAMP.WIDTH of the body is still hit, but slower, with its aim moved by up to ±WOBBLE', () => {
+  const hit = (/** @type {number} */ dx) => {
+    const { pl, ball } = setup(dx);
+    const evs = run(pl, ball, SWING.CONTACT + 1, i => (i === 0 ? keys('hard') : NO_KEYS));
+    return { press: evs[0], hit: evs.find(e => e?.type === 'hit') };
+  };
+  const body = hit(4), side = hit(30);
+  assert.equal(body.press?.cramped, true, 'through the body: cramped');
+  assert.equal(side.press?.cramped, false, '0.7 m to the side: a full swing');
+  assert.ok(body.hit && side.hit, 'both are hit');
+  assert.equal(body.hit.cramped, true);
+  // the same contact with the cramp off: the cramped one has CRAMP.POWER of its depth pace, the same height speed
+  const width = CRAMP.WIDTH;
+  CRAMP.WIDTH = -1;
+  let full;
+  try { full = hit(4); } finally { CRAMP.WIDTH = width; }
+  const ratio = body.hit.ball.vz / full.hit.ball.vz;
+  assert.ok(Math.abs(ratio - CRAMP.POWER) < 0.06, `depth pace × ${ratio.toFixed(2)}`);
+  assert.ok(Math.abs(body.hit.ball.vy - full.hit.ball.vy) <= Math.abs(full.hit.ball.vy) * 0.05, 'about the same height speed');
+  const seen = new Set();
+  for (let f = 0; f < 200; f++) {
+    const a = crampedAim(4, f);
+    assert.ok(Math.abs(a - 4) <= CRAMP.WOBBLE, 'within the wobble');
+    seen.add(a);
+  }
+  assert.equal(seen.size, 2 * CRAMP.WOBBLE + 1, 'every wobble step happens');
+  assert.equal(crampedAim(0, 3) >= 0 && crampedAim(7, 3) <= 7, true, 'kept 0–7');
+});
+
+test('S12b: a ball near the body at CRAMP.ABOVE (1.5 m) or higher is a normal shot: the player reaches up', () => {
+  assert.equal(CRAMP.ABOVE, 53);
+  const still = { ...P, speed: 0 };
+  const press = (/** @type {number} */ y) => stepPlayer(makePlayer(0, 100), keys('hard'),
+    makeBall({ x: 4 * FP, y: y * FP, z: 100 * FP }), still, 0, MY_TURN);
+  assert.equal(press(CRAMP.ABOVE - 1)?.cramped, true, 'just under 1.5 m: cramped');
+  assert.equal(press(CRAMP.ABOVE)?.cramped, false, 'at 1.5 m: normal');
+  assert.equal(press(70)?.cramped, false, 'an overhead at 2 m: normal');
+  assert.equal(press(70)?.reach, true, '…and still in reach');
 });

@@ -40,7 +40,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S11** Options: key remapping and key test
 - [x] **S11b** Touch controls (mobile mode): on-screen buttons, Auto / On / Off setting
 - [x] **S12** Polish and release prep
-- [ ] **S12b** The hitting range: a smaller reach for the human player (the owner's request after S12)
+- [x] **S12b** The hitting range: a smaller reach for the human player (the owner's request after S12)
 - [ ] **CP-F** Release play-test and go-live *(you)*
 
 ---
@@ -1468,3 +1468,9 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Caching:** checked, no change. The live site sends `Cache-Control: public, max-age=0, must-revalidate` with ETags, and was serving 0.11.4's files exactly, so a deploy isn't stuck behind old modules; no `_headers` needed.
   - **Checked in the browser** (the app's Chromium pane, `npm run dev` on 8789): the title, card, fullscreen button and favicon at 1280×720; at 844×390 by synthetic touches, every screen's touch wording, a 1P match played to the result (P1 driven by a CPU brain) with the point flash measured in the buffer (bright on the point frame, fading by frame 24); the fullscreen button calls `requestFullscreen` (the pane doesn't grant it); no console errors from a cold load to the result. **Edge:** headless, loads and draws the title. **Not checked:** Firefox (not installed), real fullscreen, a high-refresh display, a real phone (the owner's check), full play in Edge.
   - **Left for later:** S12b (the owner asked after S12 for a smaller hitting range). `?cam=zoom|old` and `?curve=old|half|true` are still there as debug options; harmless, not removed.
+- 2026-10-22, S12b: the hitting range. `squash-physics.js` unchanged; `npm test` golden/flight/shot/hit numbers exactly as the P0 baseline; unit tests 133 → 138; `npm run typecheck` clean. Version 0.12.1.
+  - **Reach 90% for humans** (`HUMAN_REACH`, applied through the CPU's `shrinkReach`), the CPU's reach now its 95–99% of that. The owner compared 100/90/80/70% drawn on the court (`art/mockups/s12b-reach.png`, `s12b-ranges.png`) and in play with `?reach=`, which stays for comparing.
+  - **Height limit 2.4 m** (`REACH_TOP`): found while mapping the range: the arcade's classifier has no top limit at all.
+  - **Cramped shots** (`CRAMP`, `crampedAim`; asked for "more realistic"; squash coaching calls it a jammed ball): within 0.2 m across of the feet and below 1.5 m, the shot keeps 80% of its pace and its aim wobbles ±2 steps. The owner set 0.3 m first, then 1.5 m as the "reach up" height, then made it a little smaller. No on-screen label (offered; not asked for).
+  - **Measured:** `test/measure-levels.js` (new, by hand): the reference beginner wins 80, 74, 65, 54, 44, 23, 13, 8, 5% at levels 1–9 (S6b 78, 71, 67, 54, 43, 29, 14, 10, 5). In CPU-vs-CPU matches 11–16% of CPU hits were cramped at 0.3 m; 7–9% of all hits against the reference player at 0.2 m.
+  - **Checked in the browser:** `?reach=` sizes, CPU-driven matches with no console errors. **Not checked:** play by a person at full speed (the owner's), whether level 6 (29 → 23%) now feels too big a step from 5.

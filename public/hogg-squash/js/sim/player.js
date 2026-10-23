@@ -69,6 +69,7 @@ export const PLAYER_LIMITS = { xMin: -134, xMax: 134, zMin: 12, zMax: 179 };
  * @property {'fore' | 'back'} hand      which side of the body the ball is on (classifier flag 4 = backhand)
  * @property {Contact | null} contact    null when the swing can't make contact (out of reach, or not your ball)
  * @property {boolean} hit               contact has been made
+ * @property {boolean} [cramped]         the ball is met too close to the body (CRAMP): a weaker, wilder shot
  */
 
 /**
@@ -86,6 +87,7 @@ export const PLAYER_LIMITS = { xMin: -134, xMax: 134, zMin: 12, zMax: 179 };
  * @property {number} index
  * @property {boolean} reach           false = a miss (out of reach, or not this player's turn)
  * @property {number} [aim]             set on 'hit'
+ * @property {boolean} [cramped]         set on 'swing' and 'hit': the ball is too close to the body (CRAMP)
  * @property {{ x: number, y: number, z: number, vx: number, vy: number, vz: number }} [ball]  set on 'hit': the ball
  *   at contact, with its new velocity (16.16)
  */
@@ -116,7 +118,7 @@ export function shotFor(zone, button, index) {
 }
 
 /**
- * A CPU's smaller reach (params.cpuReach, below 1). Its contact is classified as if the ball 7 frames ahead were
+ * A smaller reach: a human's (params.humanReach, S12b), and a CPU's as params.cpuReach of that. The contact is classified as if the ball 7 frames ahead were
  * further from its feet by 1 ÷ reach, across and in depth, so every band of the arcade's classifier (clean, stretch,
  * dive, out of reach) shrinks around it by that share. The arcade's classifier does the work: it is run again on a
  * still ball at the scaled spot (game speed 0, so the 7 look-ahead frames don't move it). The shot table zone stays
@@ -133,6 +135,32 @@ function shrinkReach(c, pl, p, opts, reach) {
   const at = { ...g, x: Math.round(pl.x + (g.x - pl.x) / reach), z: Math.round(pl.z + (g.z - pl.z) / reach), vx: 0, vy: 0, vz: 0 };
   const s = classifyContact(at, pl, { ...p, speed: 0 }, opts);
   return { ...s, zone: c.zone, ghost: g };
+}
+
+/**
+ * The highest ball a player can reach (S12b, the owner's call): 84 game units = 2.4 m, a 1.75 m player's arm and racket
+ * stretched up. The arcade's classifier has no top limit (anything above y 48 is an overhead), so a ball above this is
+ * a miss here. The CPU never plans contacts this high (CPU.CONTACT_Y_MAX, 1.6 m), so only humans notice.
+ */
+export const REACH_TOP = 84;
+
+/**
+ * A cramped shot (S12b, the owner's call; in squash a ball met too close to the body is "jammed": no room for a full
+ * swing). When the ball at contact passes within WIDTH units across of the player's feet (9 = 0.2 m: through the body;
+ * first 0.3 m, made a little smaller after play), the shot still goes but with POWER of its pace and its aim (0–7, set by timing) moved by up to ±WOBBLE
+ * steps. A ball at ABOVE units (53 = 1.5 m) or higher is never cramped: the player reaches up and plays it normally.
+ * Humans and the CPU alike; the CPU stands SIDE_OFFSET (0.7 m) to the side, so it is cramped only when its
+ * positioning is off.
+ */
+export const CRAMP = { WIDTH: 9, ABOVE: 53, POWER: 0.8, WOBBLE: 2 };
+
+/**
+ * The cramped aim: the timing's aim moved by −WOBBLE…+WOBBLE steps, picked from the frame (deterministic), kept 0–7.
+ * @param {number} aim @param {number} frame
+ */
+export function crampedAim(aim, frame) {
+  const n = 2 * CRAMP.WOBBLE + 1, k = (Math.imul(frame + 1, 0x9e3779b1) >>> 0) % n - CRAMP.WOBBLE;
+  return Math.max(0, Math.min(7, aim + k));
 }
 
 /** @param {'swing' | 'dive'} kind */
@@ -179,22 +207,29 @@ export function stepPlayer(pl, act, ball, p, frame, turn = { isP1: true, turnIsP
     const T = timing(s.kind);
     if (s.t === T.CONTACT && s.contact) {
       const c = s.contact;
-      const aim = aimFromTiming(ball.z, pl.z);
-      const entry = shotFor(c.zone, s.button, c.index);
+      const timed = aimFromTiming(ball.z, pl.z);
+      const aim = s.cramped ? crampedAim(timed, frame) : timed;
+      const e = shotFor(c.zone, s.button, c.index);
+      // power sets the depth pace; the height speed is lift ÷ power, so lift is cut by the same share to keep it
+      const entry = s.cramped ? { ...e, lift: Math.round(e.lift * CRAMP.POWER), power: Math.round(e.power * CRAMP.POWER) } : e;
       applyShot(ball, entry, aim, { z: pl.z, flags1b: c.flags, isCpu: !!(pl.flags1b & 0x40) }, frame, p);
       s.hit = true;
       event = { type: 'hit', kind: s.kind, button: s.button, flags: c.flags, zone: c.zone, index: c.index, reach: true,
-                aim, ball: { x: ball.x, y: ball.y, z: ball.z, vx: ball.vx, vy: ball.vy, vz: ball.vz } };
+                aim, cramped: !!s.cramped, ball: { x: ball.x, y: ball.y, z: ball.z, vx: ball.vx, vy: ball.vy, vz: ball.vz } };
     }
   } else if (act.hard || act.soft) {
     const button = act.hard ? 'hard' : 'soft';
     const opts = { isP1: turn.isP1, turnIsP1: turn.turnIsP1 };
     const c0 = classifyContact(ball, pl, p, opts);
-    const c = pl.flags1b & 0x40 && p.cpuReach < 1 ? shrinkReach(c0, pl, p, opts, p.cpuReach) : c0;
-    const reach = turn.mayStrike && !(c.flags & 0x20);
+    // a human's reach (S12b), and a CPU's as its share of that
+    const share = (p.humanReach ?? 1) * (pl.flags1b & 0x40 ? p.cpuReach : 1);
+    const c = share < 1 ? shrinkReach(c0, pl, p, opts, share) : c0;
+    const tooHigh = (c.ghost.y >> 16) > REACH_TOP;
+    const reach = turn.mayStrike && !(c.flags & 0x20) && !tooHigh;
     const kind = reach && (c.flags & DIVE_FLAG) ? 'dive' : 'swing';
-    pl.swing = { kind, t: 0, button, hand: c.flags & 4 ? 'back' : 'fore', contact: reach ? c : null, hit: false };
-    event = { type: 'swing', kind, button, flags: c.flags, zone: c.zone, index: c.index, reach };
+    const cramped = reach && Math.abs((c0.ghost.x >> 16) - (pl.x >> 16)) <= CRAMP.WIDTH && (c0.ghost.y >> 16) < CRAMP.ABOVE;
+    pl.swing = { kind, t: 0, button, hand: c.flags & 4 ? 'back' : 'fore', contact: reach ? c : null, hit: false, cramped };
+    event = { type: 'swing', kind, button, flags: c.flags, zone: c.zone, index: c.index, reach, cramped };
   }
 
   const sw = pl.swing;
