@@ -41,7 +41,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S11b** Touch controls (mobile mode): on-screen buttons, Auto / On / Off setting
 - [x] **S12** Polish and release prep
 - [x] **S12b** The hitting range: a smaller reach for the human player (the owner's request after S12)
-- [ ] **S12c** CP-F fix-ups: the hitting range by direction (less behind, a wider backhand, a shorter forehand)
+- [x] **S12c** CP-F fix-ups: the hitting range by direction (less behind, a wider backhand, a shorter forehand)
 - [ ] **CP-F** Release play-test and go-live *(you)*
 
 ---
@@ -1507,3 +1507,10 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Fix:** the hitting range, by direction: less reach behind, a slightly wider backhand, a slightly shorter forehand. Added as **S12c** before go-live; CP-F is replayed after it.
   - **School logo (open question 6):** still open. The owner asked where it would go: S9's slot is in the right margin under P2's score panel, at most 66 px, off by default (`?logo=on` previews it). Decide at the CP-F replay.
   - **After v1:** all four (more characters, audio, crowd, tournament), **starting with audio**, in a new plan.
+- 2026-10-22, S12c: the hitting range by direction. `squash-physics.js` unchanged; `npm test` golden/flight/shot/hit numbers exactly as the P0 baseline; unit tests 138 → 143; `npm run typecheck` clean. Version 0.12.2.
+  - **The owner's pick (plan D, then three changes after seeing the maps):** in front 90%, behind 70%, forehand 75%, backhand 105%; the backhand's stretch and dive bands as wide as the forehand's with clean inside (`even`); an oval through the same four edges, so the far corners are out of reach (`oval`); the dive band 0.1 m wider on both sides (`dive`). Straight out: forehand clean 0.8 / stretch 1.3 / dive 1.7 m, backhand 0.7 / 1.2 / 1.6 m, 1.9 m in front, 1.5 m behind. `HUMAN_REACH`; `docs/decisions.md`, "The hitting range".
+  - **How:** `shrinkReach` now maps the ball piecewise so the arcade's band edges land on the wanted ones per side (`bandEdges`, `toArcadeBands`), keeps the ball on its real side of the forehand/backhand split (S12b's single share could flip a ball just right of the feet to a forehand), and marks a ball outside the oval out of reach (`outsideOval`). One number in `humanReach` still works as S12b's. The CPU's is `cpuReach` of each.
+  - **Beyond the plan's scope list (the owner asked):** `even`, `oval` and `dive` change which band a ball falls in, not only the band sizes. The classifier's tables are untouched.
+  - **Maps:** `art/mockups/s12c-reach.png` (now vs B/C/D), `s12c-even.png`, `s12c-oval.png`, `s12c-dive.png` (as built), drawn in the browser from the sim itself.
+  - **Measured:** reference beginner 85, 78, 72, 59, 41, 23, 12, 7, 4% at levels 1–9 (S12b 80, 74, 65, 54, 44, 23, 13, 8, 5). Levels 1, 3 and 4 moved by 5–7 points (flagged, not re-tuned); cramped 7–10% of hits. Two older player tests moved their ball distances to fit the new bands.
+  - **Checked in the browser:** `?reach=` candidates drawn and served; the default match loads at 0.12.2 with the new reach, no console errors. **By tests only:** band edges per side, the oval's corners, the dive widening, the CPU's share. **Not checked by me:** play by a person (the owner played the final shape before it became the default).

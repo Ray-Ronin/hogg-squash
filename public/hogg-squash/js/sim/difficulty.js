@@ -66,15 +66,18 @@ export const LEVEL_TABLE = {
  * @property {number} cpuSoftScale  0…1
  * @property {number} cpuVolley     0 or 1
  * @property {number} cpuReach      0…1
- * @property {number} [humanReach]  0…1: a human's hit zones as a share of the arcade's (S12b: HUMAN_REACH; missing = 1);
- *   a CPU's are cpuReach of that
+ * @property {number | import('./player.js').Reach} [humanReach]  a human's hit zones as a share of the arcade's, one
+ *   for every direction or one each (S12c: HUMAN_REACH; missing = 1); a CPU's are cpuReach of that
  */
 
 /**
- * A human's hit zones as a share of the arcade's (S12b, the owner's pick after playing 100/90/80/70%): every level and
- * 2P. A CPU's are its cpuReach of this. ?reach= overrides it for trying sizes.
+ * A human's hit zones as shares of the arcade's, by direction (S12b: 90% everywhere, the owner's pick after playing
+ * 100/90/80/70%; S12c, after CP-F and the owner's play: less behind, a shorter forehand, a wider backhand with the
+ * forehand's stretch and dive widths, an oval instead of a rectangle, and the dive 0.1 m wider each side): every level
+ * and 2P. A CPU's are its cpuReach of these. ?reach= overrides them for trying sizes.
+ * @type {import('./player.js').Reach}
  */
-export const HUMAN_REACH = 0.9;
+export const HUMAN_REACH = { front: 0.9, behind: 0.7, fore: 0.75, back: 1.05, even: true, oval: true, dive: 0.1 };
 
 /**
  * A level number from anything (a URL value, say): a whole number 1–9, else the default.

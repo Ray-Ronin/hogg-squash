@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FP, makeBall, step, applyShot, shotEntry, SHOT_TABLES, aimFromTiming } from '../public/hogg-squash/js/squash-physics.js';
-import { makePlayer, stepPlayer, swingPhase, swingLength, shotFor, SWING, DIVE, DROP, PLAYER_LIMITS, REACH_TOP, CRAMP, crampedAim } from '../public/hogg-squash/js/sim/player.js';
+import { makePlayer, stepPlayer, swingPhase, swingLength, shotFor, SWING, DIVE, DROP, PLAYER_LIMITS, REACH_TOP, CRAMP, crampedAim, toReach } from '../public/hogg-squash/js/sim/player.js';
 import { defaultParams } from '../public/hogg-squash/js/sim/world.js';
 
 const P = defaultParams();
@@ -89,14 +89,15 @@ test('not your ball is a miss, even in reach', () => {
   assert.ok(run(pl, ball, SWING.CONTACT, () => NO_KEYS, MY_TURN, 1).every(e => e === null));
 });
 
+// the default reach is S12c's (HUMAN_REACH): forehand stretch 39–57 units, dive to 77; backhand dive 52–72
 test('a stretch (flag 2) is an ordinary swing, not a dive', () => {
-  const { pl, ball } = setup(60);
+  const { pl, ball } = setup(50);
   const [press] = run(pl, ball, 1, () => keys('hard'));
   assert.ok(press.flags & 2);
   assert.deepEqual([press.kind, press.index, press.reach], ['swing', 2, true]);
 });
 
-for (const [dx, index, hand] of [[-54, 11, 'back'], [86, 10, 'fore']]) {
+for (const [dx, index, hand] of [[-58, 11, 'back'], [70, 10, 'fore']]) {
   test(`a dive: the special band (ball ${dx} units to the side) dives, hits contact type ${index}, then lies still`, () => {
     const { pl, ball } = setup(dx);
     const x0 = pl.x, z0 = pl.z;
@@ -225,6 +226,120 @@ test('S12b: a CPU\'s reach is its share of the human\'s, so it shrinks with a sm
   }
   assert.equal(band(press(88, false, 0.95, 1)), 'dive', 'a 0.95 human still dives at 88');
   assert.equal(band(press(88, true, 0.95, 0.95)), 'out', '…a CPU at 0.95 of that can\'t');
+});
+
+test('S12c: toReach: one share is every direction (S12b), nothing is the arcade\'s, a Reach is kept', () => {
+  assert.deepEqual(toReach(0.9), { front: 0.9, behind: 0.9, fore: 0.9, back: 0.9 });
+  assert.deepEqual(toReach(undefined), { front: 1, behind: 1, fore: 1, back: 1 });
+  const r = { front: 0.9, behind: 0.75, fore: 0.8, back: 1 };
+  assert.equal(toReach(r), r);
+});
+
+test('S12c: each direction\'s bands change by its own share', () => {
+  const still = { ...P, speed: 0 };                                  // the ball stays where it is for the look-ahead
+  const press = (/** @type {number} */ dx, /** @type {number} */ dz, /** @type {any} */ reach, cpu = false) => {
+    const pl = makePlayer(0, 100);
+    if (cpu) pl.flags1b = 0x40;
+    const ball = makeBall({ x: dx * FP, y: 20 * FP, z: (100 + dz) * FP });
+    return /** @type {any} */ (stepPlayer(pl, keys('hard'), ball, { ...still, humanReach: reach, cpuReach: 1 }, 0, MY_TURN));
+  };
+  const band = (/** @type {any} */ e) => (!e.reach ? 'out' : e.kind === 'dive' ? 'dive' : e.flags & 2 ? 'stretch' : 'clean');
+  const all = (/** @type {any} */ o) => ({ front: 1, behind: 1, fore: 1, back: 1, ...o });
+  // forehand (clean below 52, dive to 96 at the arcade's size): a shorter forehand
+  assert.equal(band(press(45, 0, all({}))), 'clean');
+  assert.equal(band(press(45, 0, all({ fore: 0.8 }))), 'stretch');
+  assert.equal(band(press(80, 0, all({}))), 'dive');
+  assert.equal(band(press(80, 0, all({ fore: 0.8 }))), 'out');
+  assert.equal(band(press(80, 0, all({ back: 0.5, front: 0.5, behind: 0.5 }))), 'dive', 'the other shares leave the forehand alone');
+  // backhand (out beyond 64): a wider one reaches further
+  assert.equal(band(press(-68, 0, all({}))), 'out');
+  assert.equal(band(press(-68, 0, all({ back: 1.1 }))), 'dive');
+  assert.equal(band(press(-68, 0, all({ fore: 1.2 }))), 'out', 'the forehand share leaves the backhand alone');
+  // a ball on the backhand side stays a backhand, however small the share
+  assert.ok(press(19, 0, all({})).flags & 4, 'a backhand at the arcade\'s size');
+  assert.ok(press(19, 0, all({ back: 0.5 })).flags & 4, 'still a backhand at 50%');
+  assert.ok(!(press(20, 0, all({ fore: 1.25 })).flags & 4), 'and a forehand stays a forehand');
+  // depth (out at 40 in front or behind): less reach behind only
+  assert.equal(band(press(30, 35, all({}))), 'clean');
+  assert.equal(band(press(30, 35, all({ behind: 0.8 }))), 'out');
+  assert.equal(band(press(30, -35, all({ behind: 0.8 }))), 'clean', 'in front is the front share');
+  assert.equal(band(press(30, -35, all({ front: 0.8 }))), 'out');
+  // a CPU's is cpuReach of each
+  const cpu = (/** @type {number} */ dx, /** @type {number} */ k) => {
+    const pl = makePlayer(0, 100);
+    pl.flags1b = 0x40;
+    const ball = makeBall({ x: dx * FP, y: 20 * FP, z: 100 * FP });
+    return stepPlayer(pl, keys('hard'), ball, { ...still, humanReach: all({ fore: 0.8 }), cpuReach: k }, 0, MY_TURN);
+  };
+  assert.equal(band(cpu(75, 1)), 'dive');
+  assert.equal(band(cpu(75, 0.95)), 'out', '75 is beyond 0.95 × 0.8 of 96');
+});
+
+test('S12c: an even backhand has the forehand\'s stretch and dive widths, the same outer edge, and clean inside', () => {
+  const still = { ...P, speed: 0 };
+  const press = (/** @type {number} */ dx, /** @type {any} */ reach) => {
+    const pl = makePlayer(0, 100);
+    const ball = makeBall({ x: dx * FP, y: 20 * FP, z: 100 * FP });
+    return /** @type {any} */ (stepPlayer(pl, keys('hard'), ball, { ...still, humanReach: reach }, 0, MY_TURN));
+  };
+  const band = (/** @type {any} */ e) => (!e.reach ? 'out' : e.kind === 'dive' ? 'dive' : e.flags & 2 ? 'stretch' : 'clean');
+  const edges = (/** @type {any} */ reach, /** @type {number} */ sign) => {
+    const out = /** @type {Record<string, number>} */ ({});
+    for (let a = 1; a < 120; a++) out[band(press(sign * a, reach))] = a;
+    return out;                                                      // the furthest distance of each band
+  };
+  const D = { front: 0.9, behind: 0.7, fore: 0.75, back: 1.05 };
+  const fore = edges(D, 1), plain = edges(D, -1), even = edges({ ...D, even: true }, -1);
+  const width = (/** @type {Record<string, number>} */ e) => [e.stretch - e.clean, e.dive - e.stretch];
+  assert.equal(even.dive, plain.dive, 'the outer edge is the backhand share\'s');
+  for (const [i, w] of width(even).entries()) assert.ok(Math.abs(w - width(fore)[i]) <= 1, `band ${i}: ${w} vs the forehand's ${width(fore)[i]}`);
+  assert.ok(even.clean > plain.clean + 5, 'the rest is a clean hit');
+  assert.ok(press(19, { ...D, even: true }).flags & 4, 'the split doesn\'t move');
+});
+
+test('S12c: an oval reach keeps the four outer edges but not the corners', () => {
+  const still = { ...P, speed: 0 };
+  const press = (/** @type {number} */ dx, /** @type {number} */ dz, /** @type {any} */ reach) => {
+    const pl = makePlayer(0, 100);
+    const ball = makeBall({ x: dx * FP, y: 20 * FP, z: (100 + dz) * FP });
+    return /** @type {any} */ (stepPlayer(pl, keys('hard'), ball, { ...still, humanReach: reach }, 0, MY_TURN));
+  };
+  const R = { front: 0.9, behind: 0.7, fore: 0.75, back: 1.05, even: true };
+  const O = { ...R, oval: true };
+  // on the axes, as far as the rectangle reaches (forehand 72, backhand 67, in front 36, behind 28 units)
+  for (const [dx, dz] of [[70, 0], [-66, 0], [5, -35], [5, 27], [-5, 27], [5, -37], [5, 29]]) {
+    assert.equal(press(dx, dz, O).reach, press(dx, dz, R).reach, `the same at ${dx}, ${dz}`);
+  }
+  assert.ok(press(70, 0, O).reach && press(-66, 0, O).reach, 'the side edges are kept');
+  // the corners: in the rectangle, out of the oval
+  for (const [dx, dz] of [[65, -30], [65, 24], [-60, -30], [-60, 24]]) {
+    assert.ok(press(dx, dz, R).reach, `the rectangle reaches ${dx}, ${dz}`);
+    assert.ok(!press(dx, dz, O).reach, `the oval doesn't reach ${dx}, ${dz}`);
+  }
+  // halfway out on both axes is still in
+  assert.ok(press(36, -18, O).reach && press(-33, 14, O).reach);
+});
+
+test('S12c: `dive` widens only the dive band, outwards on both sides, and the oval with it', () => {
+  const still = { ...P, speed: 0 };
+  const press = (/** @type {number} */ dx, /** @type {any} */ reach) => {
+    const pl = makePlayer(0, 100);
+    const ball = makeBall({ x: dx * FP, y: 20 * FP, z: 100 * FP });
+    return /** @type {any} */ (stepPlayer(pl, keys('hard'), ball, { ...still, humanReach: reach }, 0, MY_TURN));
+  };
+  const band = (/** @type {any} */ e) => (!e.reach ? 'out' : e.kind === 'dive' ? 'dive' : e.flags & 2 ? 'stretch' : 'clean');
+  const edges = (/** @type {any} */ reach, /** @type {number} */ sign) => {
+    const out = /** @type {Record<string, number>} */ ({});
+    for (let a = 1; a < 120; a++) out[band(press(sign * a, reach))] = a;
+    return out;
+  };
+  const R = { front: 0.9, behind: 0.7, fore: 0.75, back: 1.05, even: true, oval: true };
+  for (const sign of [1, -1]) {
+    const before = edges(R, sign), after = edges({ ...R, dive: 0.1 }, sign);
+    assert.equal(after.clean, before.clean, `${sign}: clean unchanged`);
+    assert.equal(after.stretch, before.stretch, `${sign}: stretch unchanged`);
+    assert.ok(Math.abs(after.dive - before.dive - 4.5) <= 1, `${sign}: the dive reaches 0.1 m (4.5 units) further: ${before.dive} → ${after.dive}`);
+  }
 });
 
 test('S12b: a ball met within CRAMP.WIDTH of the body is still hit, but slower, with its aim moved by up to ±WOBBLE', () => {

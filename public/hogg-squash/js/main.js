@@ -23,7 +23,8 @@
 // ?h=<px> character height at the back, ?curve=true|half|old the true-scale, CP-B or S3 height curve (for comparing),
 // ?cam=zoom|old the S8b camera candidates the owner didn't pick, for comparison (the frozen camera is wide; old is S1's),
 // ?racket=off draws the swings without the racket shift, ?racket=s8b|a with S8b's shift or S12's candidate A (for comparing),
-// ?reach=0.5..1 shrinks the human players' hit zones to that share (S12b, for trying sizes; the CPU's shrink with them),
+// ?reach=0.5..1.25 sets the human players' hit zones to that share (S12b, for trying sizes; the CPU's shrink with
+// them; front,behind,forehand,backhand sets one share each, S12c),
 // ?scale=int whole-number scaling only (default: fill the window),
 // ?slow=<n> slow motion (the sim runs n times slower), ?dev exposes the game as window.hogg for testing,
 // ?court=code|lines starts on that court view, ?logo=on shows the logo slot (LOGO in render/hud.js) for testing.
@@ -84,8 +85,19 @@ const RACKET_SHIFT = query.get('racket') !== 'off';
 const RACKET_TRY = /** @type {Record<string, [number, number]>} */ ({ s8b: [0.12, 0], a: [0.16, 0.06] });
 const racketTry = RACKET_TRY[query.get('racket') ?? ''];
 if (racketTry) [RACKET.MAX, RACKET.SIDE] = racketTry;
-/** ?reach=0.5..1: the human players' hit zones as a share of the arcade's, for trying sizes (S12b; default HUMAN_REACH). */
-const REACH_TRY = query.has('reach') ? Math.min(1, Math.max(0.5, Number(query.get('reach')) || 1)) : null;
+/**
+ * ?reach=0.5..1.25: the human players' hit zones as a share of the arcade's, for trying sizes (S12b; default
+ * HUMAN_REACH). One number sets every direction; four (front,behind,forehand,backhand, S12c) set one each, and a
+ * word `even` after them makes the backhand's stretch and dive bands as wide as the forehand's, and `oval` rounds the
+ * reach's corners off (an oval through the same edges), and `dive0.1` widens the dive band outwards by 0.1 m a side.
+ */
+const REACH_TRY = (() => {
+  if (!query.has('reach')) return null;
+  const parts = String(query.get('reach')).split(','), even = parts.includes('even'), oval = parts.includes('oval');
+  const dive = Math.min(0.5, Math.max(0, Number(parts.find(s => s.startsWith('dive'))?.slice(4)) || 0));
+  const v = parts.filter(s => /^[\d.]+$/.test(s)).map(s => Math.min(1.25, Math.max(0.5, Number(s) || 1)));
+  return v.length === 4 ? { front: v[0], behind: v[1], fore: v[2], back: v[3], even, oval, dive } : v[0];
+})();
 /** ?mode, ?level or ?to: straight into that match, skipping the menus. */
 const SHORTCUT = query.has('mode') || query.has('level') || query.has('to');
 /** Steps that GAME shows on the wall before the result screen comes up (0.7 s). */

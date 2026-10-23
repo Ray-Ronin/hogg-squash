@@ -1,6 +1,6 @@
 {
   "name": "hogg-squash",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "private": true,
   "type": "module",
   "description": "Hogg Squash: a local-play browser squash game. No build step; public/ is served as-is.",

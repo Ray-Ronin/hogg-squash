@@ -118,23 +118,103 @@ export function shotFor(zone, button, index) {
 }
 
 /**
- * A smaller reach: a human's (params.humanReach, S12b), and a CPU's as params.cpuReach of that. The contact is classified as if the ball 7 frames ahead were
- * further from its feet by 1 ÷ reach, across and in depth, so every band of the arcade's classifier (clean, stretch,
- * dive, out of reach) shrinks around it by that share. The arcade's classifier does the work: it is run again on a
- * still ball at the scaled spot (game speed 0, so the 7 look-ahead frames don't move it). The shot table zone stays
- * the real one.
+ * A reach by direction (S12c): shares of the arcade's hit zones in front of the feet (towards the front wall), behind
+ * them, on the forehand side and on the backhand side (everyone is right-handed, as in the arcade: the classifier's
+ * backhand is the ball left of x + 20, for P1 and P2 alike). With `even` (the owner's call after the S12c map), the
+ * backhand's stretch and dive bands are as wide as the forehand's (the arcade's are both 24 and 20 units wide, scaled by
+ * the forehand share), its outer edge stays at the backhand share, and the rest inside is a clean hit. With `oval` (the
+ * owner's call too: "I don't want to be able to hit the shots at the extreme corners"), the reach is an oval through the
+ * same four outer edges instead of a rectangle: a ball outside it is out of reach; inside, the bands are as before.
+ * `dive` (metres, the owner's call after the oval) widens the dive band outwards on both sides by that much, so the
+ * reach across grows by it too.
+ * @typedef {{ front: number, behind: number, fore: number, back: number, even?: boolean, oval?: boolean, dive?: number }} Reach
+ */
+
+/**
+ * The arcade classifier's band edges across, in whole units from the feet (forehand to the right, backhand to the
+ * left): clean below the first, then stretch, dive, and out of reach beyond the last.
+ */
+const EDGES = { fore: [52, 76, 96], back: [20, 44, 64] };
+/** …and in depth: out of reach this many units in front or behind. */
+const DEPTH_OUT = 40;
+/** Game units per metre across (court-rules.js). */
+const ACROSS_PER_M = 45;
+
+/**
+ * The band edges across on one side for a reach (see Reach), in whole units from the feet.
+ * @param {Reach} r @param {boolean} back  the backhand side
+ * @returns {number[]}
+ */
+function bandEdges(r, back) {
+  const e = back ? EDGES.back : EDGES.fore, s = back ? r.back : r.fore, f = EDGES.fore;
+  const out = e[2] * s + (r.dive ?? 0) * ACROSS_PER_M;
+  if (!back || !r.even) return [e[0] * s, e[1] * s, out];
+  const dive = e[2] * s - (f[2] - f[1]) * r.fore;      // the forehand's dive width (plus the same `dive` outwards)
+  return [dive - (f[1] - f[0]) * r.fore, dive, out];   // …and its stretch width; clean inside
+}
+
+/**
+ * Where a ball `a` units from the feet lands on the arcade's bands for one side: the wanted edges are mapped
+ * piecewise onto the arcade's ones.
+ * @param {number} a @param {number[]} want @param {number[]} arcade
+ */
+function toArcadeBands(a, want, arcade) {
+  if (a < want[0]) return a * arcade[0] / want[0];
+  for (let i = 1; i < 3; i++) {
+    if (a < want[i]) return arcade[i - 1] + (a - want[i - 1]) * (arcade[i] - arcade[i - 1]) / (want[i] - want[i - 1]);
+  }
+  return arcade[2] + (a - want[2]);
+}
+
+/**
+ * Outside the oval reach (see Reach): the real ball's distance from the feet against the oval through the outer edges
+ * of the quarter it's in.
+ * @param {{ x: number, z: number }} g  the ball 7 frames ahead
+ * @param {Player} pl @param {Reach} r @param {boolean} back  on the backhand side
+ */
+function outsideOval(g, pl, r, back) {
+  const ax = (g.x - pl.x) / FP, dz = (g.z - pl.z) / FP;
+  const across = bandEdges(r, back)[2], depth = DEPTH_OUT * (dz > 0 ? r.behind : r.front);
+  return (ax / across) ** 2 + (dz / depth) ** 2 > 1;
+}
+
+/**
+ * A reach from one share for every direction (S12b's form), a Reach, or nothing (the arcade's: 1).
+ * @param {number | Reach | undefined} r
+ * @returns {Reach}
+ */
+export function toReach(r) {
+  if (r === undefined) return { front: 1, behind: 1, fore: 1, back: 1 };
+  if (typeof r === 'number') return { front: r, behind: r, fore: r, back: r };
+  return r;
+}
+
+/**
+ * A different reach: a human's (params.humanReach, S12b; by direction since S12c), and a CPU's as params.cpuReach of
+ * that. The contact is classified as if the ball 7 frames ahead were further from its feet by 1 ÷ share, across by the
+ * forehand or backhand share and in depth by the front or behind one, so every band of the arcade's classifier (clean,
+ * stretch, dive, out of reach) shrinks around it by that share (or grows, for a share above 1). The arcade's classifier
+ * does the work: it is run again on a still ball at the scaled spot (game speed 0, so the 7 look-ahead frames don't
+ * move it). The scaled ball is kept on its real side, so the forehand/backhand split never moves. The shot table zone
+ * stays the real one.
  * @param {Contact} c  the contact as classified for the real ball
  * @param {Player} pl
  * @param {any} p
  * @param {{ isP1: boolean, turnIsP1: boolean }} opts
- * @param {number} reach  0…1
+ * @param {Reach} reach
  * @returns {Contact}
  */
 function shrinkReach(c, pl, p, opts, reach) {
   const g = c.ghost;
-  const at = { ...g, x: Math.round(pl.x + (g.x - pl.x) / reach), z: Math.round(pl.z + (g.z - pl.z) / reach), vx: 0, vy: 0, vz: 0 };
-  const s = classifyContact(at, pl, { ...p, speed: 0 }, opts);
-  return { ...s, zone: c.zone, ghost: g };
+  const split = ((pl.x >> 16) + 0x14) * FP;            // the classifier's backhand: the ball's x (whole units) below this
+  const back = g.x < split;
+  const side = back ? -1 : 1, a = side * (g.x - pl.x) / FP;
+  const sx = pl.x + side * toArcadeBands(a, bandEdges(reach, back), back ? EDGES.back : EDGES.fore) * FP;
+  const x = Math.round(back ? Math.min(sx, split - 1) : Math.max(sx, split));
+  const z = Math.round(pl.z + (g.z - pl.z) / (g.z > pl.z ? reach.behind : reach.front));
+  const s = classifyContact({ ...g, x, z, vx: 0, vy: 0, vz: 0 }, pl, { ...p, speed: 0 }, opts);
+  const flags = reach.oval && outsideOval(g, pl, reach, back) ? s.flags | 0x20 : s.flags;
+  return { ...s, flags, zone: c.zone, ghost: g };
 }
 
 /**
@@ -221,9 +301,12 @@ export function stepPlayer(pl, act, ball, p, frame, turn = { isP1: true, turnIsP
     const button = act.hard ? 'hard' : 'soft';
     const opts = { isP1: turn.isP1, turnIsP1: turn.turnIsP1 };
     const c0 = classifyContact(ball, pl, p, opts);
-    // a human's reach (S12b), and a CPU's as its share of that
-    const share = (p.humanReach ?? 1) * (pl.flags1b & 0x40 ? p.cpuReach : 1);
-    const c = share < 1 ? shrinkReach(c0, pl, p, opts, share) : c0;
+    // a human's reach (S12b, by direction since S12c), and a CPU's as its share of that
+    const r = toReach(p.humanReach), k = pl.flags1b & 0x40 ? p.cpuReach : 1;
+    const share = { front: r.front * k, behind: r.behind * k, fore: r.fore * k, back: r.back * k, even: r.even, oval: r.oval,
+                    dive: (r.dive ?? 0) * k };
+    const c = share.even || share.oval || share.dive || [share.front, share.behind, share.fore, share.back].some(v => v !== 1)
+      ? shrinkReach(c0, pl, p, opts, share) : c0;
     const tooHigh = (c.ghost.y >> 16) > REACH_TOP;
     const reach = turn.mayStrike && !(c.flags & 0x20) && !tooHigh;
     const kind = reach && (c.flags & DIVE_FLAG) ? 'dive' : 'swing';
