@@ -41,6 +41,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S11b** Touch controls (mobile mode): on-screen buttons, Auto / On / Off setting
 - [x] **S12** Polish and release prep
 - [x] **S12b** The hitting range: a smaller reach for the human player (the owner's request after S12)
+- [ ] **S12c** CP-F fix-ups: the hitting range by direction (less behind, a wider backhand, a shorter forehand)
 - [ ] **CP-F** Release play-test and go-live *(you)*
 
 ---
@@ -1137,6 +1138,34 @@ Go through "Done when", tick S12, add a Session log entry, and commit. Ask me be
 
 **Done when…** `npm test` passes; the owner has picked a size by playing; `docs/decisions.md` ("Hitting") records it with the measured numbers.
 
+## S12c: CP-F fix-ups (the hitting range by direction)
+
+**Goal:** the owner's CP-F notes: "make the range more realistic by shortening how far back you can hit it from, and make the backhand a little wider. Also, make the forehand be a little shorter." Each direction of the hitting range gets its own share, picked by the owner in play.
+
+**In scope**
+- Split S12b's single reach share into four: **behind** (the ball further from the front wall than the feet), **in front**, **forehand across** and **backhand across**. `shrinkReach` in `js/sim/player.js` already moves the ball further from the feet by 1 ÷ reach; scale x by the forehand or backhand share (by which side of the feet the ball is, as the classifier decides it, mirrored correctly for P1 and P2) and z by the behind or in-front share. No new hitting rules and no change to the arcade classifier's tables.
+- Starting points (all as shares of the arcade's range, S12b is 90% for each): behind smaller (e.g. 75%), in front unchanged (90%), backhand wider (e.g. 100%), forehand shorter (e.g. 80%). Today: forehand clean to 1.0 m, dive to 1.9 m; backhand 0.4 m / 1.3 m; 1.9 m in front and behind.
+- Comparing: extend `?reach=` to take the four shares (e.g. `?reach=0.9,0.75,0.8,1` for front, behind, forehand, backhand; one number still sets all four). Redraw the S12b court map with the candidates (`art/mockups/s12c-reach.png`) so the owner sees the shapes before playing. The owner picks by playing; the picks become the defaults.
+- The CPU's reach stays its `cpuReach` (95–99%) of the human's in every direction. Re-measure the level win rates with `test/measure-levels.js` and record them beside S12b's; flag it if a level moves by more than about 5 points.
+- The cramp (`CRAMP`, 0.2 m across, below 1.5 m) and the 2.4 m height limit are unchanged.
+- Tests: each direction's bands shrink by its own share; one share still behaves as S12b did; the arcade's golden/flight/shot/hit numbers are unchanged.
+
+**Not in scope:** new art, animations, the cramp, touch or menu changes, the school logo.
+
+**Main files:** `js/sim/player.js`, `js/sim/difficulty.js` (`HUMAN_REACH`), the `?reach=` parsing, tests, `docs/decisions.md` ("The hitting range").
+
+**Done when…** `npm test` and `npm run typecheck` pass; the owner has picked the four shares by playing; `docs/decisions.md` records them with the new distances and win rates. Version 0.12.2.
+
+**You check or decide at the end:** go back to CP-F step 1 (one 1P and one 2P match with the new range).
+
+**Starter prompt**
+```text
+We're doing Session S12c of docs/plan.md: "CP-F fix-ups (the hitting range by direction)".
+Read CLAUDE.md, docs/decisions.md ("The hitting range") and docs/plan.md (rules, S12b, S12c, and the CP-F notes in the Session log). Check S12b is ticked.
+Build S12c's "In scope" list only. Show me the court map first, then let me play the candidates with ?reach= before you set defaults.
+Go through "Done when", tick S12c, add a Session log entry, and commit. Ask me before pushing.
+```
+
 ## CP-F: Release play-test and go-live *(you)*
 
 1. Play a full 1P match and a full 2P match from the title screen, the way a new player would.
@@ -1474,3 +1503,7 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Cramped shots** (`CRAMP`, `crampedAim`; asked for "more realistic"; squash coaching calls it a jammed ball): within 0.2 m across of the feet and below 1.5 m, the shot keeps 80% of its pace and its aim wobbles ±2 steps. The owner set 0.3 m first, then 1.5 m as the "reach up" height, then made it a little smaller. No on-screen label (offered; not asked for).
   - **Measured:** `test/measure-levels.js` (new, by hand): the reference beginner wins 80, 74, 65, 54, 44, 23, 13, 8, 5% at levels 1–9 (S6b 78, 71, 67, 54, 43, 29, 14, 10, 5). In CPU-vs-CPU matches 11–16% of CPU hits were cramped at 0.3 m; 7–9% of all hits against the reference player at 0.2 m.
   - **Checked in the browser:** `?reach=` sizes, CPU-driven matches with no console errors. **Not checked:** play by a person at full speed (the owner's), whether level 6 (29 → 23%) now feels too big a step from 5.
+- 2026-10-22, CP-F (first pass, not ticked): the owner played the release test.
+  - **Fix:** the hitting range, by direction: less reach behind, a slightly wider backhand, a slightly shorter forehand. Added as **S12c** before go-live; CP-F is replayed after it.
+  - **School logo (open question 6):** still open. The owner asked where it would go: S9's slot is in the right margin under P2's score panel, at most 66 px, off by default (`?logo=on` previews it). Decide at the CP-F replay.
+  - **After v1:** all four (more characters, audio, crowd, tournament), **starting with audio**, in a new plan.
