@@ -3,7 +3,7 @@
 A browser-based squash game that plays like Gaelco's *Squash* (1992 arcade), with all-original pixel art.
 Themed on Hogg Middle School (Razorbacks; red, black, white). **Local play only:** 1 player vs CPU, or 2 players on one keyboard or two gamepads. There is no online play, ever.
 
-**Status:** v1 is feature-complete (S12c, version 0.12.2) and waiting for the release play-test (CP-F, replayed after the S12c fix-up) in `docs/plan.md`. Its status list shows what's done; the next step is the first unticked line.
+**Status:** v1 is feature-complete (S12c, version 0.12.2). The CP-F replay asked for one more fix-up, S12d (squarer corners on the hitting range, the school logo in the match), before the release play-test is replayed. See `docs/plan.md`. Its status list shows what's done; the next step is the first unticked line.
 Read `docs/decisions.md` first, then `docs/plan.md` (its rules, your session, and the Session log).
 
 ## How this repo is served

@@ -42,6 +42,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S12** Polish and release prep
 - [x] **S12b** The hitting range: a smaller reach for the human player (the owner's request after S12)
 - [x] **S12c** CP-F fix-ups: the hitting range by direction (less behind, a wider backhand, a shorter forehand)
+- [ ] **S12d** CP-F fix-ups: a squarer hitting range, the school logo in the match
 - [ ] **CP-F** Release play-test and go-live *(you)*
 
 ---
@@ -1166,6 +1167,33 @@ Build S12c's "In scope" list only. Show me the court map first, then let me play
 Go through "Done when", tick S12c, add a Session log entry, and commit. Ask me before pushing.
 ```
 
+## S12d: CP-F fix-ups (a squarer hitting range, the school logo in the match)
+
+**Goal:** the owner's CP-F replay notes. (1) "Reduce the rounding at the edge of the oval and make it more like a rectangle with curved corners." (2) The school logo goes in the match (open question 6: yes), using the shield from the title screen.
+
+**In scope**
+- **The range's shape:** S12c's `oval` (an oval through the four outer edges, `outsideOval` in `js/sim/player.js`) becomes a rectangle with rounded corners through the same four edges. The four edges, the bands, the shares, `even` and `dive` are unchanged; only how much of each corner is cut off changes. One way: a superellipse (|x/a|ⁿ + |z/b|ⁿ ≤ 1; n = 2 is today's oval, a bigger n is squarer), or a corner radius. Pick whichever is simpler to explain and test.
+- **Comparing:** a `?reach=` word for the roundness (e.g. `round3`, `round4`, `round6`) beside `oval`. Redraw S12c's oval map with today's oval and two or three squarer candidates (`art/mockups/s12d-corners.png`) so the owner sees them, then the owner plays them and picks; the pick becomes the default in `HUMAN_REACH`.
+- The CPU's reach stays its `cpuReach` of the human's. Re-measure the level win rates with `test/measure-levels.js` and record them beside S12c's; flag a level that moves by more than about 5 points.
+- **The logo:** make `assets/logo.png` from the owner's shield (`art/ui/hogg-logo-source.png`, the one on the title), pixelated onto the palette the way the title's was (area-averaged, locked to the neutrals and reds), at the slot's size (at most 66 px; `LOGO.SIZE`), so it isn't shrunk smoothly in the game. Turn `LOGO.on` to true. Check it in the right margin under P2's panel, at 1280×720 and on a phone-sized screen with the touch controls showing, clear of the margin's key help. Record open question 6 as settled in `docs/decisions.md` (Theme) and `docs/open-questions.md`.
+- Tests: the corners shrink as the roundness picks, the four edges stay, one share still works as S12b's; the arcade's golden/flight/shot/hit numbers are unchanged.
+
+**Not in scope:** new SpriteCook art, the band sizes or shares, the cramp, the title screen, touch or menu changes.
+
+**Main files:** `js/sim/player.js`, `js/sim/difficulty.js` (`HUMAN_REACH`), the `?reach=` parsing in `main.js`, `render/hud.js` (`LOGO`), `assets/logo.png`, tests, `docs/decisions.md` ("The hitting range", Theme).
+
+**Done when…** `npm test` and `npm run typecheck` pass; the owner has picked the corners by playing; the logo shows in a match with no console errors; `docs/decisions.md` records both. Version 0.12.3.
+
+**You check or decide at the end:** go back to CP-F step 1 (one 1P and one 2P match with the new corners and the logo).
+
+**Starter prompt**
+```text
+We're doing Session S12d of docs/plan.md: "CP-F fix-ups (a squarer hitting range, the school logo in the match)".
+Read CLAUDE.md, docs/decisions.md ("The hitting range", Theme) and docs/plan.md (rules, S12c, S12d, and the CP-F notes in the Session log). Check S12c is ticked.
+Build S12d's "In scope" list only. Show me the corner map first, then let me play the candidates with ?reach= before you set the default. Show me the logo in the match before you commit.
+Go through "Done when", tick S12d, add a Session log entry, and commit. Ask me before pushing.
+```
+
 ## CP-F: Release play-test and go-live *(you)*
 
 1. Play a full 1P match and a full 2P match from the title screen, the way a new player would.
@@ -1514,3 +1542,7 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Maps:** `art/mockups/s12c-reach.png` (now vs B/C/D), `s12c-even.png`, `s12c-oval.png`, `s12c-dive.png` (as built), drawn in the browser from the sim itself.
   - **Measured:** reference beginner 85, 78, 72, 59, 41, 23, 12, 7, 4% at levels 1–9 (S12b 80, 74, 65, 54, 44, 23, 13, 8, 5). Levels 1, 3 and 4 moved by 5–7 points (flagged, not re-tuned); cramped 7–10% of hits. Two older player tests moved their ball distances to fit the new bands.
   - **Checked in the browser:** `?reach=` candidates drawn and served; the default match loads at 0.12.2 with the new reach, no console errors. **By tests only:** band edges per side, the oval's corners, the dive widening, the CPU's share. **Not checked by me:** play by a person (the owner played the final shape before it became the default).
+- 2026-10-22, CP-F (replay, not ticked): the owner played again with S12c's range.
+  - **Fix:** "Reduce the rounding at the edge of the oval and make it more like a rectangle with curved corners." Added as **S12d** before go-live; CP-F is replayed after it.
+  - **School logo (open question 6): yes**, using the shield from the title screen, in S9's slot in the right margin. Also in S12d.
+  - **After v1:** unchanged: all four, starting with audio.
