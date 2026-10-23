@@ -320,6 +320,35 @@ test('S12c: an oval reach keeps the four outer edges but not the corners', () =>
   assert.ok(press(36, -18, O).reach && press(-33, 14, O).reach);
 });
 
+test('S12d: a bigger `oval` power squares the corners off, keeping the four edges', () => {
+  const still = { ...P, speed: 0 };
+  const press = (/** @type {number} */ dx, /** @type {number} */ dz, /** @type {any} */ reach) => {
+    const pl = makePlayer(0, 100);
+    const ball = makeBall({ x: dx * FP, y: 20 * FP, z: (100 + dz) * FP });
+    return /** @type {any} */ (stepPlayer(pl, keys('hard'), ball, { ...still, humanReach: reach }, 0, MY_TURN)).reach;
+  };
+  const R = { front: 0.9, behind: 0.7, fore: 0.75, back: 1.05, even: true };
+  const n = (/** @type {number | boolean} */ oval) => ({ ...R, oval });
+  // power 2 is S12c's oval
+  for (let dx = -80; dx <= 80; dx += 4) for (let dz = -40; dz <= 32; dz += 4) {
+    assert.equal(press(dx, dz, n(2)), press(dx, dz, n(true)), `oval: 2 is \`true\` at ${dx}, ${dz}`);
+  }
+  // the edges straight out stay (forehand 72, backhand 67, in front 36, behind 28 units)
+  for (const oval of [3, 4, 6]) for (const [dx, dz, inside] of [[70, 0, true], [74, 0, false], [-66, 0, true], [-69, 0, false],
+    [5, -35, true], [5, -37, false], [5, 27, true], [5, 29, false]]) {
+    assert.equal(press(dx, dz, n(oval)), inside, `power ${oval} at ${dx}, ${dz}`);
+  }
+  // three quarters of the way to the forehand/front corner: out of the oval, in at power 3; 82%: out at 3, in at 4
+  assert.ok(!press(54, -27, n(2)) && press(54, -27, n(3)));
+  assert.ok(!press(59, -29, n(3)) && press(59, -29, n(4)));
+  // a squarer shape only ever adds to the reach
+  for (let dx = -80; dx <= 80; dx += 3) for (let dz = -40; dz <= 32; dz += 3) {
+    for (const [lo, hi] of [[2, 3], [3, 4], [4, 6]]) {
+      assert.ok(!press(dx, dz, n(lo)) || press(dx, dz, n(hi)), `power ${hi} reaches what ${lo} does at ${dx}, ${dz}`);
+    }
+  }
+});
+
 test('S12c: `dive` widens only the dive band, outwards on both sides, and the oval with it', () => {
   const still = { ...P, speed: 0 };
   const press = (/** @type {number} */ dx, /** @type {any} */ reach) => {

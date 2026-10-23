@@ -125,9 +125,12 @@ export function shotFor(zone, button, index) {
  * the forehand share), its outer edge stays at the backhand share, and the rest inside is a clean hit. With `oval` (the
  * owner's call too: "I don't want to be able to hit the shots at the extreme corners"), the reach is an oval through the
  * same four outer edges instead of a rectangle: a ball outside it is out of reach; inside, the bands are as before.
+ * A number for `oval` (S12d, the owner's CP-F replay: "more like a rectangle with curved corners") squares it off: the
+ * reach is |across ÷ edge|ⁿ + |depth ÷ edge|ⁿ ≤ 1, where n = 2 (or `true`) is S12c's oval and a bigger n cuts less off
+ * each corner; the four edges stay where they are.
  * `dive` (metres, the owner's call after the oval) widens the dive band outwards on both sides by that much, so the
  * reach across grows by it too.
- * @typedef {{ front: number, behind: number, fore: number, back: number, even?: boolean, oval?: boolean, dive?: number }} Reach
+ * @typedef {{ front: number, behind: number, fore: number, back: number, even?: boolean, oval?: boolean | number, dive?: number }} Reach
  */
 
 /**
@@ -167,15 +170,16 @@ function toArcadeBands(a, want, arcade) {
 }
 
 /**
- * Outside the oval reach (see Reach): the real ball's distance from the feet against the oval through the outer edges
- * of the quarter it's in.
+ * Outside the oval reach (see Reach): the real ball's distance from the feet against the oval (or the squarer shape of
+ * power `oval`) through the outer edges of the quarter it's in.
  * @param {{ x: number, z: number }} g  the ball 7 frames ahead
  * @param {Player} pl @param {Reach} r @param {boolean} back  on the backhand side
  */
 function outsideOval(g, pl, r, back) {
   const ax = (g.x - pl.x) / FP, dz = (g.z - pl.z) / FP;
   const across = bandEdges(r, back)[2], depth = DEPTH_OUT * (dz > 0 ? r.behind : r.front);
-  return (ax / across) ** 2 + (dz / depth) ** 2 > 1;
+  const n = r.oval === true ? 2 : Number(r.oval);
+  return Math.abs(ax / across) ** n + Math.abs(dz / depth) ** n > 1;
 }
 
 /**

@@ -16,12 +16,13 @@ import { drawSlice, drawPanel, slice } from './ui.js';
 /** @typedef {import('./text.js').FontName} FontName */
 
 /**
- * The school logo slot (open question 6): one image path and one switch, off by default, so a logo can be added to
- * the match later by dropping the file in and turning `on` to true (?logo=on shows it for testing). It is drawn in
- * the right margin under P2's panel, scaled down to fit SIZE if it's bigger. The title screen's shield is separate
- * (assets/title.png, A5). The image loads only when the slot is on, and a missing file just leaves the slot empty.
+ * The school logo slot (open question 6): one image path and one switch. On since S12d (the owner's call at the CP-F
+ * replay): the Hogg Razorbacks shield from the title, made at this size by art/tools/s12d-logo.lua (61×66), so it is
+ * drawn 1:1. It is drawn in the right margin under P2's panel, scaled down to fit SIZE if it's bigger. The title
+ * screen's shield is separate (assets/title.png, A5). The image loads only when the slot is on, and a missing file
+ * just leaves the slot empty.
  */
-export const LOGO = { url: 'assets/logo.png', on: false, SIZE: 66 };
+export const LOGO = { url: 'assets/logo.png', on: true, SIZE: 66 };
 
 /** Each rally reason's callout slice (ui.json): `notUp` is DOUBLE BOUNCE (the owner's wording; two lines, 52 px). */
 export const CALLOUTS = { tin: 'callout TIN', out: 'callout OUT', down: 'callout DOWN', notUp: 'callout DOUBLE BOUNCE' };

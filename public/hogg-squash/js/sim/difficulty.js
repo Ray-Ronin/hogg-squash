@@ -73,11 +73,12 @@ export const LEVEL_TABLE = {
 /**
  * A human's hit zones as shares of the arcade's, by direction (S12b: 90% everywhere, the owner's pick after playing
  * 100/90/80/70%; S12c, after CP-F and the owner's play: less behind, a shorter forehand, a wider backhand with the
- * forehand's stretch and dive widths, an oval instead of a rectangle, and the dive 0.1 m wider each side): every level
- * and 2P. A CPU's are its cpuReach of these. ?reach= overrides them for trying sizes.
+ * forehand's stretch and dive widths, an oval instead of a rectangle, and the dive 0.1 m wider each side; S12d, after
+ * the CP-F replay: the oval squared off to power 3, the owner's pick of 2/3/4/6 in play): every level and 2P. A CPU's
+ * are its cpuReach of these. ?reach= overrides them for trying sizes.
  * @type {import('./player.js').Reach}
  */
-export const HUMAN_REACH = { front: 0.9, behind: 0.7, fore: 0.75, back: 1.05, even: true, oval: true, dive: 0.1 };
+export const HUMAN_REACH = { front: 0.9, behind: 0.7, fore: 0.75, back: 1.05, even: true, oval: 3, dive: 0.1 };
 
 /**
  * A level number from anything (a URL value, say): a whole number 1–9, else the default.

@@ -42,7 +42,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S12** Polish and release prep
 - [x] **S12b** The hitting range: a smaller reach for the human player (the owner's request after S12)
 - [x] **S12c** CP-F fix-ups: the hitting range by direction (less behind, a wider backhand, a shorter forehand)
-- [ ] **S12d** CP-F fix-ups: a squarer hitting range, the school logo in the match
+- [x] **S12d** CP-F fix-ups: a squarer hitting range, the school logo in the match
 - [ ] **CP-F** Release play-test and go-live *(you)*
 
 ---
@@ -1546,3 +1546,8 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Fix:** "Reduce the rounding at the edge of the oval and make it more like a rectangle with curved corners." Added as **S12d** before go-live; CP-F is replayed after it.
   - **School logo (open question 6): yes**, using the shield from the title screen, in S9's slot in the right margin. Also in S12d.
   - **After v1:** unchanged: all four, starting with audio.
+- 2026-10-22, S12d: CP-F fix-ups (a squarer hitting range, the school logo in the match). `squash-physics.js` unchanged; `npm test` golden/flight/shot/hit numbers exactly as the P0 baseline; unit tests 143 → 144; `npm run typecheck` clean. Version 0.12.3.
+  - **The corners:** `oval` in a Reach can now be a number, the power n of a superellipse through the same four outer edges (|across ÷ edge|ⁿ + |depth ÷ edge|ⁿ ≤ 1; `true` or 2 is S12c's oval). Picked over a corner radius: one number, and "bigger is squarer" is easy to say and test. `?reach=` takes `round<n>` (2–20) beside `oval`. The owner saw today's oval, round3, round4 and round6 on the map (`art/mockups/s12d-corners.png`, drawn in the browser from the sim), played them and **picked round3** (`HUMAN_REACH.oval` 3).
+  - **Measured:** reference beginner 84, 77, 70, 57, 42, 22, 11, 7, 4% at levels 1–9 (S12c 85, 78, 72, 59, 41, 23, 12, 7, 4): nothing moved more than 2 points. Cramped 7–10% of hits.
+  - **The logo:** `assets/logo.png` (61×66) from the title's shield by `art/tools/s12d-logo.lua` (area-averaged, the title crest's palette lock and outline, no shadow); `LOGO.on` true. Open question 6 settled in `decisions.md` (Theme), `open-questions.md` and `theme.md`.
+  - **Checked in the browser** (the app's pane, `npm run dev` on 8789): the logo in the right margin under P2's panel at 1280×720, and at 844×390 with the touch controls showing (clear of SOFT and the key help); a fresh load with no console messages and `logo.png` 200; a 1P match played to the result (P1 driven by a CPU brain) with no console errors. **By tests only:** power 2 equals `true`, the four edges kept at powers 3/4/6, the corner points between powers, a squarer shape only adding reach. **Not checked by me:** play by a person (the owner played round3 before it became the default), a real phone.
