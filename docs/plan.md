@@ -43,6 +43,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S12b** The hitting range: a smaller reach for the human player (the owner's request after S12)
 - [x] **S12c** CP-F fix-ups: the hitting range by direction (less behind, a wider backhand, a shorter forehand)
 - [x] **S12d** CP-F fix-ups: a squarer hitting range, the school logo in the match
+- [ ] **S12e** CP-F fix-ups: longer front-wall callouts, a FIRST TO notice when win-by-two moves the finish
 - [ ] **CP-F** Release play-test and go-live *(you)*
 
 ---
@@ -1194,6 +1195,34 @@ Build S12d's "In scope" list only. Show me the corner map first, then let me pla
 Go through "Done when", tick S12d, add a Session log entry, and commit. Ask me before pushing.
 ```
 
+## S12e: CP-F fix-ups (longer callouts, the FIRST TO notice)
+
+**Goal:** the owner's CP-F notes after S12d. (1) "Make the words that appear on the front wall stay there for longer." (2) After those words go, say on the front wall "First to 12, 13 etc." because of win by two, "but only say it whenever the final score goes up."
+
+**In scope**
+- **Longer callouts (the owner's pick: double both):** `TIMING.CALLOUT` and `TIMING.POINT` in `js/sim/world.js` go from 43 to 86 sim frames each (about 1.5 s each at 57.4 Hz, 3 s in all, was 1.5 s). GAME at the end of the match is unchanged (the owner's call).
+- **The FIRST TO notice:** a third step in the point freeze, after POINT and the score, as long as each of the others (`TIMING.FIRST_TO`, 86 frames), shown only on a point that raises the score needed to win. That score is the match length, or the lower score + 2 once both sides reach length − 1 (one helper in `js/sim/match.js`, e.g. `winningScore(match)`). In a game to 11: 10–10 shows FIRST TO 12, 11–10 shows nothing, 11–11 shows FIRST TO 13; in a game to 5, 4–4 shows FIRST TO 6. Every other point's freeze keeps its two steps. The world remembers whether this point raised it (set where `scoreRally` runs), so the HUD doesn't work it out.
+- **Its look:** on the front wall where the callouts go, in the game's bitmap font (no new SpriteCook art): big and red like the callouts if FIRST TO 12 fits the wall's 220 px, else FIRST TO on one line and the number under it. Show the owner a screenshot at 10–10 before committing.
+- Update the phase notes at the top of `world.js` and the `hud.js` header. Record the timing and the notice in `docs/decisions.md` ("Match rules").
+- **Measure:** a longer freeze moves the frame numbers the CPU's choices are seeded from, so re-run `test/measure-levels.js` and record the rates beside S12d's; flag a level that moves by more than about 5 points (expected: noise only).
+- Tests: the freeze is 172 frames on a normal point and 258 on a point that raises the finish; `winningScore` for each match length before, at and past length − 1 all; the notice never shows on a match-winning point. The arcade's golden/flight/shot/hit numbers are unchanged.
+
+**Not in scope:** the serve notice, GAME or the result screen, the match lengths or the win-by-two rule itself, new SpriteCook art, sound.
+
+**Main files:** `js/sim/world.js` (`TIMING`, `stepPoint`), `js/sim/match.js`, `js/render/hud.js`, `test/world.test.js`, `test/match.test.js`, `docs/decisions.md`.
+
+**Done when…** `npm test` and `npm run typecheck` pass; the owner has seen the FIRST TO notice at 10–10 and played the longer callouts; a match plays through 10–10 to the result with no console errors. Version 0.12.4.
+
+**You check or decide at the end:** go back to CP-F step 1 (one 1P and one 2P match, at least one going past 10–10).
+
+**Starter prompt**
+```text
+We're doing Session S12e of docs/plan.md: "CP-F fix-ups (longer callouts, the FIRST TO notice)".
+Read CLAUDE.md, docs/decisions.md ("Match rules") and docs/plan.md (rules, S12e, and the CP-F notes in the Session log). Check S12d is ticked.
+Build S12e's "In scope" list only. Show me the FIRST TO notice at 10-10 (a screenshot) and let me play the longer callouts before you commit.
+Go through "Done when", tick S12e, add a Session log entry, and commit. Ask me before pushing.
+```
+
 ## CP-F: Release play-test and go-live *(you)*
 
 1. Play a full 1P match and a full 2P match from the title screen, the way a new player would.
@@ -1551,3 +1580,7 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Measured:** reference beginner 84, 77, 70, 57, 42, 22, 11, 7, 4% at levels 1–9 (S12c 85, 78, 72, 59, 41, 23, 12, 7, 4): nothing moved more than 2 points. Cramped 7–10% of hits.
   - **The logo:** `assets/logo.png` (61×66) from the title's shield by `art/tools/s12d-logo.lua` (area-averaged, the title crest's palette lock and outline, no shadow); `LOGO.on` true. Open question 6 settled in `decisions.md` (Theme), `open-questions.md` and `theme.md`.
   - **Checked in the browser** (the app's pane, `npm run dev` on 8789): the logo in the right margin under P2's panel at 1280×720, and at 844×390 with the touch controls showing (clear of SOFT and the key help); a fresh load with no console messages and `logo.png` 200; a 1P match played to the result (P1 driven by a CPU brain) with no console errors. **By tests only:** power 2 equals `true`, the four edges kept at powers 3/4/6, the corner points between powers, a squarer shape only adding reach. **Not checked by me:** play by a person (the owner played round3 before it became the default), a real phone.
+- 2026-10-23, CP-F (second replay, not ticked): the owner played 0.12.3.
+  - **Fix:** "Make the words that appear on the front wall stay there for longer", and after them say "First to 12, 13 etc." because of win by two, "but only say it whenever the final score goes up." Added as **S12e** before go-live; CP-F is replayed after it.
+  - **The owner's picks:** both callout steps doubled (0.75 s → 1.5 s each); FIRST TO as a third step in the point freeze after POINT and the score, not during the serve; GAME unchanged.
+  - **After v1:** not discussed this time (still all four, starting with audio).
