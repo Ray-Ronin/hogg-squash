@@ -6,10 +6,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { makeUi, navigate, matchOver, autoPause, assignInMatch, showsMatch, DEFAULT_SETTINGS, TITLE_ITEMS, PAUSE_ITEMS,
   RESULT_ITEMS, OPTION_ITEMS, KEY_CELLS, keyCell, captureKey } from '../public/hogg-squash/js/ui/screens.js';
-import { OPTIONS_HINT, OPTIONS_LAYOUT } from '../public/hogg-squash/js/ui/options.js';
+import { OPTIONS_HINT, OPTIONS_LAYOUT, EFFECTS_NOTE } from '../public/hogg-squash/js/ui/options.js';
 import { KEYTEST_TEXT, KEYS, keyBox } from '../public/hogg-squash/js/ui/keytest.js';
 import { defaultLayouts, keyLabel, helpLines, seatLabel, ACTIONS } from '../public/hogg-squash/js/input/keymap.js';
-import { TITLE_HINT, TITLE_TOP } from '../public/hogg-squash/js/ui/title.js';
+import { TITLE_HINT, TITLE_TOP, SOUND_NOTE } from '../public/hogg-squash/js/ui/title.js';
 import { SETUP_HINT, levelNote, lengthNote, modeLine } from '../public/hogg-squash/js/ui/setup.js';
 import { ASSIGN_TEXT } from '../public/hogg-squash/js/ui/assign.js';
 import { PAUSE_HINT } from '../public/hogg-squash/js/ui/pause.js';
@@ -105,7 +105,7 @@ test('options: from the title and back, moving round the keys and buttons', () =
   assert.deepEqual(keyCell(ui.sel), { player: 0, action: 'soft' });
   run(ui, ['down']);
   assert.equal(OPTION_ITEMS[ui.sel - KEY_CELLS], 'LAPTOP KEYS FOR P2');
-  run(ui, ['down', 'down', 'down']);
+  run(ui, ['down', 'down', 'down', 'down']);   // past EFFECTS
   assert.equal(OPTION_ITEMS[ui.sel - KEY_CELLS], 'BACK');
   run(ui, ['down']);
   assert.equal(ui.sel, 0, 'down from BACK wraps to the first key');
@@ -243,10 +243,10 @@ test('the font has every character the screens draw, and the lines fit', () => {
   /** [font, lines, the widest they may be] */
   const used = [
     ['large-red', [...TITLE_ITEMS, 'MATCH LENGTH', 'LEVEL', '5 7 9 11', '1 2 3 4 5 6 7 8 9', 'PAUSED'], 306],
-    ['large-white', [...TITLE_ITEMS, ...PAUSE_ITEMS, ...RESULT_ITEMS, '11', resultLine(w), 'CONTROLLERS',
+    ['large-white', [...TITLE_ITEMS, ...PAUSE_ITEMS, 'SOUND OFF', ...RESULT_ITEMS, '11', resultLine(w), 'CONTROLLERS',
       'CONTROLLER DISCONNECTED'], 306],
-    ['small', [TITLE_HINT, SETUP_HINT, ASSIGN_TEXT.play, ASSIGN_TEXT.carryOn, 'keys arrows Num0 Num.  +  (unplugged controller)'], 620],
-    ['small-dark', [...levels, lengthNote(11), modeLine({ players: 1, target: 9, level: 5 }) + ', FIRST TO 11',
+    ['small', [TITLE_HINT, EFFECTS_NOTE, SETUP_HINT, ASSIGN_TEXT.play, ASSIGN_TEXT.carryOn, 'keys arrows Num0 Num.  +  (unplugged controller)'], 620],
+    ['small-dark', [SOUND_NOTE.text, ...levels, lengthNote(11), modeLine({ players: 1, target: 9, level: 5 }) + ', FIRST TO 11',
       modeLine({ players: 2, target: 9, level: 5 })], 306],
     ['small-grey', [PAUSE_HINT, RESULT_HINT, ASSIGN_TEXT.join, ASSIGN_TEXT.swap, ...ASSIGN_TEXT.lost,
       matchLine({ players: 1, target: 11, level: 9 }), matchLine({ players: 2, target: 11, level: 5 })], 400],
@@ -270,7 +270,9 @@ test('options and key test: every word in the font, and it fits', () => {
   };
   // the title's last row stays in its menu area (y 196–292, rows 24 px apart; the bar reaches 19 px below a row's top)
   assert.ok(TITLE_TOP + (TITLE_ITEMS.length - 1) * 24 + 19 <= 96);
-  for (const item of [...OPTION_ITEMS, 'OPTIONS', 'KEY TEST']) fits('large-white', item, OPTIONS_LAYOUT.w - 60);
+  for (const item of [...OPTION_ITEMS, 'EFFECTS 10', 'EFFECTS OFF', 'OPTIONS', 'KEY TEST']) {
+    fits('large-white', item, OPTIONS_LAYOUT.w - 60);
+  }
   // every key a player is likely to pick, as a key cell (half the gap between P1's and P2's columns, each side)
   const codes = ['Space', 'Enter', 'NumpadEnter', 'ShiftLeft', 'ShiftRight', 'Backspace', 'CapsLock', 'Semicolon',
     'Quote', 'Comma', 'Period', 'Slash', 'Minus', 'Equal', 'IntlBackslash', 'NumpadAdd', 'NumpadMultiply', 'Home',

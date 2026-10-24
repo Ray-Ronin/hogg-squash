@@ -2,7 +2,8 @@
 // Touch controls for phones and tablets (docs/controls.md, "Touch controls"): HTML buttons over the canvas (the
 // markup and look are in index.html), a stick on the left for moving and HARD / SOFT on the right, plus small pause
 // and fullscreen buttons. They give the same actions as the keys and pads (input/actions.js), so the sim never
-// knows; on the menus the stick moves, HARD is OK and SOFT is back, like a pad.
+// knows; on the menus the stick moves, HARD is OK and SOFT is back, like a pad. A speaker button beside the fullscreen
+// button turns Sound on and off (S13).
 // When they show (automatic, no setting; the owner's call after S11b): hidden at start (shown from the start only on a
 // phone-like screen: coarse pointer, no hover), shown on the first touch, hidden again when a key is pressed or a pad
 // is used. So someone on a computer never sees them.
@@ -79,8 +80,9 @@ const noButtons = () => ({ ...noDirs(), hard: false, soft: false, pause: false }
  * @typedef {object} TouchControls
  * @property {() => TouchInput} take  this step's input (presses since the last call, then forgotten)
  * @property {(on: boolean, inMatch: boolean, overCourt?: boolean) => void} show  show or hide them (the pause button
- *   only in a match). The fullscreen button shows with them, and on its own on the screens that aren't over the court
- *   (the title, setup and options), so it can be clicked with a mouse too.
+ *   only in a match). The fullscreen and speaker buttons show with them, and on their own on the screens that aren't
+ *   over the court (the title, setup and options), so they can be clicked with a mouse too.
+ * @property {(on: boolean) => void} setSound  show the speaker button on (Sound on) or crossed out (off)
  * @property {() => void} release  let go of everything (the window lost focus)
  */
 
@@ -99,15 +101,18 @@ export function toggleFullscreen(doc = document) {
 }
 
 /**
- * The on-screen controls: index.html's #touch with #stick (and its .knob), #hard, #soft and #pause, and #full beside it.
+ * The on-screen controls: index.html's #touch with #stick (and its .knob), #hard, #soft and #pause, and #full and the
+ * speaker button #sound beside it.
  * @param {Document} [doc]
+ * @param {() => void} [onSound]  the speaker button was pressed (called inside the click or the finger's release, so the
+ *   sound engine may start there: the browser's rule)
  * @returns {TouchControls}
  */
-export function createTouchControls(doc = document) {
+export function createTouchControls(doc = document, onSound = () => {}) {
   const root = /** @type {HTMLElement} */ (doc.getElementById('touch'));
   const el = (/** @type {string} */ id) => /** @type {HTMLElement} */ (doc.getElementById(id));
   const stick = el('stick'), knob = /** @type {HTMLElement} */ (stick.querySelector('.knob'));
-  const pauseBtn = el('pause'), fullBtn = el('full');
+  const pauseBtn = el('pause'), fullBtn = el('full'), soundBtn = el('sound');
   /** @type {Dirs} */
   let held = noDirs();
   /** @type {TouchButtons} */
@@ -178,6 +183,10 @@ export function createTouchControls(doc = document) {
   on(fullBtn, 'touchstart', () => {});
   on(fullBtn, 'touchend', () => toggleFullscreen(doc));
   fullBtn.addEventListener('click', () => toggleFullscreen(doc));
+  // the speaker: Sound on / off, the same way (a finger's release, or a click)
+  on(soundBtn, 'touchstart', () => {});
+  on(soundBtn, 'touchend', () => onSound());
+  soundBtn.addEventListener('click', () => onSound());
 
   function release() {
     stickFinger = null;
@@ -200,6 +209,12 @@ export function createTouchControls(doc = document) {
       }
       pauseBtn.hidden = !inMatch;
       fullBtn.hidden = !doc.fullscreenEnabled || !(showing || !overCourt);
+      soundBtn.hidden = !(showing || !overCourt);
+    },
+    setSound(soundOn) {
+      soundBtn.classList.toggle('off', !soundOn);
+      soundBtn.setAttribute('aria-label', soundOn ? 'Sound off' : 'Sound on');
+      soundBtn.title = soundOn ? 'Sound off' : 'Sound on';
     },
     release,
   };

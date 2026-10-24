@@ -17,7 +17,7 @@
 
     /* touch controls (js/input/touch.js): over the canvas, see-through so the court shows under them */
     #touch { position: fixed; inset: 0; pointer-events: none; font: bold 15px system-ui, sans-serif; color: #fff; }
-    #touch > *, #full { position: absolute; pointer-events: auto; box-sizing: border-box; border-radius: 50%;
+    #touch > *, #full, #sound { position: absolute; pointer-events: auto; box-sizing: border-box; border-radius: 50%;
       display: grid; place-items: center; border: 2px solid rgba(255, 255, 255, 0.45);
       background: rgba(255, 255, 255, 0.12); text-shadow: 0 1px 2px #000; font: bold 16px system-ui, sans-serif;
       color: #fff; }
@@ -32,13 +32,24 @@
     #hard.on { background: rgba(200, 16, 46, 0.8); }
     #soft { right: calc(14px + env(safe-area-inset-right) + var(--d) * 1.1);
       bottom: calc(14px + env(safe-area-inset-bottom) + var(--d) * 0.55); }
-    #pause, #full { width: 44px; height: 44px; top: calc(8px + env(safe-area-inset-top)); font-size: 16px; }
+    #pause, #full, #sound { width: 44px; height: 44px; top: calc(8px + env(safe-area-inset-top)); font-size: 16px; }
     #pause { left: calc(8px + env(safe-area-inset-left)); }
     #full { position: fixed; right: calc(8px + env(safe-area-inset-right)); }
-    /* the fullscreen button also shows on the menus for a mouse (S12): smaller, and dark so it shows on the white wall */
-    html:not(.touch) #full { width: 32px; height: 32px; top: 6px; right: 6px; font-size: 12px; cursor: pointer;
-      background: rgba(22, 22, 26, 0.55); border-color: rgba(22, 22, 26, 0.3); }
-    html:not(.touch) #full:hover { background: rgba(200, 16, 46, 0.85); }
+    /* the speaker (S13): left of the fullscreen button, or in its place where there's none (iPhone Safari) */
+    #sound { position: fixed; right: calc(60px + env(safe-area-inset-right)); }
+    #full[hidden] + #sound { right: calc(8px + env(safe-area-inset-right)); }
+    #sound svg { width: 22px; height: 22px; filter: drop-shadow(0 1px 2px #000); }
+    #sound .cross { display: none; }
+    #sound.off .waves { display: none; }
+    #sound.off .cross { display: inline; }
+    /* the fullscreen and speaker buttons also show on the menus for a mouse (S12): smaller, and dark so they show on
+       the white wall */
+    html:not(.touch) #full, html:not(.touch) #sound { width: 32px; height: 32px; top: 6px; right: 6px; font-size: 12px;
+      cursor: pointer; background: rgba(22, 22, 26, 0.55); border-color: rgba(22, 22, 26, 0.3); }
+    html:not(.touch) #sound { right: 44px; }
+    html:not(.touch) #full[hidden] + #sound { right: 6px; }
+    html:not(.touch) #sound svg { width: 16px; height: 16px; }
+    html:not(.touch) #full:hover, html:not(.touch) #sound:hover { background: rgba(200, 16, 46, 0.85); }
 
     /* until main.js has loaded (the game then draws its own loading bar) */
     #loading { position: fixed; inset: 0; display: grid; place-items: center; color: #8a8a94;
@@ -49,7 +60,7 @@
     @media (orientation: portrait) {
       html.touch #turn { display: grid; place-items: center; position: fixed; inset: 0; background: #16161a;
         color: #eee; font: bold 22px system-ui, sans-serif; text-align: center; padding: 24px; }
-      html.touch #touch, html.touch #full { display: none; }
+      html.touch #touch, html.touch #full, html.touch #sound { display: none; }
     }
   </style>
 </head>
@@ -62,6 +73,13 @@
     <div id="pause" aria-label="Pause">II</div>
   </div>
   <div id="full" role="button" aria-label="Fullscreen" title="Fullscreen" hidden>[ ]</div>
+  <div id="sound" role="button" aria-label="Sound off" title="Sound off" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>
+      <path class="waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/>
+      <path class="cross" d="M16 9l6 6M22 9l-6 6"/>
+    </svg>
+  </div>
   <div id="loading">Loading…</div>
   <div id="turn">Turn your phone sideways to play</div>
   <noscript><p style="color:#eee;font-family:system-ui">Hogg Squash needs JavaScript.</p></noscript>

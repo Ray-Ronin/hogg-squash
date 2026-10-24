@@ -11,7 +11,7 @@ Tick a line (`[x]`) when its session or checkpoint is finished. **The next sessi
 Lines marked *(you)* are things the owner does. Lines marked 💳 are spend approvals (SpriteCook credits, or ElevenLabs credits for sound): the session after it stops and waits for your OK before generating anything.
 
 **Audio**
-- [ ] **S13** Sound engine: the first-input rule, the Effects level, pause and mute; placeholder sounds made in code
+- [x] **S13** Sound engine: the first-input rule, the Effects level, pause and mute; placeholder sounds made in code
 - [ ] **P1** Prerequisites for sound *(you)*: ElevenLabs Starter plan, its connector in Claude Code (can be done any time before A6)
 - [ ] 💳 Approve ElevenLabs spend for A6 *(you)*
 - [ ] **A6** Sound effects: generate, trim and level the game's sounds
@@ -614,3 +614,11 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Characters:** three new bodies (four in all), looks only. SpriteCook has 488 credits; the plan needs about 1,000, so a top-up of about 500–600 before A9.
   - **Versions:** `1.<session>.<fix>` from S13 (1.13.0); 2.0.0 at CP-J.
   - **Next:** S13 (the sound engine, with placeholder sounds made in code). P1 (the owner: ElevenLabs Starter and its connector) can be done any time before A6.
+- 2026-10-24, S13 (sound engine, 1.13.0): `js/audio/` (`audio.js`, `sounds.js`, `synth.js`), an empty `assets/sfx/sfx.json`, and `test/audio.test.js` (8 tests; 154 unit tests in all).
+  - **Sounds:** 19 names, each with a placeholder made in code (noise bursts and tones, no files): `hit-hard`, `hit-soft`, `hit-dive`, `serve`, `swing-hard`, `swing-soft` (a miss), `dive`, `wall-front`, `wall-side`, `floor`, `glass`, `tin`, `out`, `point` (the callout's jingle), `game`, `menu-move`, `menu-ok`, `menu-back`, `menu-key`. A6 names its files after these in `sfx.json`; anything not listed keeps its placeholder. Shoe squeaks have no event yet: S14 can add one from the players' movement (no sim change), or A6 can skip them.
+  - **The first-input rule:** the context is made at load and kept suspended until a key, click or tap, even in a browser that would let it start (the in-app test browser has no autoplay rule, so this is enforced in code). The first key's own menu sound plays as the context starts. A pad-only start shows "Press a key or tap for sound" under the title's red band (dark text on the wood), and it goes on the first key.
+  - **Settings:** EFFECTS (Off, 1–10, default 7) on the options screen above BACK (the options panel was re-spaced a little to fit a fifth button); SOUND ON/OFF in the pause menu (third item); a speaker button left of the fullscreen button (on touch, and on the menus for a mouse). Both are saved in `localStorage` (`hogg-squash.sound`); `?sound=off` mutes one visit without saving.
+  - **Checked in the browser** (with `?sound=log`; Claude can't hear, so by what the code reports): `suspended` before any input, also after a menu move and a pad press; `running` after the first key; a CPU-against-CPU match logged hit → front wall → floor for each shot in order, a jingle for each of 12 points and one GAME jingle, nothing in the point freeze; pausing suspends the context; the Effects level (5) and Sound off survived a reload; the speaker button turned sound back on; `?sound=off`; no console errors or warnings from a cold load to the result screen. **By tests only:** the event table's coverage (every event type, collision and rally reason), the settings' saving, loading and clamping with blocked or full storage, `sfx.json` checking, the placeholders never clipping.
+  - **Download size:** about 23 KB more (the three audio modules and `sfx.json`), no sound files yet.
+  - **For the owner (CP-G or before A6):** listen to a match: does each sound land on its moment, and is 7 the right default? Should the iPhone's silent switch mute the game (now: yes; `navigator.audioSession.type = 'playback'` would play through it)?
+  - **Next:** P1 (the owner: ElevenLabs Starter and its connector), then A6.

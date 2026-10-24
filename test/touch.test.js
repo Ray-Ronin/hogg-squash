@@ -75,7 +75,7 @@ test('2P cannot be picked while the touch controls show; after a key it can', ()
 });
 
 test('the options have no touch setting; GO TO HOME on the title goes to the website', () => {
-  assert.deepEqual(OPTION_ITEMS, ['LAPTOP KEYS FOR P2', 'RESET TO DEFAULTS', 'KEY TEST', 'BACK']);
+  assert.deepEqual(OPTION_ITEMS, ['LAPTOP KEYS FOR P2', 'RESET TO DEFAULTS', 'KEY TEST', 'EFFECTS', 'BACK']);
   assert.equal(TITLE_ITEMS[3], 'GO TO HOME');
   assert.equal(SITE_URL, 'https://roninray.com/');
   const ui = makeUi();

@@ -204,7 +204,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 ## Screens (2026-10-18)
 - Flow: **title → 1P / 2P → match length (5/7/9/11) → difficulty 1–9 (1P only) → controller assignment → match → result → rematch / menu.**
 - **Pause menu on Esc** (and Start on a gamepad). Pause also triggers automatically when the window loses focus or leaves fullscreen.
-- **Options screen:** key remapping and a key test.
+- **Options screen:** key remapping and a key test; the **Effects** level (S13). The pause menu also has **Sound on/off** (S13).
 - **GO TO HOME on the title (2026-10-22, the owner's request; first named RONINRAY.COM):** the title's fourth item goes back to the website's start page (https://roninray.com/), where the game and the build log are.
 
 ## Version numbers (2026-10-22, the owner's call)
@@ -229,6 +229,12 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **Volume:** an **Effects** level on the Options screen (Off, 1–10, saved in the browser like the keys), **Sound on/off** in the pause menu, and a speaker button beside the fullscreen button for touch. A Music level only if music is added later.
 - **The first sound:** browsers allow sound only after a key press, click or tap (a gamepad button doesn't count). The game is **silent until the first key, click or tap**, with no extra screen; a gamepad-only player sees a small "Press a key or tap for sound" note on the title.
 - **Sound stays out of the simulation:** it listens to the sim's events, as the effects do, and never changes the play.
+- **As built in S13 (2026-10-24):** `js/audio/` holds the engine (`audio.js`: one Web Audio context, master and Effects gains, the first-input unlock, pause, the `sfx.json` loader), the table of events and menu moves to sound names (`sounds.js`) and a placeholder for every name made in code (`synth.js`: noise bursts and tones, no files). A6's files go in `assets/sfx/` and are listed in `assets/sfx/sfx.json` by those names (`{ "files": [...], "level": 0–1 }`, several files = variants); a name not listed plays its placeholder.
+  - **Effects level:** Off or 1–10, **default 7** (for the owner to judge at CP-G), a square curve (7 is about half of 10's loudness); OK on it steps up and wraps to Off, for taps. Saved with Sound on/off in `localStorage` (`hogg-squash.sound`).
+  - **Silent until the first key, click or tap,** even in a browser that would allow sound sooner (the context is suspended until then). The sound is also suspended on the pause menu, with the window blurred, the tab hidden, the portrait warning up, Sound off or the level at Off. Sounds asked for meanwhile are dropped, not saved up.
+  - **Which events sound:** hits by HARD / SOFT and the dive's stretch hit; a miss whooshes; the serve sounds on the launch, not the press; the ball on the front wall, side walls, floor and back glass; the tin's clang (or a buzz for out) replaces that step's ball sound; a jingle with each callout and a longer one on GAME. Shoe squeaks have names in A6's list but no event yet (S14 can add one, from the players' movement, without the sim).
+  - **iPhone silent switch: respected for now** (iOS mutes Web Audio while it's on). Setting `navigator.audioSession.type = 'playback'` would make the game sound through it; the owner's call at CP-G.
+  - **Checking without hearing:** `?sound=log` logs every sound by name as it plays (with the audio clock and page time, for S14's timing), and the context's state changes; `?sound=off` starts with Sound off for that visit.
 
 ## Characters (2026-10-23)
 - **Several new bodies:** three new SpriteCook characters (four in all), each with every animation of `player-100`'s sheet. More can be added later, one art session each.

@@ -14,6 +14,10 @@
 // menu items work by tapping. They show on the first touch and hide on a key press or pad use (no setting); 2P can't
 // be picked while they show. A portrait phone is told to turn sideways (and pauses).
 // The title's GO TO HOME goes back to the website's start page.
+// Sound (S13, js/audio/): silent until the first key, click or tap (the browser's rule; a gamepad-only player sees a
+// note on the title). The world's events and the menu moves play sounds by name; the Effects level is on the options
+// screen, Sound on/off in the pause menu and on the speaker button (both saved), and the sound stops while paused,
+// blurred, hidden or turned sideways. ?sound=log logs every sound as it plays; ?sound=off starts with Sound off.
 // Debug keys: ` toggles the debug overlay, ' steps the court view:
 // the painted court, the code court (with the code ball and effects), and the painted court with the code's lines
 // over it in cyan, for checking that they match.
@@ -56,8 +60,10 @@ import { useFont, drawText, lineHeight } from './render/text.js';
 import { useUi } from './render/ui.js';
 import { useFx } from './render/fx.js';
 import { drawDebug, createShotLog } from './render/debug.js';
-import { makeUi, navigate, captureKey, matchOver, autoPause, assignInMatch, showsMatch, setTouch, tap,
+import { makeUi, navigate, captureKey, matchOver, autoPause, assignInMatch, showsMatch, setTouch, tap, toggleSound,
   DEFAULT_SETTINGS, SITE_URL } from './ui/screens.js';
+import { createAudio, loadSound, saveSound } from './audio/audio.js';
+import { soundsFor, menuSound, menuState } from './audio/sounds.js';
 import { clearHits, hitAt } from './ui/menu.js';
 import { drawTitle, useTitle } from './ui/title.js';
 import { drawOptions } from './ui/options.js';
@@ -113,7 +119,14 @@ const ui = makeUi({
   players: query.get('mode') === '2p' ? 2 : 1,
   target: MATCH_LENGTHS.includes(to) ? to : DEFAULT_SETTINGS.target,
   level: toLevel(query.get('level') ?? undefined),
-}, SHORTCUT ? 'match' : 'title', loadLayouts(store));
+}, SHORTCUT ? 'match' : 'title', loadLayouts(store), loadSound(store));
+if (query.get('sound') === 'off') ui.sound.on = false;    // for this visit only (saved if changed)
+const audio = createAudio({ log: query.get('sound') === 'log' });
+audio.setLevel(ui.sound.level);
+/** The window has focus (sound stops while it hasn't). */
+let focused = true;
+/** A pad has been used (with sound still locked, the title says to press a key or tap). */
+let padUsed = false;
 /** The character sprites, once loaded (null: boxes). @type {import('./render/actors.js').Sprites | null} */
 let sprites = null;
 let showBoxes = query.has('boxes');
@@ -165,17 +178,39 @@ newMatch(nextSeed++);
  * @param {import('./ui/screens.js').Nav} n
  */
 function nav(n) {
-  const from = ui.screen;
-  doEffect(from, navigate(ui, n));
+  const before = menuState(ui);
+  doEffect(before, navigate(ui, n), n);
 }
 
-/** Do what a move or a tap asks of the match. @param {import('./ui/screens.js').ScreenName} from  the screen it was made on @param {import('./ui/screens.js').Effect} effect */
-function doEffect(from, effect) {
+/**
+ * Do what a move or a tap asks of the match, and play its menu sound.
+ * @param {import('./audio/sounds.js').MenuState} before  the screens before it
+ * @param {import('./ui/screens.js').Effect} effect
+ * @param {import('./ui/screens.js').Nav} n  the move (a tap is an OK)
+ */
+function doEffect(before, effect, n) {
+  const from = before.screen;
   if (from === 'assign' && (effect === 'start' || effect === 'resume')) forgetLost(seats);  // carry on with the keys
   if (effect === 'prepare' || effect === 'rematch') newMatch(nextSeed++);
   else if (effect === 'restart') newMatch(matchSeed);
   else if (effect === 'keys') keysChanged();
+  else if (effect === 'sound') soundChanged();
   else if (effect === 'site') location.href = SITE_URL;
+  const s = menuSound(n, before, menuState(ui), effect);
+  if (s) audio.play(s);
+}
+
+/** The Effects level or Sound on/off changed: keep them, and tell the sound engine and the speaker button. */
+function soundChanged() {
+  saveSound(store, ui.sound);
+  audio.setLevel(ui.sound.level);
+  touch.setSound(ui.sound.on);
+  syncAudio();
+}
+
+/** Whether sound should be running now: on, and not paused, blurred, hidden or turned sideways. */
+function syncAudio() {
+  audio.setActive(ui.sound.on && ui.sound.level > 0 && ui.screen !== 'pause' && focused && !document.hidden && !portrait());
 }
 
 /** The options changed a key: keep the layouts and give the keyboard the new game keys. */
@@ -198,7 +233,8 @@ const pads = createPads();
 /** The browser's name for each pad seen. @type {Map<number, string>} */
 const padIds = new Map();
 /** The on-screen controls, and whether they show (from the start only on a phone-like screen). */
-const touch = createTouchControls();
+const touch = createTouchControls(document, () => { toggleSound(ui); soundChanged(); });
+touch.setSound(ui.sound.on);
 const touchState = makeTouchState(matchMedia('(pointer: coarse) and (hover: none)').matches);
 /** Taps on the canvas since the last step, in game pixels (a menu item under one is picked). @type {[number, number][]} */
 const taps = [];
@@ -257,8 +293,16 @@ kb.onPress('Quote', () => {
 // pausing without a key: the window loses focus, the tab is hidden, or fullscreen is left (the browser may keep the
 // Esc that leaves fullscreen to itself). F11's fullscreen isn't the Fullscreen API, so leaving it shows only as the
 // window shrinking from the screen's size.
-window.addEventListener('blur', () => { autoPause(ui); touch.release(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden) { autoPause(ui); touch.release(); } });
+window.addEventListener('blur', () => { focused = false; autoPause(ui); touch.release(); syncAudio(); });
+window.addEventListener('focus', () => { focused = true; });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { autoPause(ui); touch.release(); }
+  syncAudio();
+});
+// a key, click or tap also means the window has focus (a blur can come without a focus to follow, in some frames)
+for (const type of ['keydown', 'pointerdown', 'touchend']) {
+  window.addEventListener(type, () => { focused = true; syncAudio(); }, { capture: true });   // inside the gesture
+}
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) autoPause(ui); });
 const screenSized = () => window.innerWidth >= window.screen.width && window.innerHeight >= window.screen.height;
 let wasScreenSized = screenSized();
@@ -280,7 +324,7 @@ function pollPads() {
   const bySlot = [null, null];
   for (const p of list) {
     padIds.set(p.index, p.id);
-    if (p.any || p.pressed.up || p.pressed.down || p.pressed.left || p.pressed.right) noteKeyOrPad(touchState);
+    if (p.any || p.pressed.up || p.pressed.down || p.pressed.left || p.pressed.right) { noteKeyOrPad(touchState); padUsed = true; }
     let slot = seatOf(seats, p.index);
     const seating = ui.screen === 'assign' || ui.screen === 'match';
     if (seating && slot < 0) {
@@ -313,6 +357,7 @@ let stepCount = 0;
 const playing = () => ui.screen === 'match';
 function simStep() {
   stepCount++;
+  syncAudio();
   const wasMatch = ui.screen === 'match';
   const presses = kb.takePresses();       // sampled once per step; presses on the menus don't reach the match
   if (presses.size) noteKeyOrPad(touchState);
@@ -325,7 +370,7 @@ function simStep() {
   } else {
     for (const code of presses) {
       if (ui.listen) {                    // the options screen is waiting for a key: this one, if it can be used
-        if (captureKey(ui, code) === 'keys') keysChanged();
+        if (captureKey(ui, code) === 'keys') { keysChanged(); audio.play('menu-key'); }
         if (ui.listen) continue;
         break;
       }
@@ -344,8 +389,8 @@ function simStep() {
     }
     for (const [x, y] of tapped) {
       if (playing()) break;
-      const from = ui.screen;
-      doEffect(from, tap(ui, hitAt(x, y)));
+      const before = menuState(ui);
+      doEffect(before, tap(ui, hitAt(x, y)), 'ok');
     }
   }
   touch.show(ui.touch, ui.screen === 'match', showsMatch(ui));
@@ -377,6 +422,7 @@ function simStep() {
         events.some(e => e.type === 'serveSwing' && e.side === i) ? world.ball : null));
   }
   effects.add(events, world);
+  for (const s of soundsFor(events)) audio.play(s);
   shotLog.add(events, world);
 }
 
@@ -415,7 +461,7 @@ function render() {
   }
 
   clearHits();
-  if (ui.screen === 'title') drawTitle(ctx, ui);
+  if (ui.screen === 'title') drawTitle(ctx, ui, padUsed && !audio.unlocked() && ui.sound.on && ui.sound.level > 0);
   else if (ui.screen === 'length' || ui.screen === 'level') drawSetup(ctx, ui);
   else if (ui.screen === 'options') drawOptions(ctx, ui);
   else if (ui.screen === 'keytest') drawKeyTest(ctx, kb.heldKeys(), layouts, ui.touch);
@@ -441,7 +487,7 @@ function render() {
 // waiting for frames
 if (query.has('dev')) {
   Object.assign(window, { hogg: {
-    kb, render, shots: shotLog.shots, ui, buffer: ctx.canvas,
+    kb, render, shots: shotLog.shots, ui, buffer: ctx.canvas, audio,
     get world() { return world; },
     get cpus() { return cpus; },
     get seats() { return seats; },
@@ -501,6 +547,7 @@ document.getElementById('loading')?.remove();           // index.html's text, un
   requestAnimationFrame(drawLoading);
 })();
 loadLogo(LOGO.on || query.get('logo') === 'on');
+audio.load('assets/sfx/sfx.json');                    // A6's files; until then (and for any missing) the placeholders
 try {
   const a = await art.ready;
   useCourt(a.court);

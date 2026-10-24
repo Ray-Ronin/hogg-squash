@@ -3,7 +3,8 @@
 // shield) with 1 PLAYER / 2 PLAYERS / OPTIONS / GO TO HOME (back to the website) in its menu area (MENU: the
 // `menu` slice in art/ui/title.aseprite), and the keys on the red band under the wall (while the touch controls show,
 // 2P is faded and the band says why). The setup, options and key test screens draw on the same background.
-// A small "How to play" card sits beside the menu, between it and the shield (S12).
+// A small "How to play" card sits beside the menu, between it and the shield (S12), and a gamepad-only player is told
+// to press a key or tap for sound (S13).
 // Without the image the screen is the margin colour with the name in the large font.
 import { WIDTH } from '../engine/screen.js';
 import { drawText, lineHeight } from '../render/text.js';
@@ -52,12 +53,20 @@ export function drawHint(ctx, str) {
   drawText(ctx, 'small', str, WIDTH / 2, HINT_Y, 'center');
 }
 
-/** @param {CanvasRenderingContext2D} ctx @param {import('./screens.js').Ui} ui */
-export function drawTitle(ctx, ui) {
+/** The note for someone who has only used a gamepad: the browser needs a key, click or tap before it allows sound
+ * (S13). Its middle: under the red band, clear of the menu, the How to play card and the shield. */
+export const SOUND_NOTE = { text: 'Press a key or tap for sound', x: WIDTH / 2, y: 330 };
+
+/**
+ * @param {CanvasRenderingContext2D} ctx @param {import('./screens.js').Ui} ui
+ * @param {boolean} [soundNote]  show SOUND_NOTE (sound is still locked and a pad has been used)
+ */
+export function drawTitle(ctx, ui, soundNote = false) {
   drawTitleBack(ctx);
   drawList(ctx, TITLE_ITEMS, ui.sel, MENU.x + 40, MENU.y + TITLE_TOP, { off: titleOff(ui) });
   const c = HOW_TO_PLAY, h = c.lines.length * c.ROW + 12 - (c.ROW - lineHeight('small'));
   drawPanel(ctx, 'panel dark', c.x, c.y, c.w, h);
   c.lines.forEach((l, i) => drawText(ctx, i === 0 ? 'small-red' : 'small', l, c.x + c.w / 2, c.y + 6 + i * c.ROW, 'center'));
   drawHint(ctx, ui.touch ? TOUCH_2P_NOTE : TITLE_HINT);   // touch is 1P only (2P is faded)
+  if (soundNote) drawText(ctx, 'small-dark', SOUND_NOTE.text, SOUND_NOTE.x, SOUND_NOTE.y, 'center');   // on the wood
 }

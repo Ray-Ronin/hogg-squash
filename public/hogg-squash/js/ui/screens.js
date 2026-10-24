@@ -2,15 +2,16 @@
 // The screens (docs/decisions.md, "Screens") as a small state machine, with no drawing and no devices, so Node can
 // test it (test/screens.test.js). The flow:
 //   title (1P / 2P) → match length → level (1P only) → controllers → match → result → rematch, or back to the title
-// and the pause menu over the match (Resume / Restart match / Quit to title), and from the title the options (each
-// player's six keys, remapped by pressing a key; presets; the key test), and GO TO HOME back to the website. main.js turns
-// key presses, pad buttons and touch into Navs (a tap on a menu item is tap()), calls navigate, and does what the
+// and the pause menu over the match (Resume / Restart match / Sound on/off / Quit to title), and from the title the options (each
+// player's six keys, remapped by pressing a key; presets; the key test; the Effects level), and GO TO HOME back to the
+// website. The pause menu also turns Sound on and off (S13). main.js turns key presses, pad buttons and touch into Navs (a tap on a menu item is tap()), calls navigate, and does what the
 // Effect it returns asks (build the match, start it, …). While the touch controls show, 2P can't be picked (touch is
 // 1P vs CPU only; docs/decisions.md, "Mobile and touch").
 // Each screen's drawing is in its own file in js/ui/; the menus' words are here, so the tests can check the font.
 import { MATCH_LENGTHS } from '../sim/match.js';
 import { LEVELS, DEFAULT_LEVEL } from '../sim/difficulty.js';
 import { ACTIONS, defaultLayouts, refusal, duplicateNote, keyLabel, resetLayouts, laptopPreset } from '../input/keymap.js';
+import { defaultSound, SOUND_LEVELS } from '../audio/audio.js';
 
 /** @typedef {'title' | 'length' | 'level' | 'assign' | 'match' | 'pause' | 'result' | 'options' | 'keytest'} ScreenName */
 /** @typedef {{ players: 1 | 2, target: number, level: number }} Settings  target: points to win; level: 1P only */
@@ -27,7 +28,8 @@ import { ACTIONS, defaultLayouts, refusal, duplicateNote, keyLabel, resetLayouts
  *  start: play the prepared match; resume: carry on with the match
  *  restart: the same match again from 0–0; rematch: a new match with the same settings; quit: drop the match
  *  keys: the key layouts changed (save them, and tell the keyboard); site: leave for roninray.com (SITE_URL)
- * @typedef {null | 'prepare' | 'start' | 'resume' | 'restart' | 'rematch' | 'quit' | 'keys' | 'site'} Effect
+ *  sound: the Effects level or Sound on/off changed (save them, and tell the sound engine)
+ * @typedef {null | 'prepare' | 'start' | 'resume' | 'restart' | 'rematch' | 'quit' | 'keys' | 'site' | 'sound'} Effect
  */
 
 /**
@@ -40,6 +42,8 @@ import { ACTIONS, defaultLayouts, refusal, duplicateNote, keyLabel, resetLayouts
  * @property {boolean} listen     the options screen is waiting for a key for the selected action
  * @property {string} note        the options screen's message line (a prompt, a refusal, a key used twice)
  * @property {boolean} touch       the touch controls are showing (then 2P can't be picked)
+ * @property {import('../audio/audio.js').SoundSettings} sound  the Effects level (the options) and Sound on/off (the
+ *   pause menu; the speaker button changes it too)
  */
 
 /** The defaults: 1 player, first to 9, level 5 (the plan's suggestion; the owner decides at the end of S10). */
@@ -48,13 +52,24 @@ export const DEFAULT_SETTINGS = Object.freeze({ players: /** @type {1 | 2} */ (1
 export const TITLE_ITEMS = ['1 PLAYER', '2 PLAYERS', 'OPTIONS', 'GO TO HOME'];
 /** Where the title's last item goes: the website's start page (the game, and how it was built). */
 export const SITE_URL = 'https://roninray.com/';
-export const PAUSE_ITEMS = ['RESUME', 'RESTART MATCH', 'QUIT TO TITLE'];
+export const PAUSE_ITEMS = ['RESUME', 'RESTART MATCH', 'SOUND ON', 'QUIT TO TITLE'];
+/** The pause menu's Sound on/off item. */
+const PAUSE_SOUND = 2;
 export const RESULT_ITEMS = ['REMATCH', 'MENU'];
 /** The options screen's buttons, under its 6 rows × 2 players of keys (selections 0–11, P1 then P2 on each row). */
-export const OPTION_ITEMS = ['LAPTOP KEYS FOR P2', 'RESET TO DEFAULTS', 'KEY TEST', 'BACK'];
+export const OPTION_ITEMS = ['LAPTOP KEYS FOR P2', 'RESET TO DEFAULTS', 'KEY TEST', 'EFFECTS', 'BACK'];
 /** The first button's selection. */
 export const KEY_CELLS = ACTIONS.length * 2;
-const [LAPTOP, RESET, KEY_TEST, OPTIONS_BACK] = OPTION_ITEMS.map((_, i) => KEY_CELLS + i);
+const [LAPTOP, RESET, KEY_TEST, EFFECTS, OPTIONS_BACK] = OPTION_ITEMS.map((_, i) => KEY_CELLS + i);
+/** The Effects item's selection: left / right change the level, OK steps it up (wrapping from 10 to Off, for taps). */
+export const EFFECTS_SEL = EFFECTS;
+
+/** The Effects level as the options show it: "EFFECTS 7", "EFFECTS OFF". @param {number} level */
+export const effectsLabel = level => `EFFECTS ${level || 'OFF'}`;
+/** The options' buttons as drawn (the Effects item with its level). @param {Ui} ui */
+export const optionLabels = ui => OPTION_ITEMS.map((it, i) => (KEY_CELLS + i === EFFECTS ? effectsLabel(ui.sound.level) : it));
+/** The pause menu's items as drawn (SOUND ON or SOUND OFF). @param {Ui} ui */
+export const pauseLabels = ui => PAUSE_ITEMS.map((it, i) => (i === PAUSE_SOUND ? `SOUND ${ui.sound.on ? 'ON' : 'OFF'}` : it));
 /** The title's 2P item. */
 const TWO_PLAYERS = 1;
 
@@ -75,11 +90,18 @@ export function setTouch(ui, on) {
  * @param {Partial<Settings>} [settings]
  * @param {ScreenName} [screen]  'title', or 'match' to go straight to a match (the URL shortcuts)
  * @param {import('../input/keymap.js').KeyLayout[]} [keys]  the key layouts (the saved ones, else the defaults)
+ * @param {import('../audio/audio.js').SoundSettings} [sound]  the sound settings (the saved ones, else the defaults)
  * @returns {Ui}
  */
-export function makeUi(settings = {}, screen = 'title', keys = defaultLayouts()) {
+export function makeUi(settings = {}, screen = 'title', keys = defaultLayouts(), sound = defaultSound()) {
   return { screen, settings: { ...DEFAULT_SETTINGS, ...settings }, sel: 0, inMatch: false, keys, listen: false, note: '',
-    touch: false };
+    touch: false, sound };
+}
+
+/** Sound on or off (the pause menu, the speaker button). @param {Ui} ui @returns {Effect} */
+export function toggleSound(ui) {
+  ui.sound.on = !ui.sound.on;
+  return 'sound';
 }
 
 /** The player and action of an options key cell (null for a button). @param {number} sel */
@@ -183,6 +205,7 @@ export function navigate(ui, nav) {
         go(ui, 'match');
         return 'restart';
       }
+      if ((nav === 'ok' || nav === 'left' || nav === 'right') && ui.sel === PAUSE_SOUND) return toggleSound(ui);
       if (nav === 'ok') {
         go(ui, 'title', s.players - 1);
         return 'quit';
@@ -219,6 +242,11 @@ function options(ui, nav) {
   if (nav === 'up') ui.sel = ui.sel === 0 ? OPTIONS_BACK : ui.sel === LAPTOP ? KEY_CELLS - 2 : ui.sel - (cell ? 2 : 1);
   else if (nav === 'down') ui.sel = ui.sel === OPTIONS_BACK ? 0 : cell ? Math.min(ui.sel + 2, LAPTOP) : ui.sel + 1;
   else if ((nav === 'left' || nav === 'right') && cell) ui.sel ^= 1;
+  else if ((nav === 'left' || nav === 'right' || isOk(nav)) && ui.sel === EFFECTS) {
+    const was = ui.sound.level, max = SOUND_LEVELS.MAX;
+    ui.sound.level = isOk(nav) ? (was + 1) % (max + 1) : Math.min(max, Math.max(0, was + (nav === 'left' ? -1 : 1)));
+    return ui.sound.level === was ? null : 'sound';
+  }
   else if (nav === 'back' || (isOk(nav) && ui.sel === OPTIONS_BACK)) go(ui, 'title', 2);
   else if (isOk(nav) && cell) {
     ui.listen = true;

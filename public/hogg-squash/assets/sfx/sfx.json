@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "_about": "The game's sound files (A6), by the names in js/audio/sounds.js. Each: { \"files\": [\"<name>-1.mp3\", ...], \"level\": 0-1 }. A name not listed plays its placeholder made in code (js/audio/synth.js).",
+  "sounds": {}
+}
