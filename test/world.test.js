@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FP, makeBall, step, classifyContact, difficultyParams, SERVE } from '../public/hogg-squash/js/squash-physics.js';
 import {
-  makeWorld, stepWorld, landingSpot, TIMING, SERVE_SPOT, SERVE_AIM, SERVE_WINDUP, serveTarget, serveAim, serveFlight,
+  makeWorld, stepWorld, landingSpot, freezeLength, TIMING, SERVE_SPOT, SERVE_AIM, SERVE_WINDUP, serveTarget, serveAim, serveFlight,
   serveIsGood,
 } from '../public/hogg-squash/js/sim/world.js';
 import { serviceBox, LINES } from '../public/hogg-squash/js/sim/court-rules.js';
@@ -332,4 +332,30 @@ test('a whole match to 5: the result, then HARD starts a rematch at 0-0', () => 
   assert.equal(w.phase, 'serve');
   assert.deepEqual(w.match.scores, [0, 0]);
   assert.equal(w.match.winner, null);
+});
+
+test('the freeze: 172 frames on a normal point, 258 on one that raises the finish, never on the winning point', () => {
+  assert.deepEqual(TIMING, { CALLOUT: 86, POINT: 86, FIRST_TO: 86 });
+  /** The server (who wins an unreturned serve) at `mine`, the receiver at `theirs`: the freeze after the next point. */
+  function freezeAfter(target, mine, theirs) {
+    const w = makeWorld({ target, seed: 3 });
+    const s = w.match.server;
+    w.match.scores[s] = mine;
+    w.match.scores[s === 0 ? 1 : 0] = theirs;
+    serve(w);
+    until(w, 'rally');
+    const n = freezeLength(w), raised = w.raised;
+    run(w, n - 1);
+    assert.equal(w.phase, 'point', `${mine}-${theirs}: still frozen`);
+    const end = run(w, 1);
+    assert.equal(end.length, 1);
+    return { n, raised, end: end[0].type };
+  }
+  assert.deepEqual(freezeAfter(11, 3, 2), { n: 172, raised: false, end: 'newRally' }, '4-2');
+  assert.deepEqual(freezeAfter(11, 9, 10), { n: 258, raised: true, end: 'newRally' }, '10-10: FIRST TO 12');
+  assert.deepEqual(freezeAfter(11, 10, 10), { n: 172, raised: false, end: 'newRally' }, '11-10: nothing');
+  assert.deepEqual(freezeAfter(11, 10, 11), { n: 258, raised: true, end: 'newRally' }, '11-11: FIRST TO 13');
+  assert.deepEqual(freezeAfter(5, 3, 4), { n: 258, raised: true, end: 'newRally' }, '4-4 in a game to 5: FIRST TO 6');
+  assert.deepEqual(freezeAfter(11, 11, 10), { n: 172, raised: false, end: 'match' }, '12-10 wins: no notice');
+  assert.deepEqual(freezeAfter(11, 10, 9), { n: 172, raised: false, end: 'match' }, '11-9 wins: no notice');
 });

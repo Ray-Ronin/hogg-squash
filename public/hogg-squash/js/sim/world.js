@@ -2,7 +2,8 @@
 // The game world for a 2-player match: the ball, both players, the frame counter, the rally and the match.
 // Pure sim code: no DOM, canvas or input devices. One call to stepWorld is one 57.4 Hz sim step.
 //
-// Phases:  serve → rally → point (a freeze: callout, then POINT and the score) → serve … → over (HARD = rematch)
+// Phases:  serve → rally → point (a freeze: callout, then POINT and the score, then FIRST TO on a point that raised
+//           the finish) → serve … → over (HARD = rematch)
 //  - serve: the server stands in the service box match.js names and holds the ball. HARD or SOFT starts the serve
 //    swing (CP-D): the server is locked and the ball stays held for SERVE_WINDUP frames, then it launches on the
 //    swing's contact frame, as a rally swing's contact does. The launch uses the arcade's SERVE height, aimed across
@@ -18,11 +19,15 @@ import { FP, makeBall, predict, SERVE } from '../squash-physics.js';
 import { levelParams, DEFAULT_LEVEL } from './difficulty.js';
 import { serviceBox, LINES } from './court-rules.js';
 import { makeRally, canStrike, rallyStrike, stepBall } from './rally.js';
-import { firstServer, makeMatch, scoreRally } from './match.js';
+import { firstServer, makeMatch, scoreRally, winningScore } from './match.js';
 import { makePlayer, stepPlayer, PLAYER_LIMITS, SWING } from './player.js';
 
-/** Freeze after a rally, in sim frames: the callout, then POINT and the score (about 1.5 s in all). */
-export const TIMING = { CALLOUT: 43, POINT: 43 };
+/**
+ * Freeze after a rally, in sim frames: the callout, then POINT and the score, about 1.5 s each (S12e, the owner's
+ * pick at CP-F: doubled from 43). A point that raises the score needed to win (win by 2: 10–10 in a game to 11 is now
+ * first to 12) adds a third step, FIRST TO and the new finish, as long again: 3 s in all, or 4.5 s.
+ */
+export const TIMING = { CALLOUT: 86, POINT: 86, FIRST_TO: 86 };
 
 /**
  * Frames from the serve press to the launch (CP-D): a rally swing's wind-up, so the serve tag's 3 wind-up frames
@@ -90,6 +95,7 @@ export const SERVE_AIM = {
  * @property {{ button: 'hard' | 'soft', t: number } | null} windup  the serve's wind-up: the button pressed and frames
  *   since the press (null before the press and after the launch)
  * @property {RallyResult | null} result  the last rally's result (kept through the freeze)
+ * @property {boolean} raised    this point raised the score needed to win (winningScore), so the freeze shows FIRST TO
  */
 
 /**
@@ -137,6 +143,7 @@ export function makeWorld({ target = 9, seed = 0, params = defaultParams(), cpu 
     params, seed, cpu: [cpu[0], cpu[1]], matchNo: 0, frame: 0, phase: 'serve', timer: 0,
     match: makeMatch({ target, server }), rally: makeRally(server), ball: makeBall(),
     players: [makePlayer(0, 0), makePlayer(0, 0)], landing: null, serveTarget: null, windup: null, result: null,
+    raised: false,
   };
   setupServe(w);
   return w;
@@ -156,6 +163,7 @@ function setupServe(w) {
   w.serveTarget = null;
   w.windup = null;
   w.result = null;
+  w.raised = false;
   holdBall(w);
 }
 
@@ -392,7 +400,9 @@ function stepRally(w, acts, events) {
   if (ev) events.push({ type: 'ball', ev, ...at });
   if (ev === 'floor') w.landing = null;
   if (result) {
+    const finish = winningScore(w.match);
     scoreRally(w.match, result.winner);
+    w.raised = w.match.winner === null && winningScore(w.match) > finish;
     w.result = result;
     w.phase = 'point';
     w.timer = 0;
@@ -401,9 +411,14 @@ function stepRally(w, acts, events) {
   }
 }
 
+/** The point freeze's length in frames: two steps, or three when the point raised the finish. @param {World} w */
+export function freezeLength(w) {
+  return TIMING.CALLOUT + TIMING.POINT + (w.raised ? TIMING.FIRST_TO : 0);
+}
+
 /** @param {World} w @param {WorldEvent[]} events */
 function stepPoint(w, events) {
-  if (++w.timer < TIMING.CALLOUT + TIMING.POINT) return;
+  if (++w.timer < freezeLength(w)) return;
   const m = w.match;
   if (m.winner !== null) {
     w.phase = 'over';

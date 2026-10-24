@@ -1,7 +1,7 @@
 // Match scoring: lengths, win by 2, serve handover and boxes (node:test, run by npm test).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MATCH_LENGTHS, makeMatch, scoreRally, firstServer } from '../public/hogg-squash/js/sim/match.js';
+import { MATCH_LENGTHS, makeMatch, scoreRally, firstServer, winningScore } from '../public/hogg-squash/js/sim/match.js';
 
 /** Score a run of rally winners, e.g. '0011' = P1, P1, P2, P2. */
 function play(m, winners) {
@@ -105,4 +105,22 @@ test('first server: the human vs CPU; from the seed in 2P', () => {
 
 test('only 5, 7, 9 or 11', () => {
   for (const target of [0, 3, 10, 21]) assert.throws(() => makeMatch({ target, server: 0 }), RangeError);
+});
+
+test('winningScore: the match length until both reach length - 1, then the lower score + 2', () => {
+  for (const target of MATCH_LENGTHS) {
+    const at = (a, b) => winningScore(scoreTo(makeMatch({ target, server: 0 }), a, b));
+    assert.equal(at(0, 0), target, `${target}: 0-0`);
+    assert.equal(at(target - 2, target - 2), target, `${target}: before length - 1`);
+    assert.equal(at(target - 1, target - 2), target, `${target}: one side at length - 1`);
+    assert.equal(at(target - 1, target - 1), target + 1, `${target}: both at length - 1`);
+    assert.equal(at(target, target - 1), target + 1, `${target}: a point ahead`);
+    assert.equal(at(target - 1, target), target + 1, `${target}: a point behind`);
+    assert.equal(at(target, target), target + 2, `${target}: level past length - 1`);
+    assert.equal(at(target + 3, target + 3), target + 5, `${target}: well past`);
+  }
+  // the plan's examples
+  assert.equal(winningScore(scoreTo(makeMatch({ target: 11, server: 0 }), 10, 10)), 12);
+  assert.equal(winningScore(scoreTo(makeMatch({ target: 11, server: 0 }), 11, 11)), 13);
+  assert.equal(winningScore(scoreTo(makeMatch({ target: 5, server: 0 }), 4, 4)), 6);
 });

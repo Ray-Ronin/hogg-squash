@@ -56,3 +56,14 @@ export function scoreRally(m, winner) {
   if (Math.max(a, b) >= m.target && Math.abs(a - b) >= 2) m.winner = a > b ? 0 : 1;
   return m;
 }
+
+/**
+ * The score that wins the match from here (S12e): the match length, or once both sides reach length − 1 (win by 2),
+ * the lower score + 2. In a game to 11: 10–9 → 11, 10–10 → 12, 11–10 → 12, 11–11 → 13.
+ * @param {Match} m
+ * @returns {number}
+ */
+export function winningScore(m) {
+  const low = Math.min(m.scores[0], m.scores[1]);
+  return low >= m.target - 1 ? low + 2 : m.target;
+}

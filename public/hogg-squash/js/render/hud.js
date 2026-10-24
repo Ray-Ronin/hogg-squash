@@ -2,12 +2,14 @@
 // The HUD, in the bitmap font (text.js) and A5's pieces (ui.js; docs/art-style-guide.md §3): a score panel in each
 // side margin (P1 left in Hogg red, P2 / the CPU right in white) with the serve tag under the server's score, the
 // match length on a dark panel under P1's, each side's controls at the foot of its margin, and on the front wall the
-// rally callouts (the reason's word, the winner's point under it), the score, GAME at the end and the serve notice.
+// rally callouts (the reason's word, the winner's point under it), the score, FIRST TO and the new finish after a
+// point that raised it (win by 2, S12e), GAME at the end and the serve notice.
 // The scorer's new score flashes white once when a point is won (pointFlash).
 // The pause menu and the result are screens of their own (js/ui/). The optional logo slot (LOGO) is in the right margin.
 import { project } from './projection.js';
 import { WIDTH, HEIGHT } from '../engine/screen.js';
 import { TIMING } from '../sim/world.js';
+import { winningScore } from '../sim/match.js';
 import { LINES } from '../sim/court-rules.js';
 import { drawText, lineHeight, capsHeight } from './text.js';
 import { drawSlice, drawPanel, slice } from './ui.js';
@@ -33,6 +35,7 @@ const LAYOUT = {
   INFO_Y: 108,          // the "FIRST TO" panel (left) and the logo slot (right)
   INFO_H: 30,
   CALLOUT_Y: 88,        // the middle of a callout on the wall (DOUBLE BOUNCE 62–114, the others 72–104)
+  FIRST_TO_Y: 58,       // the top of FIRST TO's first line; the finish goes one line under it
   NOTE_Y: 118,          // the line under a callout ("P1's point", "P1 to serve")
   KEYS_Y: 306,          // the first line of each margin's controls
 };
@@ -111,6 +114,17 @@ function callout(ctx, key) {
   else drawText(ctx, 'huge-red', key.replace('callout ', ''), cx, LAYOUT.CALLOUT_Y - 14, 'center');
 }
 
+/**
+ * FIRST TO and the new finish, big and red like the callouts, in the bitmap font. FIRST TO 12 is 234 px in the huge
+ * font, wider than the wall's 220, so the number goes on a line of its own under it.
+ * @param {CanvasRenderingContext2D} ctx @param {number} finish
+ */
+function firstTo(ctx, finish) {
+  const cx = WIDTH / 2, y = LAYOUT.FIRST_TO_Y;
+  drawText(ctx, 'huge-red', 'FIRST TO', cx, y, 'center');
+  drawText(ctx, 'huge-red', String(finish), cx, y + capsHeight('huge-red') + 8, 'center');
+}
+
 /** The image in the logo slot, once loaded (null: none, or not loaded). @type {HTMLImageElement | null} */
 let logo = null;
 
@@ -166,6 +180,8 @@ export function drawHud(ctx, w, opts) {
     if (w.timer < TIMING.CALLOUT) {
       callout(ctx, CALLOUTS[w.result.reason]);
       drawText(ctx, 'small-dark', `${name(w, w.result.winner)}'s point`, cx, LAYOUT.NOTE_Y, 'center');
+    } else if (w.timer >= TIMING.CALLOUT + TIMING.POINT) {
+      firstTo(ctx, winningScore(m));
     } else {
       callout(ctx, 'callout POINT');
       drawText(ctx, 'large-red', `${m.scores[0]} – ${m.scores[1]}`, cx, LAYOUT.NOTE_Y - 4, 'center');

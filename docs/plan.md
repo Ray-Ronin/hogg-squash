@@ -43,7 +43,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S12b** The hitting range: a smaller reach for the human player (the owner's request after S12)
 - [x] **S12c** CP-F fix-ups: the hitting range by direction (less behind, a wider backhand, a shorter forehand)
 - [x] **S12d** CP-F fix-ups: a squarer hitting range, the school logo in the match
-- [ ] **S12e** CP-F fix-ups: longer front-wall callouts, a FIRST TO notice when win-by-two moves the finish
+- [x] **S12e** CP-F fix-ups: longer front-wall callouts, a FIRST TO notice when win-by-two moves the finish
 - [ ] **CP-F** Release play-test and go-live *(you)*
 
 ---
@@ -1584,3 +1584,8 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Fix:** "Make the words that appear on the front wall stay there for longer", and after them say "First to 12, 13 etc." because of win by two, "but only say it whenever the final score goes up." Added as **S12e** before go-live; CP-F is replayed after it.
   - **The owner's picks:** both callout steps doubled (0.75 s → 1.5 s each); FIRST TO as a third step in the point freeze after POINT and the score, not during the serve; GAME unchanged.
   - **After v1:** not discussed this time (still all four, starting with audio).
+- 2026-10-23, S12e: CP-F fix-ups (longer callouts, the FIRST TO notice). `squash-physics.js` unchanged; `npm test` golden/flight/shot/hit numbers exactly as the P0 baseline; unit tests 144 → 146; `npm run typecheck` clean. Version 0.12.4.
+  - **Longer callouts:** `TIMING.CALLOUT` and `TIMING.POINT` 43 → 86 frames (about 1.5 s each, 3 s in all). GAME unchanged. The owner played them and said they feel right.
+  - **FIRST TO:** a third 86-frame step (`TIMING.FIRST_TO`) on a point that raises the finish: `winningScore` in `match.js`, `world.raised` set beside `scoreRally`, `freezeLength` in `world.js`. On the wall in the huge red bitmap font on two lines (FIRST TO 12 is 234 px, the wall 220). Recorded in `decisions.md` ("Match rules").
+  - **Measured:** reference beginner 84, 78, 68, 54, 39, 23, 11, 8, 5% at levels 1–9 (S12d 84, 77, 70, 57, 42, 22, 11, 7, 4): nothing moved more than 3 points.
+  - **Checked in the browser** (the app's pane, `npm run dev` on 8790, `?dev&to=11`): 10–10 reached by a real rally (the CPU won it) shows FIRST TO 12 (screenshot shown to the owner); 10–11 showed nothing; the match played on to the result at 10–12 with no console messages. **By tests only:** the 172 / 258-frame freeze lengths, 11–11 → FIRST TO 13, 4–4 in a game to 5, no notice on a winning point, `winningScore` for every length. **Left as is:** the left margin's FIRST TO panel keeps showing the match length (not in scope).
