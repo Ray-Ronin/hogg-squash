@@ -44,7 +44,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S12c** CP-F fix-ups: the hitting range by direction (less behind, a wider backhand, a shorter forehand)
 - [x] **S12d** CP-F fix-ups: a squarer hitting range, the school logo in the match
 - [x] **S12e** CP-F fix-ups: longer front-wall callouts, a FIRST TO notice when win-by-two moves the finish
-- [ ] **CP-F** Release play-test and go-live *(you)*
+- [x] **CP-F** Release play-test and go-live *(you)*
 
 ---
 
@@ -1589,3 +1589,8 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **FIRST TO:** a third 86-frame step (`TIMING.FIRST_TO`) on a point that raises the finish: `winningScore` in `match.js`, `world.raised` set beside `scoreRally`, `freezeLength` in `world.js`. On the wall in the huge red bitmap font on two lines (FIRST TO 12 is 234 px, the wall 220). Recorded in `decisions.md` ("Match rules").
   - **Measured:** reference beginner 84, 78, 68, 54, 39, 23, 11, 8, 5% at levels 1–9 (S12d 84, 77, 70, 57, 42, 22, 11, 7, 4): nothing moved more than 3 points.
   - **Checked in the browser** (the app's pane, `npm run dev` on 8790, `?dev&to=11`): 10–10 reached by a real rally (the CPU won it) shows FIRST TO 12 (screenshot shown to the owner); 10–11 showed nothing; the match played on to the result at 10–12 with no console messages. **By tests only:** the 172 / 258-frame freeze lengths, 11–11 → FIRST TO 13, 4–4 in a game to 5, no notice on a winning point, `winningScore` for every length. **Left as is:** the left margin's FIRST TO panel keeps showing the match length (not in scope).
+- 2026-10-23, CP-F (ticked): the owner played 0.12.4 from the title screen: one 1P and one 2P match, at least one past 10–10. Both played fine, **nothing to fix**.
+  - **School logo (open question 6):** settled at the first replay (yes, in the match's right margin; built in S12d).
+  - **Version 1.0.0**, the full release (`docs/decisions.md`, "Version numbers"). `squash-physics.js` unchanged.
+  - **After v1:** unchanged: all four (more characters, audio, crowd, tournament), **starting with audio**, in a new plan.
+  - **Left for the owner:** approve the push (it deploys to https://roninray.com/hogg-squash/), then check the live page in a private window; list 1.0.0 on the build page (`../roninray-site/content/versions.json`) if wanted.
