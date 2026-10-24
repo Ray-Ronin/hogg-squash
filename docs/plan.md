@@ -1,5 +1,7 @@
 # Hogg Squash v1: build plan
 
+> **v1 is complete (1.0.0, CP-F).** Work after v1 follows [`plan-v2.md`](plan-v2.md). This file is kept as the v1 plan and its history.
+
 Written 2026-10-18 from `CLAUDE.md`, everything in `docs/` and `docs/research/`, `public/hogg-squash/js/squash-physics.js` and the tests in `test/`.
 The work is split into small Claude Code sessions. Each one leaves the game working, tests passing and its work committed.
 
@@ -1594,3 +1596,4 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Version 1.0.0**, the full release (`docs/decisions.md`, "Version numbers"). `squash-physics.js` unchanged.
   - **After v1:** unchanged: all four (more characters, audio, crowd, tournament), **starting with audio**, in a new plan.
   - **Left for the owner:** approve the push (it deploys to https://roninray.com/hogg-squash/), then check the live page in a private window; list 1.0.0 on the build page (`../roninray-site/content/versions.json`) if wanted.
+- 2026-10-23, after CP-F: the plan for after v1 is written in `docs/plan-v2.md` (audio, then characters, crowd, tournament); its Session log carries on from here.

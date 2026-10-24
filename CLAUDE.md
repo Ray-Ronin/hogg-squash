@@ -3,8 +3,8 @@
 A browser-based squash game that plays like Gaelco's *Squash* (1992 arcade), with all-original pixel art.
 Themed on Hogg Middle School (Razorbacks; red, black, white). **Local play only:** 1 player vs CPU, or 2 players on one keyboard or two gamepads. There is no online play, ever.
 
-**Status:** v1 is released (CP-F, version 1.0.0): the owner's release play-test of 0.12.4 found nothing to fix. Next is a new plan for after v1: more characters, audio, crowd and tournament, starting with audio. See `docs/plan.md`; its Session log has the history.
-Read `docs/decisions.md` first, then `docs/plan.md` (its rules, your session, and the Session log).
+**Status:** v1 is released (CP-F, version 1.0.0). Work after v1 follows **`docs/plan-v2.md`**: audio first, then more characters, a crowd and a tournament. Next is its first unticked line (S13, the sound engine). `docs/plan.md` is the v1 plan and its history.
+Read `docs/decisions.md` first, then `docs/plan-v2.md` (its rules, your session, and the Session log).
 
 ## How this repo is served
 - `public/` is served as-is by the Cloudflare Worker `hogg-squash` (see `wrangler.jsonc`).
@@ -15,7 +15,8 @@ Read `docs/decisions.md` first, then `docs/plan.md` (its rules, your session, an
 
 ## Version number
 - `public/hogg-squash/js/version.js` holds the version shown in the game's bottom-right corner; `package.json`'s `version` must match (a test checks).
-- `0.<session>.<fix>`: a session sets the middle number to its own (S11 → 0.11.0); a b session or smaller update bumps the last (0.11.1). 1.0.0 is the full release. See `docs/decisions.md`, "Version numbers".
+- `0.<session>.<fix>` in v1: a session sets the middle number to its own (S11 → 0.11.0); a b session or smaller update bumps the last (0.11.1). 1.0.0 is the full release.
+- After 1.0.0, `1.<session>.<fix>`: v2's sessions carry on from S13 (S13 → 1.13.0, a fix → 1.13.1); art and sound sessions don't change it; 2.0.0 is the v2 release. See `docs/decisions.md`, "Version numbers".
 
 ## Commit messages (the public build log)
 - https://roninray.com/build/ lists every commit in this repo. Its summaries come from a `Build-log:` line in each commit message, so **every commit gets one**, not only session commits.
@@ -47,10 +48,11 @@ Read `docs/decisions.md` first, then `docs/plan.md` (its rules, your session, an
 ## IP rules (important)
 - Never commit the ROM, MAME, extracted graphics or sounds, screenshots, or anything traced from them. Research material stays in `../Research Info/`, outside the repo.
 - Hogg Middle School's name, colours and logo are approved for use by the project owner.
-- Don't use the Gaelco name, the "Squash" logo, or any of the original's art or audio. Recreating gameplay mechanics is fine.
+- Don't use the Gaelco name, the "Squash" logo, or any of the original's art or audio, not even as a reference for a generator (SpriteCook, ElevenLabs). Recreating gameplay mechanics is fine.
 
 ## Docs
-- `docs/decisions.md`: settled decisions (v1 scope, match rules, difficulty 1–9, controls, screens, art, repo layout).
+- `docs/plan-v2.md`: the plan after v1 (audio, characters, crowd, tournament); `docs/plan.md`: the v1 plan and its Session log.
+- `docs/decisions.md`: settled decisions (v1 scope, match rules, difficulty 1–9, controls, screens, art, repo layout, audio, characters).
 - `docs/open-questions.md`: small details for the plan to settle, each with a default.
 - `docs/controls.md`: keyboard and gamepad layout and the pitfalls to avoid.
 - `docs/art-style-guide.md`: art direction (640×360 pixel art), sprite list, SpriteCook + Aseprite pipeline.
