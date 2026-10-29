@@ -1,5 +1,20 @@
 {
   "version": 1,
-  "_about": "The game's sound files (A6), by the names in js/audio/sounds.js. Each: { \"files\": [\"<name>-1.mp3\", ...], \"level\": 0-1 }. A name not listed plays its placeholder made in code (js/audio/synth.js).",
-  "sounds": {}
+  "_about": "The game's sound files (A6), by the names in js/audio/sounds.js. Each: { \"files\": [\"<name>-1.mp3\", ...], \"level\": 0-1 }. A name not listed plays its placeholder made in code (js/audio/synth.js). Files are made by audio/make-sfx.mjs; sources and licence in audio/elevenlabs-manifest.md. Levels are A6's starting mix, from each file's measured loudness, for S14 to tune.",
+  "sounds": {
+    "hit-hard": { "files": ["hit-1.mp3"], "level": 1 },
+    "hit-soft": { "files": ["hit-soft-1.mp3"], "level": 0.5 },
+    "hit-dive": { "files": ["hit-dive-1.mp3"], "level": 0.89 },
+    "serve": { "files": ["serve-1.mp3"], "level": 0.89 },
+    "swing-hard": { "files": ["swing-1.mp3"], "level": 0.19 },
+    "swing-soft": { "files": ["swing-1.mp3"], "level": 0.12 },
+    "wall-front": { "files": ["bounce-1.mp3"], "level": 0.92 },
+    "wall-side": { "files": ["bounce-1.mp3"], "level": 0.73 },
+    "floor": { "files": ["bounce-1.mp3"], "level": 0.82 },
+    "glass": { "files": ["glass-1.mp3"], "level": 0.22 },
+    "tin": { "files": ["tin-1.mp3"], "level": 0.68 },
+    "out": { "files": ["out-1.mp3"], "level": 0.38 },
+    "point": { "files": ["point-1.mp3"], "level": 0.4 },
+    "game": { "files": ["game-1.mp3"], "level": 0.25 }
+  }
 }

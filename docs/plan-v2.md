@@ -12,9 +12,9 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 
 **Audio**
 - [x] **S13** Sound engine: the first-input rule, the Effects level, pause and mute; placeholder sounds made in code
-- [ ] **P1** Prerequisites for sound *(you)*: ElevenLabs Starter plan, its connector in Claude Code (can be done any time before A6)
-- [ ] 💳 Approve ElevenLabs spend for A6 *(you)*
-- [ ] **A6** Sound effects: generate, trim and level the game's sounds
+- [x] **P1** Prerequisites for sound *(you)*: ElevenLabs Starter plan, its connector in Claude Code (can be done any time before A6) *(done 2026-10-26 with the free plan instead, the owner's call: `decisions.md`, "Audio")*
+- [x] 💳 Approve ElevenLabs spend for A6 *(you)*
+- [x] **A6** Sound effects: generate, trim and level the game's sounds
 - [ ] **S14** Sound effects in the game: hooking them up, variety and the mix
 - [ ] **CP-G** Play-test 5 *(you)*: sound
 
@@ -227,6 +227,8 @@ No game code changes. Never use or describe the arcade's sounds. Finish with "Do
 **Goal:** the real sounds play at the right moments, sound varied and sit well together.
 
 **In scope**
+- *(added in A6)* **Show the ElevenLabs credit** ("Sound effects made with ElevenLabs (elevenlabs.io)"): the free plan asks for it wherever its sounds are used (`decisions.md`, "Audio"). Somewhere a player can find it, such as the options screen; the owner picks the place.
+- *(added in A6)* `sfx.json` shares one file between several names (`bounce-1.mp3` for the floor and both walls, `swing-1.mp3` for both swings), and the loader fetches and decodes it once per name: load each file once.
 - Check every A6 sound plays on its event; fix timing so a hit sounds on its contact frame (measure the delay from the event to the sound starting, with `?sound=log`'s timestamps and the audio context's output latency).
 - **Variety:** pick a variant at random (not the same twice in a row); vary the pitch a little (about ±3%) for hits and bounces.
 - **By what happened:** HARD louder than SOFT; a bounce's volume follows the ball's speed; a ball near the back wall a little quieter than one at the front wall; optional left/right pan by the ball's x (small, about ±0.3).
@@ -241,7 +243,7 @@ No game code changes. Never use or describe the arcade's sounds. Finish with "Do
 
 **Done when…**
 - `npm test` and `npm run typecheck` pass.
-- Every sound in `sfx.json` has been logged playing on its event in a real match (`?sound=log`), and no placeholder is left in use.
+- Every sound in `sfx.json` has been logged playing on its event in a real match (`?sound=log`), and no placeholder is left in use *(A6: except `dive` and the four menu sounds, which the owner left as placeholders for now)*.
 - The measured delay from a hit event to its sound is recorded in the Session log.
 - No console errors from a cold load to the result screen. Version 1.14.0.
 
@@ -622,3 +624,12 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Download size:** about 23 KB more (the three audio modules and `sfx.json`), no sound files yet.
   - **For the owner (CP-G or before A6):** listen to a match: does each sound land on its moment, and is 7 the right default? Should the iPhone's silent switch mute the game (now: yes; `navigator.audioSession.type = 'playback'` would play through it)?
   - **Next:** P1 (the owner: ElevenLabs Starter and its connector), then A6.
+- 2026-10-29, A6 (sound effects; no version change): 11 MP3s in `assets/sfx/` (76 KB in all) and `sfx.json` naming 14 of S13's 19 sounds; sources, prompts and costs in `audio/elevenlabs-manifest.md`; `audio/make-sfx.mjs` rebuilds the files from the raw takes in `audio/elevenlabs/a6/`.
+  - **Plan: ElevenLabs Free, not Starter** (the owner's call: a non-commercial school project; `decisions.md`, "Audio"). The free plan asks for a credit line, **"Sound effects made with ElevenLabs (elevenlabs.io)"**, wherever the sounds are used. A6 can't change game code, so the credit isn't in the game yet: S14 adds it (added to S14's list). Until then the sounds would play on the live site without it, so the owner decides whether to push A6 now or with S14.
+  - **Credits: 222 of the 1,000 approved** (first round 28 takes, 172; hit round 5 takes, 50). The price is 10 credits per second of sound, far under the plan's 200 per effect. The free plan runs only two or three generations at a time and sometimes refuses one as busy (nothing is charged); waiting a minute works.
+  - **Picked by the owner:** the soft swing (both swings), floor A (the floor and both walls), glass A, tin B, out, point B, game B; every first-round hit was rejected (most were nearly silent, peaks of -40 to -49 dB). A second hit round without the word "squash" (racquetball and tennis wording, 1 s, prompt influence 0.7) gave H4, a soft hollow pock, which makes all four hit sounds: HARD as it is, SOFT pitched to 0.94, serve 1.04, the dive's hit 0.97.
+  - **Skipped for now (placeholders stay):** the four menu sounds and `dive`. Shoe squeaks were generated once and rejected; they have no event anyway.
+  - **Cleanup:** each file starts on its attack (decoded in Chrome, every file's attack is within its first millisecond, so the MP3 encoder delay is handled), tail cut and faded over 40 ms, mono, -1 dB peak, 96 kbit/s. `sfx.json`'s levels are a starting mix from each file's measured loudness (HARD 1, SOFT 0.5, the jingles 0.25–0.4, the swing 0.12–0.19), for S14 and CP-G to tune.
+  - **Checked in the browser** (Claude can't hear them, so by what the code reports): all 11 files load with no console warnings; with `?sound=log&dev`, playing every name logs 14 from files and only `dive` and the menu sounds as placeholders. **By tests:** `npm test` (the S13 test that expected an empty `sfx.json` now checks that every listed file is shipped) and `npm run typecheck` pass.
+  - **For S14:** the credit line; the loader fetches a shared file once per name (load it once); vary the shared bounce by surface (pitch) so the walls and the floor don't sound identical; the glass was raised 32 dB from a quiet take, so listen for hiss.
+  - **Next:** S14 (the sounds in the game).

@@ -4,3 +4,7 @@ node_modules/
 # Never commit original game material (ROM, MAME, extracted art/sound). It lives outside this repo.
 *.zip
 *.rom
+
+# Sound review pages and their level-matched copies (rebuilt by audio/elevenlabs/*/make-listen.mjs)
+audio/elevenlabs/*/listen.html
+audio/elevenlabs/*/preview/

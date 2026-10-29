@@ -170,7 +170,9 @@ test('sfx.json: known names with files are taken; the rest are warnings, not err
   assert.deepEqual(parseSfx(null).sounds.size, 0);
   const shipped = parseSfx(JSON.parse(fs.readFileSync('public/hogg-squash/assets/sfx/sfx.json', 'utf8')));
   assert.deepEqual(shipped.warnings, []);
-  assert.equal(shipped.sounds.size, 0, 'no files yet (A6): every sound is its placeholder');
+  for (const [name, { files }] of shipped.sounds) {
+    for (const f of files) assert.ok(fs.existsSync(`public/hogg-squash/assets/sfx/${f}`), `${name}: ${f} is shipped`);
+  }
 });
 
 test('options: the Effects item, Off or 1–10; pause: Sound on/off; both report a sound change', () => {
