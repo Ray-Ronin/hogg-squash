@@ -11,15 +11,19 @@
 //  - Sounds: each name (sounds.js) plays from a file listed in assets/sfx/sfx.json (A6), else from its placeholder
 //    made in code (synth.js), so the game works before the files exist. sfx.json:
 //      { "version": 1, "sounds": { "<name>": { "files": ["<name>-1.mp3", …], "level": 0.8 }, … } }
-//    files are relative to sfx.json; more than one is variants (one picked at random each time, with Math.random:
-//    never the sim's random numbers); level (0–1, default 1) is that sound's share of the Effects level.
-//  - ?sound=log logs every sound by name as it plays (and the context's state changes), for checking without
-//    hearing; ?sound=off starts with Sound off (main.js).
+//    files are relative to sfx.json, each fetched and decoded once however many names share it (S14); more than one
+//    is variants (one picked at random each time, never the same twice running, with Math.random: never the sim's
+//    random numbers); level (0–1, default 1) is that sound's share of the Effects level; rate (default 1, S14) its
+//    pitch, so names sharing a file can differ. The racket's and the ball's pitch also varies ±3% each time, and
+//    play takes a volume and a pan from sounds.js's cuesFor. A limiter on the master stops many sounds clipping.
+//  - ?sound=log logs every sound by name as it plays (its volume, pan, rate, the audio clock, page time, the
+//    context's latency and when it's heard, where the browser says), and the context's state changes, for checking
+//    without hearing; ?sound=off starts with Sound off (main.js).
 //  - iPhone: iOS mutes Web Audio while the silent switch is on. That's respected (nothing is changed); setting
 //    navigator.audioSession.type = 'playback' would make the game sound through it (the owner's call).
 // The settings (the Effects level and Sound on/off) are saved in localStorage beside the keys, with the same handling
 // of blocked storage as input/keymap.js. Everything up to createAudio is plain functions, so Node can test it.
-import { SOUNDS } from './sounds.js';
+import { SOUNDS, SHAPE, VARIED, pickVariant } from './sounds.js';
 import { RECIPES, render } from './synth.js';
 
 /** @typedef {import('./sounds.js').SoundName} SoundName */
@@ -78,14 +82,20 @@ export function saveSound(store, s) {
   }
 }
 
+/** A sound's playback rate in sfx.json (its pitch: 1 as recorded) is kept within this. */
+export const RATE_RANGE = { MIN: 0.5, MAX: 2 };
+
+/** One sound in sfx.json, checked. @typedef {{ files: string[], level: number, rate: number }} SfxEntry */
+
 /**
- * sfx.json's sounds, checked: known names only, each with at least one file name (strings) and a level of 0–1.
- * Problems are returned as warnings, not thrown.
+ * sfx.json's sounds, checked: known names only, each with at least one file name (strings), a level of 0–1 and a
+ * rate (S14: its pitch, so one file can sound different for two names; default 1). Problems are returned as
+ * warnings, not thrown.
  * @param {unknown} json
- * @returns {{ sounds: Map<SoundName, { files: string[], level: number }>, warnings: string[] }}
+ * @returns {{ sounds: Map<SoundName, SfxEntry>, warnings: string[] }}
  */
 export function parseSfx(json) {
-  /** @type {Map<SoundName, { files: string[], level: number }>} */
+  /** @type {Map<SoundName, SfxEntry>} */
   const sounds = new Map();
   const warnings = [];
   const list = /** @type {any} */ (json)?.sounds;
@@ -95,7 +105,9 @@ export function parseSfx(json) {
     const files = Array.isArray(entry?.files) ? entry.files.filter((/** @type {unknown} */ f) => typeof f === 'string' && f) : [];
     if (!files.length) { warnings.push(`"${name}" lists no files`); continue; }
     const level = typeof entry.level === 'number' && Number.isFinite(entry.level) ? Math.min(1, Math.max(0, entry.level)) : 1;
-    sounds.set(/** @type {SoundName} */ (name), { files, level });
+    const rate = typeof entry.rate === 'number' && Number.isFinite(entry.rate)
+      ? Math.min(RATE_RANGE.MAX, Math.max(RATE_RANGE.MIN, entry.rate)) : 1;
+    sounds.set(/** @type {SoundName} */ (name), { files, level, rate });
   }
   return { sounds, warnings };
 }
@@ -106,7 +118,8 @@ export function parseSfx(json) {
  * @property {() => boolean} unlocked  a key, click or tap has happened, so the browser allows sound
  * @property {(on: boolean) => void} setActive  whether sound should be running now (see above)
  * @property {(level: number) => void} setLevel  the Effects level, 0–10
- * @property {(name: SoundName) => void} play
+ * @property {(name: SoundName, cue?: { gain?: number, pan?: number }) => void} play  a sound, with a volume (0–1, on
+ *   top of its level) and a pan (-1 … 1) from sounds.js's cuesFor
  * @property {(url: string) => Promise<void>} load  read sfx.json and decode its files (placeholders stay for the rest)
  */
 
@@ -121,22 +134,30 @@ export function createAudio({ log = false, target = window } = {}) {
   const ctx = AC ? new AC({ latencyHint: 'interactive' }) : null;
   // resuming: a resume is under way (a sound started now plays as it starts, so the first key is heard)
   let unlocked = false, want = true, busy = false, resuming = false;
-  /** The sounds by name: their buffers (variants), level, and whether from a file.
-   * @type {Map<SoundName, { buffers: AudioBuffer[], level: number, file: boolean }>} */
+  /** The sounds by name: their buffers (variants), level, rate, whether from a file, and the variant played last.
+   * @type {Map<SoundName, { buffers: AudioBuffer[], level: number, rate: number, file: boolean, last: number }>} */
   const bank = new Map();
   /** @type {GainNode | null} */
   let effects = null;
 
   if (ctx) {
+    // a limiter after the master, so many sounds at once don't clip: it only acts near full scale
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -3;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.002;
+    limiter.release.value = 0.1;
+    limiter.connect(ctx.destination);
     const master = ctx.createGain();
-    master.connect(ctx.destination);
+    master.connect(limiter);
     effects = ctx.createGain();
     effects.connect(master);
     for (const name of SOUNDS) {
       const samples = render(RECIPES[name], ctx.sampleRate);
       const buf = ctx.createBuffer(1, samples.length, ctx.sampleRate);
       buf.getChannelData(0).set(samples);
-      bank.set(name, { buffers: [buf], level: 1, file: false });
+      bank.set(name, { buffers: [buf], level: 1, rate: 1, file: false, last: -1 });
     }
     if (log) ctx.addEventListener('statechange', () => console.log(`[sound] context ${ctx.state}`));
     // the first key, click or tap (and any later one) may start it; a gamepad can't
@@ -166,21 +187,37 @@ export function createAudio({ log = false, target = window } = {}) {
     setLevel(level) {
       if (effects) effects.gain.value = levelGain(level);
     },
-    play(name) {
+    play(name, { gain = 1, pan = 0 } = {}) {
       const s = bank.get(name);
       if (!ctx || !effects || !s || !want || !unlocked || (ctx.state !== 'running' && !resuming)) return;
       const src = ctx.createBufferSource();
-      src.buffer = s.buffers[Math.floor(Math.random() * s.buffers.length)];
+      s.last = pickVariant(s.buffers.length, s.last, Math.random);
+      src.buffer = s.buffers[s.last];
+      const vary = VARIED.has(name) ? 1 + SHAPE.PITCH * (2 * Math.random() - 1) : 1;
+      src.playbackRate.value = s.rate * vary;
       let out = /** @type {AudioNode} */ (effects);
-      if (s.level !== 1) {
+      if (pan && ctx.createStereoPanner) {
+        const p = ctx.createStereoPanner();
+        p.pan.value = Math.max(-1, Math.min(1, pan));
+        p.connect(out);
+        out = p;
+      }
+      if (s.level * gain !== 1) {
         const g = ctx.createGain();
-        g.gain.value = s.level;
-        g.connect(effects);
+        g.gain.value = s.level * gain;
+        g.connect(out);
         out = g;
       }
       src.connect(out);
       src.start();
-      if (log) console.log(`[sound] ${name}${s.file ? '' : ' (placeholder)'} at ${ctx.currentTime.toFixed(3)} s, ${performance.now().toFixed(0)} ms`);
+      if (log) {
+        // when it's heard: the output timestamp maps the audio clock to page time (where the browser has it)
+        const now = performance.now(), ts = ctx.getOutputTimestamp?.();
+        const heard = ts?.contextTime !== undefined && ts.performanceTime
+          ? `, heard in ${(ts.performanceTime + (ctx.currentTime - ts.contextTime) * 1000 - now).toFixed(0)} ms` : '';
+        const lat = `latency ${((ctx.baseLatency ?? 0) * 1000).toFixed(0)}+${((/** @type {any} */ (ctx).outputLatency ?? 0) * 1000).toFixed(0)} ms`;
+        console.log(`[sound] ${name}${s.file ? '' : ' (placeholder)'} x${(s.level * gain).toFixed(2)} pan ${pan.toFixed(2)} rate ${(s.rate * vary).toFixed(3)} at ${ctx.currentTime.toFixed(3)} s, ${now.toFixed(0)} ms (${lat}${heard})`);
+      }
     },
     async load(url) {
       if (!ctx) return;
@@ -195,14 +232,27 @@ export function createAudio({ log = false, target = window } = {}) {
       }
       const { sounds, warnings } = parseSfx(json);
       for (const w of warnings) console.warn(`Hogg Squash: ${url}: ${w}`);
-      await Promise.all([...sounds].map(async ([name, { files, level }]) => {
-        try {
-          const buffers = await Promise.all(files.map(async f => {
-            const res = await fetch(new URL(f, new URL(url, location.href)));
+      // each file is fetched and decoded once, however many names share it (one bounce for the floor and both walls)
+      /** @type {Map<string, Promise<AudioBuffer>>} */
+      const decoded = new Map();
+      const base = new URL(url, location.href);
+      /** @param {string} f */
+      const fileBuffer = f => {
+        const href = new URL(f, base).href;
+        let p = decoded.get(href);
+        if (!p) {
+          p = fetch(href).then(async res => {
             if (!res.ok) throw new Error(`${f}: ${res.status}`);
             return ctx.decodeAudioData(await res.arrayBuffer());
-          }));
-          bank.set(name, { buffers, level, file: true });
+          });
+          decoded.set(href, p);
+        }
+        return p;
+      };
+      await Promise.all([...sounds].map(async ([name, { files, level, rate }]) => {
+        try {
+          const buffers = await Promise.all(files.map(fileBuffer));
+          bank.set(name, { buffers, level, rate, file: true, last: -1 });
         } catch (e) {
           console.warn(`Hogg Squash: the sound "${name}" did not load, so its placeholder plays.`, e);
         }

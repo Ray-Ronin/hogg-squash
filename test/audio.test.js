@@ -2,14 +2,15 @@
 // event type, ball collision and rally reason; a whole CPU-against-CPU match only ever asks for known sounds, in the
 // order they happen; every sound has a placeholder made in code; the menus' sounds; the Effects level and Sound
 // on/off saved, loaded and clamped (with localStorage mocked: working, empty, damaged, blocked and full); sfx.json
-// checked; and the options' Effects item and the pause menu's Sound on/off.
+// checked (with S14's rate); the cues shaped by the ball's speed, depth and x; variants never twice running; and the
+// options' Effects item and the pause menu's Sound on/off.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { SOUNDS, EVENT_SOUNDS, BALL_SOUNDS, REASON_SOUNDS, soundsFor, menuSound, menuState }
-  from '../public/hogg-squash/js/audio/sounds.js';
+import { SOUNDS, EVENT_SOUNDS, BALL_SOUNDS, REASON_SOUNDS, soundsFor, menuSound, menuState, cuesFor, speedGain,
+  pickVariant, SHAPE, VARIED } from '../public/hogg-squash/js/audio/sounds.js';
 import { RECIPES, render } from '../public/hogg-squash/js/audio/synth.js';
-import { SOUND_KEY, SOUND_LEVELS, clampLevel, levelGain, defaultSound, loadSound, saveSound, parseSfx }
+import { SOUND_KEY, SOUND_LEVELS, clampLevel, levelGain, defaultSound, loadSound, saveSound, parseSfx, RATE_RANGE }
   from '../public/hogg-squash/js/audio/audio.js';
 import { makeUi, navigate, toggleSound, optionLabels, pauseLabels, EFFECTS_SEL, OPTION_ITEMS, KEY_CELLS }
   from '../public/hogg-squash/js/ui/screens.js';
@@ -99,6 +100,44 @@ test('a whole CPU match: only known sounds; each hit before its front wall; a po
   }
 });
 
+test('cues: a bounce follows the ball speed and depth; a small pan by x; hits pan by the ball; jingles centred', () => {
+  const ball = (ev, x, z) => ({ type: 'ball', ev, x, y: 30, z });
+  const at = (events, speed, x = 0, z = 0) => cuesFor(events, { x, z, speed });
+  const [slow] = at([ball('floor', 0, 60)], 1), [fast] = at([ball('floor', 0, 60)], 4);
+  assert.ok(fast.gain > slow.gain, 'faster is louder');
+  assert.equal(speedGain(8), 1, 'never above 1');
+  assert.equal(speedGain(0), SHAPE.SPEED.MIN, 'never below MIN');
+  const [front] = at([ball('frontWall', 0, 0)], 3), [back] = at([ball('backGlass', 0, 183)], 3);
+  assert.ok(Math.abs(back.gain / front.gain - (1 - SHAPE.BACK)) < 1e-9, 'the back wall a little quieter');
+  assert.equal(at([ball('sideWall', -144, 50)], 3)[0].pan, -SHAPE.PAN, 'left wall: left');
+  assert.equal(at([ball('sideWall', 144, 50)], 3)[0].pan, SHAPE.PAN);
+  const [hit] = at([{ type: 'hit', kind: 'swing', button: 'hard', reach: true }], 3, 72, 150);
+  assert.deepEqual(hit, { name: 'hit-hard', gain: 1, pan: SHAPE.PAN / 2 }, 'a hit pans by the ball, full volume');
+  // the tin keeps the front wall's place and speed; the jingle is centred at full level
+  const end = at([ball('frontWall', 144, 0), { type: 'rally', reason: 'tin', winner: 0, scores: [1, 0] }], 4, 0, 30);
+  assert.deepEqual(end.map(c => c.name), ['tin', 'point']);
+  assert.equal(end[0].pan, SHAPE.PAN);
+  assert.deepEqual(end[1], { name: 'point', gain: 1, pan: 0 });
+  // cues and plain names agree
+  for (const e of EXAMPLES) assert.deepEqual(at([/** @type {any} */ (e)], 2).map(c => c.name), soundsFor([/** @type {any} */ (e)]));
+  for (const n of VARIED) assert.ok(SOUNDS.includes(n) && !n.startsWith('menu-') && n !== 'point' && n !== 'game', n);
+});
+
+test('variants: one at random, never the same twice running; one file is always itself', () => {
+  assert.equal(pickVariant(1, 0, Math.random), 0);
+  let last = -1;
+  const seen = new Set();
+  for (let i = 0; i < 300; i++) {
+    const v = pickVariant(3, last, Math.random);
+    assert.ok(v >= 0 && v < 3 && v !== last, `${v} after ${last}`);
+    seen.add(v);
+    last = v;
+  }
+  assert.equal(seen.size, 3, 'every variant is used');
+  assert.equal(pickVariant(2, 0, () => 0.99), 1);
+  assert.equal(pickVariant(2, 1, () => 0), 0);
+});
+
 test('every sound has a placeholder made in code: short, not silent, never clipping', () => {
   assert.deepEqual(Object.keys(RECIPES).sort(), [...SOUNDS].sort());
   for (const name of SOUNDS) {
@@ -163,9 +202,14 @@ test('sfx.json: known names with files are taken; the rest are warnings, not err
     serve: { files: [] },
   } });
   assert.deepEqual([...sounds.keys()].sort(), ['floor', 'hit-hard', 'tin']);
-  assert.deepEqual(sounds.get('hit-hard'), { files: ['hit-hard-1.mp3', 'hit-hard-2.mp3'], level: 0.8 });
+  assert.deepEqual(sounds.get('hit-hard'), { files: ['hit-hard-1.mp3', 'hit-hard-2.mp3'], level: 0.8, rate: 1 });
   assert.equal(sounds.get('floor')?.level, 1, 'level defaults to 1');
   assert.equal(sounds.get('tin')?.level, 1, 'and is clamped to 0–1');
+  const rates = parseSfx({ sounds: { floor: { files: ['a.mp3'], rate: 0.9 }, tin: { files: ['b.mp3'], rate: 9 },
+    out: { files: ['c.mp3'], rate: 'fast' } } }).sounds;
+  assert.equal(rates.get('floor')?.rate, 0.9);
+  assert.equal(rates.get('tin')?.rate, RATE_RANGE.MAX, 'a rate is clamped');
+  assert.equal(rates.get('out')?.rate, 1, 'and defaults to 1');
   assert.equal(warnings.length, 2);
   assert.deepEqual(parseSfx(null).sounds.size, 0);
   const shipped = parseSfx(JSON.parse(fs.readFileSync('public/hogg-squash/assets/sfx/sfx.json', 'utf8')));

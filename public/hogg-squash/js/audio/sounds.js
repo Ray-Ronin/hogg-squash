@@ -12,6 +12,8 @@
 //    (the tin's clang instead of the front wall, a buzz for out)
 //  rally: the callout's jingle ('point'); match: GAME's jingle ('game'). Nothing else happens in the point freeze.
 //  newRally, rematch: silent
+// cuesFor (S14) adds how each sound is shaped by what happened: a bounce's volume by the ball's speed and depth, a
+// small pan by the ball's x; audio.js varies the pitch of VARIED and picks the variant (pickVariant).
 
 /** Every sound name: the placeholders in synth.js and the names sfx.json uses. */
 export const SOUNDS = /** @type {const} */ ([
@@ -45,26 +47,94 @@ export const EVENT_SOUNDS = {
 };
 
 /**
- * The sounds one sim step's events make, in order.
+ * The sounds one sim step's events make, in order, each with the event that made it (for cuesFor).
  * @param {WorldEvent[]} events
- * @returns {SoundName[]}
+ * @returns {{ name: SoundName, e: WorldEvent }[]}
  */
-export function soundsFor(events) {
-  /** @type {SoundName[]} */
+function picked(events) {
+  /** @type {{ name: SoundName, e: WorldEvent }[]} */
   const out = [];
   let ballAt = -1;                                     // where this step's ball sound is (a rally reason replaces it)
   for (const e of events) {
     if (e.type === 'rally') {
       const r = REASON_SOUNDS[e.reason];
-      if (r && ballAt >= 0) out[ballAt] = r;
-      else if (r) out.push(r);
+      if (r && ballAt >= 0) out[ballAt] = { name: r, e: out[ballAt].e };   // the tin or out, where the ball was
+      else if (r) out.push({ name: r, e });
     }
     const name = EVENT_SOUNDS[e.type](e);
     if (!name) continue;
     if (e.type === 'ball') ballAt = out.length;
-    out.push(name);
+    out.push({ name, e });
   }
   return out;
+}
+
+/**
+ * The sounds one sim step's events make, in order.
+ * @param {WorldEvent[]} events
+ * @returns {SoundName[]}
+ */
+export function soundsFor(events) {
+  return picked(events).map(p => p.name);
+}
+
+/**
+ * How a sound is shaped by what happened (S14):
+ *  SPEED: a ball sound's volume follows the ball's speed (court units per frame, after the bounce): the square root
+ *    of speed / FULL, down to MIN. Measured in CPU matches: front wall about 1.9–4.1 (median 2.6), floor 1.8–3.4,
+ *    side walls up to 6.8, the back glass mostly about 1.4.
+ *  BACK: a ball sound at the back wall (z = COURT.BACK) is this much quieter than one at the front wall (z = 0).
+ *  PAN: left / right by the ball's x, ±PAN at the side walls. Hits and the serve pan by the ball too; the jingles
+ *    (and a tin or out that came without a ball sound) sit in the middle at full level.
+ *  PITCH: the VARIED names' pitch varies by up to ±PITCH each time (audio.js picks it, with Math.random).
+ * HARD is louder than SOFT by their levels in sfx.json.
+ */
+export const SHAPE = { SPEED: { FULL: 4, MIN: 0.25 }, BACK: 0.25, PAN: 0.3, PITCH: 0.03 };
+
+/** The sounds whose pitch varies: the racket and the ball. @type {ReadonlySet<SoundName>} */
+export const VARIED = new Set(/** @type {SoundName[]} */ ([
+  'hit-hard', 'hit-soft', 'hit-dive', 'serve', 'wall-front', 'wall-side', 'floor', 'glass', 'tin',
+]));
+
+/** One sound to play: its name, a volume (0–1, on top of its sfx.json level) and a pan (-1 left … 1 right).
+ * @typedef {{ name: SoundName, gain: number, pan: number }} Cue */
+
+/** The court's half-width and depth (COURT.SIDE, COURT.BACK in squash-physics.js). */
+const SIDE = 144, BACK = 183;
+
+/** @param {number} v @param {number} lo @param {number} hi */
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+/** A ball sound's volume for the ball's speed (units per frame). @param {number} speed */
+export const speedGain = speed => Math.max(SHAPE.SPEED.MIN, Math.sqrt(clamp(speed / SHAPE.SPEED.FULL, 0, 1)));
+
+/**
+ * The sounds one sim step's events make, shaped by where and how fast the ball was.
+ * @param {WorldEvent[]} events
+ * @param {{ x: number, z: number, speed: number }} ball  the ball after the step (court units; speed per frame):
+ *   the speed for the ball sounds, the place for the racket's (a ball event has its own place)
+ * @returns {Cue[]}
+ */
+export function cuesFor(events, ball) {
+  return picked(events).map(({ name, e }) => {
+    if (e.type === 'rally' || e.type === 'match') return { name, gain: 1, pan: 0 };
+    const at = e.type === 'ball' ? e : ball;
+    const pan = SHAPE.PAN * clamp(at.x / SIDE, -1, 1);
+    if (e.type !== 'ball') return { name, gain: 1, pan };
+    return { name, gain: speedGain(ball.speed) * (1 - SHAPE.BACK * clamp(e.z / BACK, 0, 1)), pan };
+  });
+}
+
+/**
+ * Which variant to play: one at random, never the one played last time (when there are two or more).
+ * @param {number} count  how many variants @param {number} last  the last one played (-1: none)
+ * @param {() => number} random  0 ≤ r < 1 (Math.random: never the sim's random numbers)
+ */
+export function pickVariant(count, last, random) {
+  if (count < 2) return 0;
+  if (last < 0 || last >= count) return Math.floor(random() * count);
+  const i = Math.floor(random() * (count - 1));       // one of the others
+  return i >= last ? i + 1 : i;
 }
 
 /** The part of the screens' state a menu sound depends on. @typedef {{ screen: string, sel: number, listen: boolean }} MenuState */

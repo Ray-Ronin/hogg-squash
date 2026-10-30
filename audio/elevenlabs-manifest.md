@@ -6,7 +6,7 @@ No sound from the arcade game (or any recording of it) was uploaded, described o
 ## Plan and licence
 
 - **Plan: ElevenLabs Free** (the owner's call, 2026-10-29; `docs/decisions.md`, "Audio"). Hogg Squash is a non-commercial school project that is never sold, so the free plan's non-commercial terms fit.
-- **Credit required:** the free plan asks for a credit to ElevenLabs wherever its sounds are used. Credit line to show: **"Sound effects made with ElevenLabs (elevenlabs.io)"**. Where it's shown: see `docs/plan-v2.md`, A6's Session log entry.
+- **Credit required:** the free plan asks for a credit to ElevenLabs wherever its sounds are used. Credit line to show: **"Sound effects made with ElevenLabs (elevenlabs.io)"**. Where it's shown (S14, the owner's call): in THE TOOLS on the build page (https://roninray.com/build/), which names and links ElevenLabs as the maker of the game's sounds; not inside the game for now.
 - **Generated through** the ElevenLabs connector in Claude Code (Flows), model **Sound Effects v2** (`eleven_text_to_sound_v2`), all in one flow (`n1PkhXxE06BBn4HJh3o3`). Price: 10 credits per second of sound (a 0.5 s take is 5).
 
 ## A6: the game's sound effects

@@ -18,6 +18,7 @@
 // note on the title). The world's events and the menu moves play sounds by name; the Effects level is on the options
 // screen, Sound on/off in the pause menu and on the speaker button (both saved), and the sound stops while paused,
 // blurred, hidden or turned sideways. ?sound=log logs every sound as it plays; ?sound=off starts with Sound off.
+// A ball sound's volume follows the ball's speed and depth, and every sound pans a little by the ball's x (S14).
 // Debug keys: ` toggles the debug overlay, ' steps the court view:
 // the painted court, the code court (with the code ball and effects), and the painted court with the code's lines
 // over it in cyan, for checking that they match.
@@ -63,7 +64,8 @@ import { drawDebug, createShotLog } from './render/debug.js';
 import { makeUi, navigate, captureKey, matchOver, autoPause, assignInMatch, showsMatch, setTouch, tap, toggleSound,
   DEFAULT_SETTINGS, SITE_URL } from './ui/screens.js';
 import { createAudio, loadSound, saveSound } from './audio/audio.js';
-import { soundsFor, menuSound, menuState } from './audio/sounds.js';
+import { cuesFor, menuSound, menuState } from './audio/sounds.js';
+import { FP } from './squash-physics.js';
 import { clearHits, hitAt } from './ui/menu.js';
 import { drawTitle, useTitle } from './ui/title.js';
 import { drawOptions } from './ui/options.js';
@@ -422,7 +424,10 @@ function simStep() {
         events.some(e => e.type === 'serveSwing' && e.side === i) ? world.ball : null));
   }
   effects.add(events, world);
-  for (const s of soundsFor(events)) audio.play(s);
+  const b = world.ball;                                 // read only: how fast and where, for the sounds' shape
+  for (const c of cuesFor(events, { x: b.x / FP, z: b.z / FP, speed: Math.hypot(b.vx, b.vy, b.vz) / FP })) {
+    audio.play(c.name, c);
+  }
   shotLog.add(events, world);
 }
 
