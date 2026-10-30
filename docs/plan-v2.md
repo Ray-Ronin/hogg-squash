@@ -16,7 +16,14 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [x] 💳 Approve ElevenLabs spend for A6 *(you)*
 - [x] **A6** Sound effects: generate, trim and level the game's sounds
 - [x] **S14** Sound effects in the game: hooking them up, variety and the mix
-- [ ] **CP-G** Play-test 5 *(you)*: sound
+- [x] **CP-G** Play-test 5 *(you)*: sound
+- [ ] 💳 Approve ElevenLabs spend for A6b *(you)*: up to 300 credits
+- [ ] **A6b** Sound effects round 2: the dive, the menu sounds and a shoe squeak *(added at CP-G)*
+- [ ] **S14b** Sound fix-up: a louder miss whoosh, Effects default 5, shoe squeaks, A6b's files *(added at CP-G)*
+- [ ] **P2** Prerequisites for music *(you)*: the full ElevenLabs connector, and the free plan's terms for music *(added at CP-G)*
+- [ ] 💳 Approve ElevenLabs spend for A6c *(you)* (A6c gives the price first)
+- [ ] **A6c** Menu music: a few short loops in different styles; the owner picks one *(added at CP-G)*
+- [ ] **S14c** Music in the game: a Music level, the loop on the title and menus only *(added at CP-G)*
 
 **More characters**
 - [ ] 💳 Approve SpriteCook spend for A7 *(you)*
@@ -177,7 +184,7 @@ Go through "Done when", tick S13, add a Session log entry, and commit. Ask me be
 
 ## Sound sessions: shared rules
 
-These apply to A6 and to A11's crowd sounds:
+These apply to A6, A6b, A6c (music) and to A11's crowd sounds:
 - **No game code changes.** Sound sessions only touch `audio/`, `public/hogg-squash/assets/sfx/` (files and `sfx.json`) and docs. Reading the code (the event table in `js/audio/sounds.js`) is fine.
 - **Spend gate:** step 1 is to check the ElevenLabs balance (or ask the owner to read it from the website) and list every planned generation with its prompt, length and estimated credits (200 per effect on the 2026-10-23 price list), plus a total. Then **stop and wait for the owner's OK**. If an extra generation is needed beyond the approved list, ask again.
 - **IP:** prompts describe real squash in our own words. Never upload, describe or name the arcade's sounds or Gaelco.
@@ -274,6 +281,137 @@ Read docs/plan-v2.md and its Session log. My CP-G feedback: <notes>.
 Add the fixes as a small fix-up session (S14b) before A7 if needed, tick CP-G, and commit. Don't push.
 ```
 
+**Outcome (2026-10-29):** done by interview; the answers are in the Session log. The timing, the surfaces, the speed shaping, HARD against SOFT and the jingles were all right. The fixes went into A6b and S14b, and the owner asked for menu music, so P2, A6c and S14c were added too, all before A7.
+
+## A6b: Sound effects round 2 (the dive, the menu sounds, a shoe squeak) *(added at CP-G)*
+
+**Goal:** real files for the sounds that still play A6's placeholders, plus a shoe squeak.
+
+**In scope**
+- Follow "Sound sessions: shared rules". The spend gate's estimate uses A6's measured price (10 credits a second of sound, not 200 an effect). **Approve up to 300 credits.**
+- Generate two or three prompts each, then variants only of the ones the owner likes:
+  - `dive`: the player's dive and landing on a wooden court floor (about 1 s);
+  - the four menu sounds, `menu-move`, `menu-ok`, `menu-back` and `menu-key` (short, 0.5 s or less). **The owner hasn't picked a style:** offer two or three styles (for example soft UI clicks, retro bleeps, sporty taps), let them listen, then generate the set in the style they pick. If none wins, the in-code bleeps stay;
+  - `squeak`: a basketball-style shoe squeak on a wooden court from a sharp stop (short, under 0.5 s; two or three variants so it doesn't repeat). A6's squeak take was rejected, so try new wording. Name it `squeak` in `sfx.json` (S14b adds the event; until then the file loads and goes unused).
+- Clean, level against A6's set (the squeak quieter than a SOFT hit), export to `assets/sfx/`, and add the names to `sfx.json`.
+
+**Not in scope:** game code (the squeak's event is S14b), music (A6c), re-doing A6's sounds.
+
+**Depends on:** CP-G, and the 💳 approval line above it.
+
+**Main files:** `audio/elevenlabs-manifest.md`, `audio/elevenlabs/a6b/`, `audio/make-sfx.mjs`, `public/hogg-squash/assets/sfx/`, `sfx.json`.
+
+**Done when…**
+- The owner has heard and picked each sound, or chosen to keep its placeholder.
+- The manifest shows the credits spent within the approved 300.
+- `npm test` passes, and the game loads the new files with no console errors (`?sound=log&dev`: `dive` and any picked menu sounds now come from files).
+
+**Starter prompt**
+```text
+We're doing Session A6b of docs/plan-v2.md: "Sound effects round 2 (the dive, the menu sounds, a shoe squeak)".
+Read CLAUDE.md, docs/decisions.md ("Audio") and docs/plan-v2.md ("Sound sessions: shared rules", A6's and CP-G's Session log entries, A6b). Check CP-G is ticked.
+First check my ElevenLabs balance and list the planned generations with prompts and estimated credits (up to 300 approved), then STOP and wait for my OK before generating anything. For the menu sounds, let me hear a few styles before making the set.
+No game code changes. Never use or describe the arcade's sounds. Finish with "Done when", tick A6b, add a Session log entry, and commit. Ask me before pushing.
+```
+
+## S14b: Sound fix-up (CP-G's notes) *(added at CP-G)*
+
+**Goal:** CP-G's fixes: the miss whoosh heard, a quieter default and shoe squeaks.
+
+**In scope**
+- **The miss whoosh about twice as loud:** both swings' levels in `sfx.json` roughly doubled (from 0.12–0.19 to about 0.25–0.38), still well under a hit. The owner found it too quiet on every device and for both HARD and SOFT.
+- **Effects default 5** (was 7). Players who already saved a level keep it; only the default changes. Update the test that checks the default.
+- **Shoe squeaks:** a new sound name `squeak`, with a placeholder in `synth.js` until A6b's file is listed. It plays **when a player stops sharply or changes direction just before hitting**, on **about one such hit in three** (at random), quieter than the hit and panned by the player's x. Work it out in `main.js` from the players' positions over the last few frames before the hit (read only; nothing in `js/sim/`); keep the rule pure and tested in `sounds.js`, like `cuesFor`. A CPU hit counts the same as a human one.
+- Check A6b's files (the dive and any picked menu sounds) play on their events with `?sound=log`.
+
+**Not in scope:** new sound files (A6b), music (A6c, S14c), changing the speed shaping, the jingles' levels or the timing (all judged right at CP-G), any change to `js/sim/`.
+
+**Depends on:** A6b.
+
+**Main files:** `public/hogg-squash/assets/sfx/sfx.json`, `js/audio/sounds.js`, `js/audio/audio.js`, `js/audio/synth.js`, `js/main.js`, tests.
+
+**Done when…**
+- `npm test` and `npm run typecheck` pass.
+- A real match with `?sound=log` logs `squeak` on some hits that follow a sharp stop and never on hits from a steady run, along with the louder swings and A6b's sounds.
+- A first visit (no saved settings) shows Effects 5.
+- No console errors from a cold load to the result screen. Version 1.14.1.
+
+**You check or decide at the end:** listen to a match: is the whoosh right now, and do the squeaks come often enough without getting repetitive?
+
+**Starter prompt**
+```text
+We're doing Session S14b of docs/plan-v2.md: "Sound fix-up (CP-G's notes)".
+Read CLAUDE.md, docs/decisions.md ("Audio") and docs/plan-v2.md (rules, the S14, CP-G and A6b Session log entries, S14b). Check A6b is ticked.
+Build S14b's "In scope" list only. Nothing in js/sim/.
+Go through "Done when", tick S14b, add a Session log entry, and commit. Ask me before pushing.
+```
+
+## P2: Prerequisites for music *(you)* *(added at CP-G)*
+
+- **Add the full ElevenLabs connector.** The connector used for A6 is the restricted one, with no music. Add the full one as a custom connector at `https://api.elevenlabs.io/v1/mcp` and check that a music tool appears in a new Claude Code session.
+- **Check the free plan's terms for music** on the ElevenLabs website: whether music made on the free plan can be used in a non-commercial game the way the sound effects are, and whether it needs the same credit (the build page's THE TOOLS already names ElevenLabs). If it can't, say so at the start of A6c, which then stops: either a paid month or no music (the owner's call).
+
+## A6c: Menu music *(added at CP-G)*
+
+**Goal:** one short music loop for the title and menus, picked by ear from a few styles.
+
+**In scope**
+- Follow "Sound sessions: shared rules" (music instead of effects; no game code). **Spend gate:** first find the music price (credits a second or a minute) and list the planned generations with their lengths and estimated credits, then stop for the owner's 💳 OK.
+- **The owner wants to hear options first:** generate three or four short candidates in different styles (for example upbeat chiptune, a sporty school pep-band feel, chill lo-fi; all original, nothing like the arcade's music), about 20–30 s each. Then generate a final take or two in the picked style.
+- Make it loop without a click or a gap (cut on a bar line, check the join), level it well under the effects so it never covers the menu sounds, and export it (stereo is fine; keep it under about 1 MB). Put it next to the effects, under a name S14c reads (for example `music-menu` in `sfx.json` or its own small list; S14c's call).
+- Record every generation in `audio/elevenlabs-manifest.md`, with the plan and the terms P2 found.
+
+**Not in scope:** game code (S14c), music during play, voice, crowd sounds.
+
+**Depends on:** P2, S14b, and the 💳 approval line above it.
+
+**Main files:** `audio/elevenlabs-manifest.md`, `audio/elevenlabs/a6c/`, `public/hogg-squash/assets/sfx/`.
+
+**Done when…**
+- The owner has heard the styles and picked a loop, which loops cleanly.
+- The manifest shows the credits spent within the approved amount, and the licence terms.
+- `npm test` passes, and the page still works because nothing in its code changed.
+
+**Starter prompt**
+```text
+We're doing Session A6c of docs/plan-v2.md: "Menu music".
+Read CLAUDE.md, docs/decisions.md ("Audio") and docs/plan-v2.md ("Sound sessions: shared rules", P2, A6c). Check P2 and S14b are ticked and the full ElevenLabs connector has a music tool.
+First find the music price and list the planned generations with estimated credits, then STOP and wait for my OK before generating anything. Let me hear a few styles before the final take.
+No game code changes. Never use or describe the arcade's music. Finish with "Done when", tick A6c, add a Session log entry, and commit. Ask me before pushing.
+```
+
+## S14c: Music in the game (a Music level, title and menus only) *(added at CP-G)*
+
+**Goal:** A6c's loop plays on the title and menus, never in play, with its own level.
+
+**In scope**
+- **A Music level** on the Options screen (Off, 1–10, the same square curve as Effects; the default set by ear, for the owner to judge), saved with the other sound settings in `localStorage`. The options panel gets a sixth button; re-space it as S13 did.
+- **Where it plays:** the title, the options and the other menus, looping. It fades out (about half a second) when a match starts and is silent in play, the pause menu and the point freeze. It comes back on the title after a match.
+- It obeys everything the effects do: silent until the first key, click or tap; suspended with the window blurred or the tab hidden; Sound on/off and the speaker button mute it too. Load it after the effects so it never delays the first sound.
+- A music bus beside the effects (its own gain before the limiter), so the Effects and Music levels are separate.
+- `?sound=log` logs the music starting, fading and stopping.
+
+**Not in scope:** music in play, more tracks, new sound files, any change to `js/sim/`.
+
+**Depends on:** A6c.
+
+**Main files:** `js/audio/audio.js`, `js/audio/sounds.js`, the options screen, `js/main.js`, `assets/sfx/`, tests.
+
+**Done when…**
+- `npm test` and `npm run typecheck` pass (new tests: the Music level's saving and clamping, the music on the right screens only).
+- In the browser with `?sound=log`: the music starts with the first key on the title, fades out at the serve, is silent through the match and comes back on the title; Music Off, Sound off and the speaker button each silence it.
+- No console errors from a cold load to the result screen. Version 1.14.2.
+
+**You check or decide at the end:** listen on a computer and a phone: is the Music level's default right, and does the loop get tiring on the menus? Then go to A7.
+
+**Starter prompt**
+```text
+We're doing Session S14c of docs/plan-v2.md: "Music in the game (a Music level, title and menus only)".
+Read CLAUDE.md, docs/decisions.md ("Audio") and docs/plan-v2.md (rules, the S14b and A6c Session log entries, S14c). Check A6c is ticked.
+Build S14c's "In scope" list only. Nothing in js/sim/.
+Go through "Done when", tick S14c, add a Session log entry, and commit. Ask me before pushing.
+```
+
 ---
 
 ## Art sessions: shared rules
@@ -308,7 +446,7 @@ Carried over from `docs/plan.md` ("Art sessions: shared rules"), for A7–A12:
 
 **Not in scope:** animations (A8–A10), game code, the select screen (S15).
 
-**Depends on:** CP-G, and the 💳 approval line above it.
+**Depends on:** S14c (CP-G's fix-ups and the menu music come first), and the 💳 approval line above it.
 
 **Main files:** `art/character/`, `art/mockups/a7-roster.png`, `art/spritecook-manifest.md`, `art/palette/hogg-squash.gpl`, `docs/art-style-guide.md`.
 
@@ -322,7 +460,7 @@ Carried over from `docs/plan.md` ("Art sessions: shared rules"), for A7–A12:
 **Starter prompt**
 ```text
 We're doing Session A7 of docs/plan-v2.md: "Art: concepts for three new characters".
-Read CLAUDE.md, docs/decisions.md ("Characters"), docs/art-style-guide.md, docs/theme.md and docs/plan-v2.md ("Art sessions: shared rules" + A7). Check CP-G is ticked.
+Read CLAUDE.md, docs/decisions.md ("Characters"), docs/art-style-guide.md, docs/theme.md and docs/plan-v2.md ("Art sessions: shared rules" + A7). Check S14c is ticked.
 First agree the three characters with me, then check my SpriteCook balance and list the planned generations with estimated credits, then STOP and wait for my OK before generating anything.
 No game code changes. Never use ROM/MAME/Gaelco images as references. Finish with "Done when", tick A7, add a Session log entry, and commit. Ask me before pushing.
 ```
@@ -640,3 +778,11 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Download size:** about 87 KB for the sound code and files together (the files unchanged from A6, 76 KB).
   - **For the owner (CP-G):** is the mix right (the bounce pitches, the glass's hiss, HARD against SOFT, the jingles' levels), is the speed shaping too strong or too weak, and is 7 the right default? Push A6 and S14 together (the credit is now on the build page).
   - **Next:** CP-G (play-test 5: sound).
+- 2026-10-29, CP-G (play-test 5: sound; planning only, no version change): the owner played 1P and 2P on a computer and a phone, then answered CP-G's questions in an interview.
+  - **Right as it is:** every hit, bounce and jingle sounds right and on time; the 40–53 ms delay can't be heard. The floor, walls and glass sound different enough; no hiss on the glass. The speed shaping, HARD against SOFT and the jingles' levels are right. Sound on/off and the speaker button work. The gamepad-only note makes sense.
+  - **To fix (S14b):** the miss whoosh is too quiet on every device, for both swings: about double. The default Effects level goes from 7 to 5.
+  - **To add:** real files for the dive and the four menu sounds (the owner wants to hear menu styles before picking), and shoe squeaks on about one hit in three when the player stops sharply just before hitting (A6b makes the files, up to 300 credits; S14b adds the event).
+  - **Settled:** the iPhone's silent switch keeps muting the game.
+  - **Music: yes, on the title and menus only**, never in play (changes "effects only"). The owner wants to hear a few styles first. The ElevenLabs connector used so far is the restricted one with no music, so P2 (the owner) adds the full connector and checks the free plan's terms for music; A6c makes the loop and S14c puts it in with a Music level.
+  - **Plan changes:** P2, A6b, S14b, A6c and S14c added with their 💳 lines, all before A7; A7 now depends on S14c. Decisions in `decisions.md`, "Audio".
+  - **Next:** 💳 approve A6b's spend, then A6b.
