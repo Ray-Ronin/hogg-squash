@@ -17,8 +17,8 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [x] **A6** Sound effects: generate, trim and level the game's sounds
 - [x] **S14** Sound effects in the game: hooking them up, variety and the mix
 - [x] **CP-G** Play-test 5 *(you)*: sound
-- [ ] 💳 Approve ElevenLabs spend for A6b *(you)*: up to 300 credits
-- [ ] **A6b** Sound effects round 2: the dive, the menu sounds and a shoe squeak *(added at CP-G)*
+- [x] 💳 Approve ElevenLabs spend for A6b *(you)*: up to 300 credits
+- [x] **A6b** Sound effects round 2: the dive, the menu sounds and a shoe squeak *(added at CP-G)*
 - [ ] **S14b** Sound fix-up: a louder miss whoosh, Effects default 5, shoe squeaks, A6b's files *(added at CP-G)*
 - [ ] **P2** Prerequisites for music *(you)*: the full ElevenLabs connector, and the free plan's terms for music *(added at CP-G)*
 - [ ] 💳 Approve ElevenLabs spend for A6c *(you)* (A6c gives the price first)
@@ -292,7 +292,7 @@ Add the fixes as a small fix-up session (S14b) before A7 if needed, tick CP-G, a
 - Generate two or three prompts each, then variants only of the ones the owner likes:
   - `dive`: the player's dive and landing on a wooden court floor (about 1 s);
   - the four menu sounds, `menu-move`, `menu-ok`, `menu-back` and `menu-key` (short, 0.5 s or less). **The owner hasn't picked a style:** offer two or three styles (for example soft UI clicks, retro bleeps, sporty taps), let them listen, then generate the set in the style they pick. If none wins, the in-code bleeps stay;
-  - `squeak`: a basketball-style shoe squeak on a wooden court from a sharp stop (short, under 0.5 s; two or three variants so it doesn't repeat). A6's squeak take was rejected, so try new wording. Name it `squeak` in `sfx.json` (S14b adds the event; until then the file loads and goes unused).
+  - `squeak`: a basketball-style shoe squeak on a wooden court from a sharp stop (short, under 0.5 s; two or three variants so it doesn't repeat). A6's squeak take was rejected, so try new wording. Name it `squeak` in `sfx.json` (S14b adds the event; until then the file loads and goes unused). *(As done: the game warns about a name it doesn't know and a test forbids warnings, so A6b shipped the files and S14b lists them; see the Session log.)*
 - Clean, level against A6's set (the squeak quieter than a SOFT hit), export to `assets/sfx/`, and add the names to `sfx.json`.
 
 **Not in scope:** game code (the squeak's event is S14b), music (A6c), re-doing A6's sounds.
@@ -321,7 +321,7 @@ No game code changes. Never use or describe the arcade's sounds. Finish with "Do
 **In scope**
 - **The miss whoosh about twice as loud:** both swings' levels in `sfx.json` roughly doubled (from 0.12–0.19 to about 0.25–0.38), still well under a hit. The owner found it too quiet on every device and for both HARD and SOFT.
 - **Effects default 5** (was 7). Players who already saved a level keep it; only the default changes. Update the test that checks the default.
-- **Shoe squeaks:** a new sound name `squeak`, with a placeholder in `synth.js` until A6b's file is listed. It plays **when a player stops sharply or changes direction just before hitting**, on **about one such hit in three** (at random), quieter than the hit and panned by the player's x. Work it out in `main.js` from the players' positions over the last few frames before the hit (read only; nothing in `js/sim/`); keep the rule pure and tested in `sounds.js`, like `cuesFor`. A CPU hit counts the same as a human one.
+- **Shoe squeaks:** a new sound name `squeak`, with a placeholder in `synth.js`, and A6b's two files listed in `sfx.json` once the name exists: `"squeak": { "files": ["squeak-1.mp3", "squeak-2.mp3"], "level": 0.18 }` (A6b shipped them unlisted; 0.18 puts them about 3 dB under a SOFT hit, before any extra quieting S14b's cue adds). It plays **when a player stops sharply or changes direction just before hitting**, on **about one such hit in three** (at random), quieter than the hit and panned by the player's x. Work it out in `main.js` from the players' positions over the last few frames before the hit (read only; nothing in `js/sim/`); keep the rule pure and tested in `sounds.js`, like `cuesFor`. A CPU hit counts the same as a human one.
 - Check A6b's files (the dive and any picked menu sounds) play on their events with `?sound=log`.
 
 **Not in scope:** new sound files (A6b), music (A6c, S14c), changing the speed shaping, the jingles' levels or the timing (all judged right at CP-G), any change to `js/sim/`.
@@ -786,3 +786,12 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Music: yes, on the title and menus only**, never in play (changes "effects only"). The owner wants to hear a few styles first. The ElevenLabs connector used so far is the restricted one with no music, so P2 (the owner) adds the full connector and checks the free plan's terms for music; A6c makes the loop and S14c puts it in with a Music level.
   - **Plan changes:** P2, A6b, S14b, A6c and S14c added with their 💳 lines, all before A7; A7 now depends on S14c. Decisions in `decisions.md`, "Audio".
   - **Next:** 💳 approve A6b's spend, then A6b.
+- 2026-10-30, A6b (sound effects round 2; no version change): real files for the dive and the four menu sounds, and two shoe-squeak variants for S14b; sources, prompts and costs in `audio/elevenlabs-manifest.md` (raw takes in `audio/elevenlabs/a6b/`, listening page from its `make-listen.mjs`); `audio/make-sfx.mjs` now builds A6's and A6b's files from either folder (A6's 11 files rebuilt byte for byte).
+  - **Credits: 80 of the 300 approved** (round 1, 10 takes: 75; round 2, one more squeak: 5). The connector can't read the balance; about 9,700 left by A6's figure. The free plan refused three takes as busy (nothing charged), so the squeak has two variants, not three.
+  - **Picked by the owner:** dive D2 (a padded thud with a short slide); squeak S1 (a basketball sneaker's chirp from a hard stop), two takes; menus **style A, soft UI clicks**: A6's four untried takes, so no new menu generations were needed. Styles B (retro bleeps) and C (string tick and whistle) were heard and not picked, and the owner first chose to keep the in-code bleeps before changing to style A.
+  - **Cleanup** as A6 (start on the attack, 40 ms fade, mono, -1 dB peak, 96 kbit/s). The dive is 0.40 s; the squeaks 0.30 s each (their raw takes peak over full scale, so they're brought down); menu-move is cut from a steady 0.4 s tone to 0.2 s so fast scrolling doesn't pile up. Sound files 124 KB in all (was 76).
+  - **`sfx.json`:** `dive` 0.6, `menu-move` 0.25, `menu-ok` 0.3, `menu-back` 0.35, `menu-key` 0.4 (peaks near the in-code bleeps'). **`squeak` isn't listed:** the game warns about a name it doesn't know and a test forbids warnings, so the plan's "list it and it goes unused" wasn't possible without code; S14b adds the name and the line (in S14b's list, level 0.18, under a SOFT hit).
+  - **Checked in the browser** (Claude can't hear them, so by `?sound=log&dev`): every file loads (200), `dive` and the four menu sounds log from files, not placeholders, and there are no console warnings or errors; the squeak files aren't fetched yet. `npm test` (156 unit tests) and `npm run typecheck` pass. **Not checked:** the new levels by ear in a match.
+  - **Fixed in passing:** A6's `make-listen.mjs` read every take's peak as 0 dB (ffmpeg's report was only read when it failed), so its "very quiet" warning never showed; both listening scripts now read it.
+  - **For S14b / the owner:** the menu and dive levels are a starting guess; tune by ear with the squeak's.
+  - **Next:** S14b (sound fix-up).

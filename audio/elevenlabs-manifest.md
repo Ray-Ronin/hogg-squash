@@ -82,4 +82,52 @@ Made by `audio/make-sfx.mjs` from the picks above. Pitch changes are by resampli
 | `point-1.mp3` | point B `vTdF…` | 1.00 | 0 | 0.500 s | point |
 | `game-1.mp3` | game B `Ol33…` | 1.00 | 0 | 1.373 s | game |
 
-Still placeholders made in code: `dive` and the four menu sounds (`menu-move`, `menu-ok`, `menu-back`, `menu-key`).
+A6b added its files below (see "A6b"). Every sound name now has a file; `squeak` waits for S14b to add the name.
+
+## A6b: the dive, the menu sounds and a shoe squeak
+
+**Approved spend:** up to 300 credits (2026-10-29); round 1 about 80 approved by the owner, round 2 (variants of the picks) in the listed plan.
+**Spent: 80 credits** (round 1, 10 takes: 75; round 2, 1 take: 5). The connector has no balance tool; by A6's figure about 9,700 are left.
+**Plan:** ElevenLabs Free, as A6 (non-commercial, credit on the build page). Same flow (`n1PkhXxE06BBn4HJh3o3`), Sound Effects v2.
+
+Raw takes are kept in `audio/elevenlabs/a6b/` as `<sound>_<prompt>_<generation id>.mp3`. `make-listen.mjs` there builds the review page (it also plays A6's four menu takes as style A).
+Settings for every take: prompt influence 0.7, loop off, one take per prompt; length as listed. No arcade sound was uploaded, described or named.
+
+### Round 1 (2026-10-30): 10 takes, 75 credits
+
+| Sound | Prompt | Length | Generation | Credits | Picked |
+|---|---|---|---|---|---|
+| dive D1 | A basketball player diving onto a hardwood gym floor: a heavy body thump and a short skid of sneakers and clothing on the wood, single fall, close-mic, no voice | 1.0 s | `7XO1UeFTciBEwwcP5cew` | 10 | no |
+| dive D2 | A person throwing themselves sideways and landing hard on a sprung wooden sports floor, dull padded thud with a brief rubbery slide, no voice | 1.0 s | `CaSVEN3YluIkenaAqJTk` | 10 | **yes** |
+| dive D3 | A quick lunge and fall onto a varnished wooden court: knee and hip hitting the floor with a firm thud, then a short scrape of a shoe, dry indoor recording, no voice | 1.0 s | `obqrLM1UxkVMKgz6oTRv` | 10 | no |
+| squeak S1 | A single basketball sneaker squeak on a polished hardwood gym floor from a sudden hard stop, short sharp rubber chirp | 0.5 s (1.0 s planned; the node was left at 0.5 s from the price check) | `7Pxl1iKqowZeKIbBJvQl` | 5 | **yes** |
+| squeak S2 | Close-mic high-pitched squeal of a rubber sole skidding to a stop on a varnished indoor court floor, one quick squeak, no footsteps | 1.0 s | `NbaBeBPAy5PZgI7JpuM8` | 10 | no |
+| squeak S3 | A gym shoe gripping and twisting on a glossy wooden floor, bright squeaky chirp, single short squeak, indoor sports hall | 1.0 s | `VxhV81Q9rVkFGr96S3Zj` | 10 | no |
+| menu-move B | A tiny retro 8-bit menu blip, one short square-wave beep, clean video game UI sound | 0.5 s | `bSVxU6NirgoDpbdGxyOk` | 5 | no (style B) |
+| menu-ok B | A retro 8-bit confirm sound, two quick rising square-wave beeps, bright video game UI sound | 0.5 s | `UltLO3p1FkYmgi2fGRwi` | 5 | no (style B) |
+| menu-move C | A very light fingertip tap on tight racket strings, a tiny dry plucky tick, close-mic | 0.5 s | `VLyypMc7IW4TFAxQVDZY` | 5 | no (style C) |
+| menu-ok C | A single short referee whistle chirp, bright and quick, under half a second | 0.5 s | `gAtB21SaUGMaxbNqplSI` | 5 | no (style C) |
+
+Menu style A (soft UI clicks) was A6's four first-round menu takes, never heard before A6b; the owner picked it, so no new menu takes were made.
+
+### Round 2 (2026-10-30): 1 take, 5 credits
+
+| Sound | Prompt | Length | Generation | Credits | Picked |
+|---|---|---|---|---|---|
+| squeak S1 | as S1 above | 0.5 s | `H0X6xUTC4qY769aQdFyx` | 5 | **yes: the second variant** |
+
+A third S1 take was refused three times as busy (free plan; nothing charged), so the squeak has two variants.
+
+### A6b's files (`public/hogg-squash/assets/sfx/`)
+
+Made by `audio/make-sfx.mjs` like A6's. 124 KB for all the sound files.
+
+| File | From | Start in the raw take | Length | Used by (`sfx.json`) |
+|---|---|---|---|---|
+| `dive-1.mp3` | dive D2 `CaSV…` | 0 | 0.403 s | dive (level 0.6) |
+| `squeak-1.mp3` | squeak S1 `7Pxl…` (raw peak +3.3 dB) | 0 | 0.300 s | not listed yet: S14b adds `squeak` (level 0.18) |
+| `squeak-2.mp3` | squeak S1 `H0X6…` (raw peak +1.5 dB) | 0 | 0.300 s | not listed yet: S14b adds `squeak` |
+| `menu-move-1.mp3` | menu-move A `JV8u…` (A6) | 0 | 0.200 s (cut from a 0.4 s tone) | menu-move (0.25) |
+| `menu-ok-1.mp3` | menu-ok A `PxbZ…` (A6) | 0 | 0.341 s | menu-ok (0.3) |
+| `menu-back-1.mp3` | menu-back A `q6Rk…` (A6) | 0 | 0.250 s | menu-back (0.35) |
+| `menu-key-1.mp3` | menu-key A `VluK…` (A6) | 0 | 0.300 s | menu-key (0.4) |

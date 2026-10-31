@@ -1,4 +1,4 @@
-// A6: builds the game's sound files from the picked ElevenLabs takes (audio/elevenlabs/a6/), into
+// A6, A6b: builds the game's sound files from the picked ElevenLabs takes (audio/elevenlabs/<session>/), into
 // public/hogg-squash/assets/sfx/. Run from the repo root: node audio/make-sfx.mjs <path to ffmpeg.exe>
 // Each output: decoded to mono 44.1 kHz (optionally pitched by resampling, which also shortens or lengthens it),
 // cut to start on its attack (the first sample within ATTACK_DB of its peak, so a hit sounds on its frame),
@@ -10,24 +10,32 @@ import { statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const FFMPEG = process.argv[2] ?? 'ffmpeg';
-const SRC = 'audio/elevenlabs/a6';
+const SRC = 'audio/elevenlabs';
 const OUT = 'public/hogg-squash/assets/sfx';
 const RATE = 44100;
 const ATTACK_DB = -24, TAIL_DB = -45, PEAK_DB = -1, FADE_IN = 0.001, FADE_OUT = 0.04;
 
 /** @type {{ out: string, src: string, pitch?: number, maxLen: number }[]} */
 const OUTPUTS = [
-  { out: 'hit-1.mp3', src: 'hit-r2_H4_jSKxIh9SYiD4ROxbRwTe.mp3', maxLen: 0.25 },
-  { out: 'hit-soft-1.mp3', src: 'hit-r2_H4_jSKxIh9SYiD4ROxbRwTe.mp3', pitch: 0.94, maxLen: 0.25 },
-  { out: 'serve-1.mp3', src: 'hit-r2_H4_jSKxIh9SYiD4ROxbRwTe.mp3', pitch: 1.04, maxLen: 0.25 },
-  { out: 'hit-dive-1.mp3', src: 'hit-r2_H4_jSKxIh9SYiD4ROxbRwTe.mp3', pitch: 0.97, maxLen: 0.25 },
-  { out: 'swing-1.mp3', src: 'swing-soft_A_bBL7Z7vSC1WuVRBI58q9.mp3', maxLen: 0.4 },
-  { out: 'bounce-1.mp3', src: 'floor_A_dUJyFKb75zlCoAUk7wM5.mp3', maxLen: 0.2 },
-  { out: 'glass-1.mp3', src: 'glass_A_mofdFWbqJkFT6VTGRKxk.mp3', maxLen: 0.25 },
-  { out: 'tin-1.mp3', src: 'tin_B_Wjn49hNHQLprprDstS4x.mp3', maxLen: 0.35 },
-  { out: 'out-1.mp3', src: 'out_A_2EqXxAjOaLoe0E7wgGX6.mp3', maxLen: 0.42 },
-  { out: 'point-1.mp3', src: 'point_B_vTdFYit140ISv3Halfbf.mp3', maxLen: 0.5 },
-  { out: 'game-1.mp3', src: 'game_B_Ol33WoMRPVk3ebJKuXBB.mp3', maxLen: 1.48 },
+  { out: 'hit-1.mp3', src: 'a6/hit-r2_H4_jSKxIh9SYiD4ROxbRwTe.mp3', maxLen: 0.25 },
+  { out: 'hit-soft-1.mp3', src: 'a6/hit-r2_H4_jSKxIh9SYiD4ROxbRwTe.mp3', pitch: 0.94, maxLen: 0.25 },
+  { out: 'serve-1.mp3', src: 'a6/hit-r2_H4_jSKxIh9SYiD4ROxbRwTe.mp3', pitch: 1.04, maxLen: 0.25 },
+  { out: 'hit-dive-1.mp3', src: 'a6/hit-r2_H4_jSKxIh9SYiD4ROxbRwTe.mp3', pitch: 0.97, maxLen: 0.25 },
+  { out: 'swing-1.mp3', src: 'a6/swing-soft_A_bBL7Z7vSC1WuVRBI58q9.mp3', maxLen: 0.4 },
+  { out: 'bounce-1.mp3', src: 'a6/floor_A_dUJyFKb75zlCoAUk7wM5.mp3', maxLen: 0.2 },
+  { out: 'glass-1.mp3', src: 'a6/glass_A_mofdFWbqJkFT6VTGRKxk.mp3', maxLen: 0.25 },
+  { out: 'tin-1.mp3', src: 'a6/tin_B_Wjn49hNHQLprprDstS4x.mp3', maxLen: 0.35 },
+  { out: 'out-1.mp3', src: 'a6/out_A_2EqXxAjOaLoe0E7wgGX6.mp3', maxLen: 0.42 },
+  { out: 'point-1.mp3', src: 'a6/point_B_vTdFYit140ISv3Halfbf.mp3', maxLen: 0.5 },
+  { out: 'game-1.mp3', src: 'a6/game_B_Ol33WoMRPVk3ebJKuXBB.mp3', maxLen: 1.48 },
+  // A6b: the dive, two squeak variants (no sfx.json entry until S14b adds the name), the menus (A6's style-A takes)
+  { out: 'dive-1.mp3', src: 'a6b/dive_D2_CaSVEN3YluIkenaAqJTk.mp3', maxLen: 0.5 },
+  { out: 'squeak-1.mp3', src: 'a6b/squeak_S1_7Pxl1iKqowZeKIbBJvQl.mp3', maxLen: 0.3 },
+  { out: 'squeak-2.mp3', src: 'a6b/squeak_S1_H0X6xUTC4qY769aQdFyx.mp3', maxLen: 0.3 },
+  { out: 'menu-move-1.mp3', src: 'a6/menu-move_A_JV8uFjQDJeM2FnuBJpOe.mp3', maxLen: 0.2 },
+  { out: 'menu-ok-1.mp3', src: 'a6/menu-ok_A_PxbZQb0MdsHZRzn7DW3e.mp3', maxLen: 0.35 },
+  { out: 'menu-back-1.mp3', src: 'a6/menu-back_A_q6RkGVf4GrXrL8Lf2TJa.mp3', maxLen: 0.25 },
+  { out: 'menu-key-1.mp3', src: 'a6/menu-key_A_VluKJdqFtXU1MLDfcQgk.mp3', maxLen: 0.3 },
 ];
 
 const db = (/** @type {number} */ x) => 20 * Math.log10(x);
@@ -60,6 +68,6 @@ for (const o of OUTPUTS) {
 
   execFileSync(FFMPEG, ['-v', 'error', '-y', '-f', 'f32le', '-ar', String(RATE), '-ac', '1', '-i', '-',
     '-c:a', 'libmp3lame', '-b:a', '96k', join(OUT, o.out)], { input: Buffer.from(cut.buffer) });
-  console.log(`${o.out.padEnd(16)} from ${o.src.split('_')[0].padEnd(10)} start ${(start / RATE).toFixed(3)} s, length ${(cut.length / RATE).toFixed(3)} s,`
+  console.log(`${o.out.padEnd(16)} from ${o.src.split('/')[1].split('_')[0].padEnd(10)} start ${(start / RATE).toFixed(3)} s, length ${(cut.length / RATE).toFixed(3)} s,`
     + ` raw peak ${db(peak).toFixed(1)} dB, RMS ${db(Math.sqrt(sq / cut.length)).toFixed(1)} dB, ${statSync(join(OUT, o.out)).size} bytes`);
 }

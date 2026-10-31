@@ -4,7 +4,7 @@
 // Run from the repo root: node audio/elevenlabs/a6/make-listen.mjs <path to ffmpeg.exe>
 // Then serve this folder (e.g. npx http-server audio/elevenlabs/a6 -p 8090) and open /listen.html:
 // opened as a file, the browser may not play the audio.
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,9 +17,8 @@ const ORDER = ['hit-r2', 'hit-hard', 'hit-soft', 'hit-dive', 'serve', 'swing-har
 
 /** A file's peak in dB, from ffmpeg's volumedetect. @param {string} f */
 function peakOf(f) {
-  let log = '';
-  try { execFileSync(FFMPEG, ['-hide_banner', '-i', f, '-af', 'volumedetect', '-f', 'null', '-'], { stdio: ['ignore', 'ignore', 'pipe'] }); }
-  catch (e) { log = String(/** @type {any} */ (e).stderr); }
+  // spawnSync, not execFileSync: ffmpeg prints volumedetect on stderr even when it succeeds (fixed in A6b).
+  const log = spawnSync(FFMPEG, ['-hide_banner', '-i', f, '-af', 'volumedetect', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
   return Number(/max_volume: (-?[\d.]+)/.exec(log)?.[1] ?? 0);
 }
 
