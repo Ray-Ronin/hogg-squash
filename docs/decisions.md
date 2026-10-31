@@ -247,7 +247,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
   - **The miss whoosh about twice as loud** (it was too quiet everywhere); **Effects default 5** (players' saved levels are kept). Both in S14b.
   - **Real files for the dive and the menu sounds** (A6b; the owner picks the menu style by ear, or keeps the in-code bleeps).
   - **Shoe squeaks: only when a player stops sharply or changes direction just before a hit, on about one such hit in three**, quieter than the hit. Worked out from the players' movement outside the sim (S14b).
-  - **A6b's picks (2026-10-30):** the menus are **soft UI clicks** (A6's untried style-A takes; retro bleeps and sporty taps were heard and not picked); a dive file; two shoe-squeak variants, shipped but not listed in `sfx.json` until S14b adds the `squeak` name (an unknown name is a console warning, and a test forbids warnings).
+  - **A6b's picks (2026-10-30):** the menus are **retro 8-bit bleeps** (style B; soft UI clicks and sporty taps were heard and not picked), each file the whole take; a dive file; two shoe-squeak variants, shipped but not listed in `sfx.json` until S14b adds the `squeak` name (an unknown name is a console warning, and a test forbids warnings).
   - **Music: on the title and menus only, never in play**, with its own **Music** level beside Effects. This replaces "no music" above; still no voice. The owner picks the style by ear from a few candidates (A6c). Music needs the full ElevenLabs connector (the one used for A6 has no music) and the free plan's terms checked for music (P2).
 
 ## Characters (2026-10-23)

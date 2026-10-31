@@ -25,6 +25,10 @@ const takes = [
   ...readdirSync(dir).filter(f => TAKE.test(f)).map(f => ({ f, path: join(dir, f) })),
   ...readdirSync(A6).filter(f => TAKE.test(f) && f.startsWith('menu-')).map(f => ({ f, path: join(A6, f) })),
 ].sort((a, b) => a.f.localeCompare(b.f));
+// The game's built menu files, played the same way, to check them against the style-A takes they came from.
+const SFX = join(dir, '..', '..', '..', 'public', 'hogg-squash', 'assets', 'sfx');
+const BUILT = 'the menus as built for the game (style B)';
+for (const f of readdirSync(SFX).filter(f => /^menu-\w+-1\.mp3$/.test(f)).sort()) takes.push({ f: `${f.replace('-1.mp3', '')}_game_built.mp3`, path: join(SFX, f) });
 
 mkdirSync(join(dir, 'preview'), { recursive: true });
 /** @type {Map<string, string[]>} */
@@ -33,7 +37,7 @@ const groups = new Map([['dive', []], ['squeak', []], ...Object.values(STYLES).m
 const peaks = {};
 for (const { f, path } of takes) {
   const [name, prompt] = f.split('_');
-  const group = name.startsWith('menu-') ? STYLES[/** @type {'A' | 'B' | 'C'} */ (prompt)] : name;
+  const group = prompt === 'game' ? BUILT : name.startsWith('menu-') ? STYLES[/** @type {'A' | 'B' | 'C'} */ (prompt)] : name;
   if (!groups.has(group)) groups.set(group, []);
   groups.get(group)?.push(f);
   peaks[f] = peakOf(path);

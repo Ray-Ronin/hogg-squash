@@ -28,14 +28,14 @@ const OUTPUTS = [
   { out: 'out-1.mp3', src: 'a6/out_A_2EqXxAjOaLoe0E7wgGX6.mp3', maxLen: 0.42 },
   { out: 'point-1.mp3', src: 'a6/point_B_vTdFYit140ISv3Halfbf.mp3', maxLen: 0.5 },
   { out: 'game-1.mp3', src: 'a6/game_B_Ol33WoMRPVk3ebJKuXBB.mp3', maxLen: 1.48 },
-  // A6b: the dive, two squeak variants (no sfx.json entry until S14b adds the name), the menus (A6's style-A takes)
+  // A6b: the dive, two squeak variants (no sfx.json entry until S14b adds the name), the menus (style B, retro bleeps)
   { out: 'dive-1.mp3', src: 'a6b/dive_D2_CaSVEN3YluIkenaAqJTk.mp3', maxLen: 0.5 },
   { out: 'squeak-1.mp3', src: 'a6b/squeak_S1_7Pxl1iKqowZeKIbBJvQl.mp3', maxLen: 0.3 },
   { out: 'squeak-2.mp3', src: 'a6b/squeak_S1_H0X6xUTC4qY769aQdFyx.mp3', maxLen: 0.3 },
-  { out: 'menu-move-1.mp3', src: 'a6/menu-move_A_JV8uFjQDJeM2FnuBJpOe.mp3', maxLen: 0.2 },
-  { out: 'menu-ok-1.mp3', src: 'a6/menu-ok_A_PxbZQb0MdsHZRzn7DW3e.mp3', maxLen: 0.35 },
-  { out: 'menu-back-1.mp3', src: 'a6/menu-back_A_q6RkGVf4GrXrL8Lf2TJa.mp3', maxLen: 0.25 },
-  { out: 'menu-key-1.mp3', src: 'a6/menu-key_A_VluKJdqFtXU1MLDfcQgk.mp3', maxLen: 0.3 },
+  { out: 'menu-move-1.mp3', src: 'a6b/menu-move_B_bSVxU6NirgoDpbdGxyOk.mp3', maxLen: 0.5 },
+  { out: 'menu-ok-1.mp3', src: 'a6b/menu-ok_B_UltLO3p1FkYmgi2fGRwi.mp3', maxLen: 0.5 },
+  { out: 'menu-back-1.mp3', src: 'a6b/menu-back_B_gg4qDuKf242g1JmUsLuR.mp3', maxLen: 0.5 },
+  { out: 'menu-key-1.mp3', src: 'a6b/menu-key_B_T6ZEVSaDkVJwBcAOAblR.mp3', maxLen: 0.5 },
 ];
 
 const db = (/** @type {number} */ x) => 20 * Math.log10(x);
