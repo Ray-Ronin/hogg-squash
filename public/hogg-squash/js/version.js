@@ -4,4 +4,4 @@
 // finished session; a b session or a smaller update after it bumps the last number (0.10.1, 1.13.1). 1.0.0 is the full
 // release (CP-F), 2.0.0 the v2 release. Keep package.json's "version" the same.
 
-export const VERSION = '1.14.0';
+export const VERSION = '1.14.1';

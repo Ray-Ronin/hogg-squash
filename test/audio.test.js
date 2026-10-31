@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { SOUNDS, EVENT_SOUNDS, BALL_SOUNDS, REASON_SOUNDS, soundsFor, menuSound, menuState, cuesFor, speedGain,
-  pickVariant, SHAPE, VARIED } from '../public/hogg-squash/js/audio/sounds.js';
+  pickVariant, SHAPE, VARIED, SQUEAK, sharpStop, squeakCues } from '../public/hogg-squash/js/audio/sounds.js';
 import { RECIPES, render } from '../public/hogg-squash/js/audio/synth.js';
 import { SOUND_KEY, SOUND_LEVELS, clampLevel, levelGain, defaultSound, loadSound, saveSound, parseSfx, RATE_RANGE }
   from '../public/hogg-squash/js/audio/audio.js';
@@ -166,10 +166,10 @@ test('menu sounds: a tick for a move, OK on, back back, nothing if nothing chang
 });
 
 test('the sound settings: defaults, saved and loaded, clamped; damaged, blocked or full storage never throws', () => {
-  assert.deepEqual(defaultSound(), { level: 7, on: true });
-  assert.equal(SOUND_LEVELS.DEFAULT, 7);
-  for (const [v, want] of [[0, 0], [10, 10], [15, 10], [-3, 0], [6.6, 7], ['4', 4], ['x', 7], [NaN, 7], [null, 7],
-    [undefined, 7], ['', 7]]) {
+  assert.deepEqual(defaultSound(), { level: 5, on: true }, 'S14b: 5 (was 7)');
+  assert.equal(SOUND_LEVELS.DEFAULT, 5);
+  for (const [v, want] of [[0, 0], [10, 10], [15, 10], [-3, 0], [6.6, 7], ['4', 4], ['x', 5], [NaN, 5], [null, 5],
+    [undefined, 5], ['', 5]]) {
     assert.equal(clampLevel(v), want, String(v));
   }
   assert.equal(levelGain(0), 0);
@@ -224,10 +224,10 @@ test('options: the Effects item, Off or 1–10; pause: Sound on/off; both report
   navigate(ui, 'down'); navigate(ui, 'down'); navigate(ui, 'ok');           // OPTIONS
   ui.sel = EFFECTS_SEL;
   assert.equal(OPTION_ITEMS[EFFECTS_SEL - KEY_CELLS], 'EFFECTS');
-  assert.equal(optionLabels(ui)[EFFECTS_SEL - KEY_CELLS], 'EFFECTS 7');
+  assert.equal(optionLabels(ui)[EFFECTS_SEL - KEY_CELLS], 'EFFECTS 5');
   assert.equal(navigate(ui, 'right'), 'sound');
-  assert.equal(ui.sound.level, 8);
-  for (let i = 0; i < 5; i++) navigate(ui, 'right');
+  assert.equal(ui.sound.level, 6);
+  for (let i = 0; i < 7; i++) navigate(ui, 'right');
   assert.equal(ui.sound.level, 10);
   assert.equal(navigate(ui, 'right'), null, 'stops at 10');
   assert.equal(navigate(ui, 'ok'), 'sound', 'OK steps on, wrapping to Off (for taps)');
@@ -251,4 +251,51 @@ test('options: the Effects item, Off or 1–10; pause: Sound on/off; both report
   assert.equal(m.sound.on, true);
   assert.equal(toggleSound(m), 'sound', 'the speaker button');
   assert.equal(m.sound.on, false);
+});
+
+test('shoe squeaks (S14b): only on hits off a sharp stop, about one in three, panned by the player', () => {
+  const run = (moves, still) => {                       // `moves` frames running across, then `still` frames planted
+    const t = [{ x: 0, z: 100 }];
+    for (let i = 0; i < moves; i++) t.push({ x: t[t.length - 1].x + 2.5, z: 100 });
+    for (let i = 0; i < still; i++) t.push({ ...t[t.length - 1] });
+    return t.slice(-(SQUEAK.RECENT + 1));
+  };
+  assert.equal(sharpStop(run(20, 8)), true, 'ran right up to the press, then planted for the swing');
+  assert.equal(sharpStop(run(20, 11)), false, 'stopped too long before the press');
+  assert.equal(sharpStop(run(0, 20)), false, 'standing and waiting');
+  assert.equal(sharpStop(run(20, 0)), false, 'still running');
+  const turn = [{ x: 0, z: 100 }, { x: 2.5, z: 100 }, { x: 0, z: 100 }, ...Array(8).fill({ x: 0, z: 100 })];
+  assert.equal(sharpStop(turn), true, 'a change of direction before the press');
+  const reset = [{ x: 100, z: 160 }, ...Array(9).fill({ x: 0, z: 40 })];
+  assert.equal(sharpStop(reset), false, 'put back on the spot for a new rally is no run');
+  assert.equal(sharpStop(run(1, 8)), false, 'a one-frame nudge');
+
+  const hit = side => ({ type: 'hit', side, kind: 'swing', button: 'soft', reach: true });
+  const tracks = [run(20, 8).map(p => ({ ...p, x: p.x - 144 })), run(0, 20)];
+  assert.deepEqual(squeakCues([hit(0)], tracks, () => 0), [{ name: 'squeak', gain: 1, pan: SHAPE.PAN * (50 - 144) / 144 }]);
+  assert.deepEqual(squeakCues([hit(0)], tracks, () => SQUEAK.CHANCE), [], 'not this time');
+  assert.deepEqual(squeakCues([hit(1)], tracks, () => 0), [], 'the other player was standing still');
+  assert.deepEqual(squeakCues([{ type: 'swing', side: 0, kind: 'swing', button: 'hard', reach: false }], tracks, () => 0), [],
+    'only hits');
+
+  // a CPU-against-CPU match, tracked as main.js does: some hits come off a sharp stop and some don't; with the
+  // CHANCE, about a third of the sharp-stop hits squeak and none of the others
+  const w = makeWorld({ target: 5, seed: 11, cpu: [true, true] });
+  const cpus = [makeCpu(w, 0), makeCpu(w, 1)];
+  const track = [[], []];
+  let sharp = 0, steady = 0, squeaks = 0, wrong = 0;
+  let r = 12345;
+  const random = () => ((r = (r * 1103515245 + 12345) >>> 0) / 2 ** 32);
+  for (let i = 0; i < 200000 && w.phase !== 'over'; i++) {
+    const events = stepWorld(w, cpuActions(cpus[0], w), cpuActions(cpus[1], w));
+    w.players.forEach((pl, s) => { track[s].push({ x: pl.x / 65536, z: pl.z / 65536 }); if (track[s].length > SQUEAK.RECENT + 1) track[s].shift(); });
+    const cues = squeakCues(events, track, random);
+    for (const e of events) if (e.type === 'hit') sharpStop(track[e.side]) ? sharp++ : steady++;
+    squeaks += cues.length;
+    if (cues.length && !events.some(e => e.type === 'hit' && sharpStop(track[e.side]))) wrong++;
+  }
+  assert.equal(w.phase, 'over');
+  assert.ok(sharp > 5 && steady > 5, `hits off a sharp stop ${sharp}, from standing ${steady}`);
+  assert.equal(wrong, 0, 'never a squeak without a sharp stop');
+  assert.ok(squeaks > 0 && squeaks < sharp, `${squeaks} squeaks of ${sharp}`);
 });

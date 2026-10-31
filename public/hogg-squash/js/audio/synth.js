@@ -90,6 +90,11 @@ export const RECIPES = {
   'menu-ok': notes([[E5, 0.045], [A5, 0.07]], 0.3),
   'menu-back': notes([[E5, 0.045], [A4, 0.07]], 0.3),
   'menu-key': notes([[C6, 0.04], [E6, 0.06]], 0.28),
+  // a shoe squeak (S14b): a high rubbery chirp, bending up, with a little scuff
+  squeak: [
+    { kind: 'tone', wave: 'triangle', f: 1900, f2: 2600, dur: 0.09, gain: 0.3, attack: 0.008, decay: 0.05 },
+    { kind: 'noise', lp: 5000, hp: 1500, dur: 0.05, gain: 0.15, attack: 0.005, decay: 0.02 },
+  ],
 };
 
 /** The seeded noise: a 32-bit xorshift, giving -1…1. @param {number} seed */

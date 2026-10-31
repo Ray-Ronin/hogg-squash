@@ -14,6 +14,8 @@
 //  newRally, rematch: silent
 // cuesFor (S14) adds how each sound is shaped by what happened: a bounce's volume by the ball's speed and depth, a
 // small pan by the ball's x; audio.js varies the pitch of VARIED and picks the variant (pickVariant).
+// squeakCues (S14b) adds a shoe squeak to some hits that come off a sharp stop, from the players' recent positions
+// (main.js keeps them, read only; no event in the sim).
 
 /** Every sound name: the placeholders in synth.js and the names sfx.json uses. */
 export const SOUNDS = /** @type {const} */ ([
@@ -21,6 +23,7 @@ export const SOUNDS = /** @type {const} */ ([
   'wall-front', 'wall-side', 'floor', 'glass', 'tin', 'out',
   'point', 'game',
   'menu-move', 'menu-ok', 'menu-back', 'menu-key',
+  'squeak',
 ]);
 /** @typedef {typeof SOUNDS[number]} SoundName */
 /** @typedef {import('../sim/world.js').WorldEvent} WorldEvent */
@@ -135,6 +138,57 @@ export function pickVariant(count, last, random) {
   if (last < 0 || last >= count) return Math.floor(random() * count);
   const i = Math.floor(random() * (count - 1));       // one of the others
   return i >= last ? i + 1 : i;
+}
+
+/**
+ * The shoe squeak (S14b; CP-G's call): when a player stops sharply or changes direction just before hitting, on about
+ * one such hit in three. The swing plants the player from the press's own step (SWING.CONTACT = 7 frames before the
+ * hit), so a hit always finds them still: a sharp stop is running (at least RUN court units a frame, at least FRAMES
+ * frames) in the last RECENT frames up to the hit, which reaches 4 frames back before the press. A player who had already
+ * stood still for that long (they got there early and waited) never squeaks; nor does a jump of more than JUMP a
+ * frame (the players put back on their spots for a new rally). A turn before the press counts too: they were running.
+ * The run is 2.5 a frame across and 1.25 deep (squash-physics.js's PLAYER), so RUN catches either.
+ *  CHANCE: the share of sharp-stop hits that squeak (picked with Math.random in main.js, never the sim's numbers).
+ * Panned by the player's x like the ball; its level in sfx.json keeps it under a SOFT hit.
+ */
+export const SQUEAK = { RECENT: 12, RUN: 1, FRAMES: 2, JUMP: 6, CHANCE: 1 / 3 };
+
+/** A player's place after a sim step, in court units. @typedef {{ x: number, z: number }} Spot */
+
+/**
+ * Whether a hit comes off a sharp stop: the player ran in the last few frames and is still now.
+ * @param {Spot[]} track  the player's places after each recent step, oldest first, the hit's step last
+ */
+export function sharpStop(track) {
+  const n = track.length;
+  if (n < 2) return false;
+  const step = (/** @type {number} */ i) => Math.hypot(track[i].x - track[i - 1].x, track[i].z - track[i - 1].z);
+  if (step(n - 1) >= SQUEAK.RUN) return false;              // still moving at the hit (never, while swinging)
+  let ran = 0;
+  for (let i = Math.max(1, n - SQUEAK.RECENT); i < n; i++) {
+    const d = step(i);
+    if (d >= SQUEAK.RUN && d <= SQUEAK.JUMP) ran++;
+  }
+  return ran >= SQUEAK.FRAMES;
+}
+
+/**
+ * The squeaks one sim step's hits make.
+ * @param {WorldEvent[]} events
+ * @param {Spot[][]} tracks  each player's recent places (sharpStop's track), by side
+ * @param {() => number} random  0 ≤ r < 1 (Math.random: never the sim's random numbers)
+ * @returns {Cue[]}
+ */
+export function squeakCues(events, tracks, random) {
+  /** @type {Cue[]} */
+  const out = [];
+  for (const e of events) {
+    if (e.type !== 'hit') continue;
+    const track = tracks[e.side];
+    if (!track || !sharpStop(track) || random() >= SQUEAK.CHANCE) continue;
+    out.push({ name: 'squeak', gain: 1, pan: SHAPE.PAN * clamp(track[track.length - 1].x / SIDE, -1, 1) });
+  }
+  return out;
 }
 
 /** The part of the screens' state a menu sound depends on. @typedef {{ screen: string, sel: number, listen: boolean }} MenuState */

@@ -30,8 +30,8 @@ import { RECIPES, render } from './synth.js';
 /** @typedef {import('../input/keymap.js').Store} Store */
 /** The sound settings: the Effects level (0 = Off, 1–10) and Sound on/off (the pause menu, the speaker button). @typedef {{ level: number, on: boolean }} SoundSettings */
 
-/** The Effects level's range and default (7, for the owner to judge). */
-export const SOUND_LEVELS = { MAX: 10, DEFAULT: 7 };
+/** The Effects level's range and default (5 from S14b, the owner's call at CP-G; it was 7). A saved level is kept. */
+export const SOUND_LEVELS = { MAX: 10, DEFAULT: 5 };
 /** Where the settings are kept, and the shape's version. */
 export const SOUND_KEY = 'hogg-squash.sound';
 const SOUND_VERSION = 1;

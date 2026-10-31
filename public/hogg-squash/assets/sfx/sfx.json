@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "_about": "The game's sound files (A6, A6b), by the names in js/audio/sounds.js. Each: { \"files\": [\"<name>-1.mp3\", ...], \"level\": 0-1, \"rate\": pitch (optional, 1 as recorded) }. A name not listed plays its placeholder made in code (js/audio/synth.js). A file shared by several names is loaded once. Files are made by audio/make-sfx.mjs; sources and licence in audio/elevenlabs-manifest.md. Levels: A6's starting mix, raised a little in S14 for the ball sounds (their volume now also follows the ball's speed and depth, about x0.7 for a typical bounce); the shared bounce is pitched per surface (floor lower, front wall higher). For CP-G to tune by ear. A6b added the dive and the menus (retro bleeps; levels set so the four are about equally loud); squeak-1/-2.mp3 are shipped but not listed until S14b adds the name (an unknown name is a warning).",
+  "_about": "The game's sound files (A6, A6b), by the names in js/audio/sounds.js. Each: { \"files\": [\"<name>-1.mp3\", ...], \"level\": 0-1, \"rate\": pitch (optional, 1 as recorded) }. A name not listed plays its placeholder made in code (js/audio/synth.js). A file shared by several names is loaded once. Files are made by audio/make-sfx.mjs; sources and licence in audio/elevenlabs-manifest.md. Levels: A6's starting mix, raised a little in S14 for the ball sounds (their volume now also follows the ball's speed and depth, about x0.7 for a typical bounce); the shared bounce is pitched per surface (floor lower, front wall higher). A6b added the dive, the menus (retro bleeps; levels set so the four are about equally loud) and the shoe squeak's two variants (listed in S14b with its name, about 3 dB under a SOFT hit). S14b doubled both swings (the miss whoosh was too quiet at CP-G).",
   "sounds": {
     "hit-hard": { "files": ["hit-1.mp3"], "level": 1 },
     "hit-soft": { "files": ["hit-soft-1.mp3"], "level": 0.5 },
     "hit-dive": { "files": ["hit-dive-1.mp3"], "level": 0.89 },
     "serve": { "files": ["serve-1.mp3"], "level": 0.89 },
-    "swing-hard": { "files": ["swing-1.mp3"], "level": 0.19 },
-    "swing-soft": { "files": ["swing-1.mp3"], "level": 0.12, "rate": 1.08 },
+    "swing-hard": { "files": ["swing-1.mp3"], "level": 0.38 },
+    "swing-soft": { "files": ["swing-1.mp3"], "level": 0.25, "rate": 1.08 },
     "wall-front": { "files": ["bounce-1.mp3"], "level": 1, "rate": 1.06 },
     "wall-side": { "files": ["bounce-1.mp3"], "level": 0.85 },
     "floor": { "files": ["bounce-1.mp3"], "level": 0.95, "rate": 0.92 },
@@ -20,6 +20,7 @@
     "menu-move": { "files": ["menu-move-1.mp3"], "level": 0.35 },
     "menu-ok": { "files": ["menu-ok-1.mp3"], "level": 0.15 },
     "menu-back": { "files": ["menu-back-1.mp3"], "level": 0.3 },
-    "menu-key": { "files": ["menu-key-1.mp3"], "level": 0.33 }
+    "menu-key": { "files": ["menu-key-1.mp3"], "level": 0.33 },
+    "squeak": { "files": ["squeak-1.mp3", "squeak-2.mp3"], "level": 0.18 }
   }
 }
