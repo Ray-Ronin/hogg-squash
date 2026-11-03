@@ -258,6 +258,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **Every character wears the same two kits:** P1 Hogg red and black, P2 / CPU white and black (the existing kit swap), so a mirror match is allowed.
 - **Invented people only,** never real students or staff.
 - **Credits:** 488 on 2026-10-23; the plan needs about 1,000, so a top-up of about 500–600 is needed before the third character's art.
+- **Recolours only for now (2026-11-03, the owner's call):** the three new bodies (A7–A10 in `plan-v2.md`) are on hold, to save credits. S15's roster holds the current player and three recolours (skin and hair), all on the one sheet. New bodies can still be added later with no game code change.
 
 ## Still open
 Nothing blocking. Details for the plan to settle are in `open-questions.md`.

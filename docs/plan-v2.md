@@ -27,16 +27,16 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [-] **S14c** Music in the game: a Music level, the loop on the title and menus only *(added at CP-G; on hold)*
 
 **More characters**
-- [ ] 💳 Approve SpriteCook spend for A7 *(you)*
-- [ ] **A7** Art: concepts for three new characters
-- [ ] **S15** Character roster and the character select screen
-- [ ] 💳 Approve SpriteCook spend for A8 *(you)*
-- [ ] **A8** Art: character 2, every animation
-- [ ] 💳 Approve SpriteCook spend for A9 *(you)* (a credit top-up is likely needed first)
-- [ ] **A9** Art: character 3, every animation
-- [ ] 💳 Approve SpriteCook spend for A10 *(you)*
-- [ ] **A10** Art: character 4, every animation
-- [ ] **CP-H** Play-test 6 *(you)*: the characters
+- [-] 💳 Approve SpriteCook spend for A7 *(you)* *(on hold)*
+- [-] **A7** Art: concepts for three new characters *(on hold 2026-11-03, the owner's call: recolours only for now)*
+- [ ] **S15** Character roster and the character select screen, with recolours of the current player as the roster for now
+- [-] 💳 Approve SpriteCook spend for A8 *(you)* *(on hold)*
+- [-] **A8** Art: character 2, every animation *(on hold)*
+- [-] 💳 Approve SpriteCook spend for A9 *(you)* (a credit top-up is likely needed first) *(on hold)*
+- [-] **A9** Art: character 3, every animation *(on hold)*
+- [-] 💳 Approve SpriteCook spend for A10 *(you)* *(on hold)*
+- [-] **A10** Art: character 4, every animation *(on hold)*
+- [ ] **CP-H** Play-test 6 *(you)*: the characters (the recolours and the select screen)
 
 **Crowd**
 - [ ] 💳 Approve SpriteCook and ElevenLabs spend for A11 *(you)* (after A11's placement mockups)
@@ -439,6 +439,8 @@ Carried over from `docs/plan.md` ("Art sessions: shared rules"), for A7–A12:
 
 ## A7: Art: concepts for three new characters
 
+*On hold (2026-11-03, the owner's call): S15's recolours are the roster for now. The characters proposed before the hold are in the Session log.*
+
 **Goal:** pick the look of three new players, so A8–A10 can animate them.
 
 **In scope**
@@ -470,12 +472,12 @@ No game code changes. Never use ROM/MAME/Gaelco images as references. Finish wit
 
 ## S15: Character roster and the character select screen
 
-**Goal:** the game can hold several characters and players can pick one. It works now with test recolours of the current player, so each new sheet from A8–A10 just appears.
+**Goal:** the game can hold several characters and players can pick one. It works with recolours of the current player, so each new sheet, if A8–A10 come back, just appears.
 
 **In scope**
 - **The roster:** `assets/characters.json` lists each character: id, name, sheet (`player-100` for the current one), and any extra recolours. The loader (`js/engine/assets.js`, `js/render/sprites.js`) loads every listed sheet, builds each one's white kit with the existing kit swap, and checks each sheet against the contract (tags, frame counts, contact frames, `feet`, `racket <tag>`); a sheet that fails is left out with a console warning, not a broken game.
-- **Test characters until the art lands:** two or three recolours of the current player (skin and hair from the palette), marked as tests in the roster, so the select screen and loading can be checked now. They're removed (or kept, if the owner likes them) at CP-H.
-- **The current player gets a name** (the owner picks one; A7 may suggest).
+- **The recolours are the roster for now** *(changed 2026-11-03: A7–A10 are on hold)*: three recolours of the current player (skin and hair from the palette; new tones go into `art/palette/hogg-squash.gpl`, up to 48), so four characters in all, sharing `player-100`'s body and animations. Hair stays off the kit's reds, or the white kit's swap would recolour it. Drawn at load from the one sheet, with no credits; note what that does to memory and loading.
+- **Names first:** at the start of the session, agree with the owner the look and name of each recolour and the current player's name (invented people, fitting the 62 px name slot in `large-white`; `Dez` was suggested for the current player).
 - **The select screen** (`js/ui/select.js`), after the difficulty step: each player picks with their own controls (P1 on the left, P2 on the right, the CPU's pick shown in 1P, random by default, re-rollable). Each character's `ready` animation plays in the kit it will wear. Touch: tap a character. The flow in `docs/decisions.md` (Screens) is updated: … → difficulty (1P only) → **characters** → controller assignment → match.
 - Rematch keeps the picks; the result screen and score panels use the characters' names where they now say P1 / P2 / CPU (check they fit the 62 px name slot; keep P1 / P2 if a name doesn't fit).
 - Loading: show the loading bar until every sheet is in; note the page's download size with four sheets.
@@ -483,7 +485,7 @@ No game code changes. Never use ROM/MAME/Gaelco images as references. Finish wit
 
 **Not in scope:** new SpriteCook art, stat differences (looks only), the tournament, any change to `js/sim/` (characters don't change the play).
 
-**Depends on:** A7 (the names and the look of the screen).
+**Depends on:** S14b (A7 is on hold; the names are agreed at the start of this session).
 
 **Main files:** `assets/characters.json`, `js/engine/assets.js`, `js/render/sprites.js`, `js/render/actors.js`, `js/ui/select.js`, `js/ui/screens.js`, `js/main.js`, `js/render/hud.js`, `test/screens.test.js`, `test/roster.test.js`, `docs/decisions.md` (Screens, Characters).
 
@@ -497,12 +499,14 @@ No game code changes. Never use ROM/MAME/Gaelco images as references. Finish wit
 **Starter prompt**
 ```text
 We're doing Session S15 of docs/plan-v2.md: "Character roster and the character select screen".
-Read CLAUDE.md, docs/decisions.md (Screens, Characters), docs/art-style-guide.md (§3 and "Characters") and docs/plan-v2.md (rules, A7's Session log entry, S15). Check A7 is ticked.
-Build S15's "In scope" list only. Characters are looks only: nothing in js/sim/ changes.
+Read CLAUDE.md, docs/decisions.md (Screens, Characters), docs/art-style-guide.md (§2 and §3) and docs/plan-v2.md (rules, the 2026-11-03 Session log entries, S15). Check S14b is ticked (the music lines and A7–A10 are on hold, so they don't count).
+First agree the recolours' looks and names and the current player's name with me, then build S15's "In scope" list only. Characters are looks only: nothing in js/sim/ changes.
 Go through "Done when", tick S15, add a Session log entry, and commit. Ask me before pushing.
 ```
 
 ## A8, A9, A10: Art: characters 2, 3 and 4, every animation
+
+*On hold (2026-11-03, the owner's call), with A7. If they come back, S15's roster takes them with no game code change.*
 
 One session per character, the same shape each time (A2 and A3 of v1 in one session).
 
@@ -538,11 +542,10 @@ No game code changes. Never use ROM/MAME/Gaelco images as references. Finish wit
 
 ## CP-H: Play-test 6: the characters *(you)*
 
-1. Play a match as each character, 1P and 2P. Do they all read clearly at the front and back of the court, in both kits?
-2. Does any animation look off next to the others (height, speed, the racket)?
+1. Play a match as each character, 1P and 2P. Can you tell them apart at the front and back of the court, in both kits?
+2. Does any recolour look off (skin or hair against the kit, the floor or the walls)?
 3. Is the select screen clear? Is the CPU's pick right (random or chosen)?
-4. Keep or drop the test recolours?
-5. Any character you'd add later (another A session)?
+4. Are the recolours enough for now, or should A7–A10 (new bodies) come back before the crowd or the tournament?
 
 **Starter prompt** (planning-only session)
 ```text
@@ -707,7 +710,7 @@ No game code changes. Finish with "Done when", tick A12, add a Session log entry
 
 **In scope**
 - Use A12's ladder, round titles and ending in S17's screens; a round title card before each tournament match; the crowd bigger by round (if chosen); the jingles for a round won and the tournament won (from A6's set; a new sound needs an A6-style spend).
-- **Release prep** as S12 did: check in Chrome, Edge and Firefox, at 60 Hz and a high refresh rate if available, and a phone (touch, sound after the first tap); a cold load with an empty cache (note the total download size: four character sheets, the crowd, sounds); caching still fine after a deploy.
+- **Release prep** as S12 did: check in Chrome, Edge and Firefox, at 60 Hz and a high refresh rate if available, and a phone (touch, sound after the first tap); a cold load with an empty cache (note the total download size: the character sheets, the crowd, sounds); caching still fine after a deploy.
 - Update `README.md` (sound, characters, crowd, tournament) and the status line in `CLAUDE.md`.
 
 **Not in scope:** anything in "Not in this plan" above (music, voice, more courts, high scores, a 2P tournament).
@@ -808,3 +811,8 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
 - 2026-11-03, music on hold (planning only, no version change): A6c was started and stopped at its first checks (P2 not done, no music tool in the connector, the free plan's music terms not yet looked up). Nothing was generated and no credits were spent. The owner then chose to skip music for now and decide later whether the game wants it at all.
   - **Plan changes:** P2, A6c's 💳 line, A6c and S14c are marked `[-]` (on hold; the Status section says what that means) but stay written; A7 now depends on S14b. The game stays effects only, with no Music level. `decisions.md`, "Audio".
   - **Next:** 💳 approve A7's spend, then A7.
+- 2026-11-03, new character art on hold (planning only, no version change): A7 was started and stopped at its first step, before the balance was checked. Nothing was generated and no credits were spent. The owner chose recolours of the current player for now, to save the credits; the plan put the character art at about 880 of its roughly 1,000 credits.
+  - **Plan changes:** A7–A10 and their 💳 lines are marked `[-]` but stay written. S15 now depends on S14b, and its recolours are the roster for now, not tests; names are agreed at its start. CP-H stays, with its questions updated, so A11's dependency on it is unchanged. `decisions.md`, "Characters".
+  - **Trade-off:** everyone shares one body and its animations, so the tournament's opponents differ by skin, hair and name only.
+  - **If A7 comes back:** these were proposed but never agreed. Maya: a woman in her 20s, slim and compact, long dark ponytail, medium brown skin. Otis: a tall, lanky man in his 30s, black short flat-top, deep brown skin, narrow shoulders and long limbs. Hank: a stocky coach of about 60, grey hair thinning on the crown, light weathered skin. All three stay 100 px head to soles, and their names fit the name slot (at most 48 px of 62).
+  - **Next:** S15.
