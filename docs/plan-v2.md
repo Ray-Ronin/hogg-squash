@@ -8,6 +8,7 @@ The work is split into small Claude Code sessions, as in v1. Each one leaves the
 ## Status
 
 Tick a line (`[x]`) when its session or checkpoint is finished. **The next session to run is the first unticked line.**
+A line marked `[-]` is on hold: it's skipped and doesn't count as unticked, until the owner brings it back.
 Lines marked *(you)* are things the owner does. Lines marked 💳 are spend approvals (SpriteCook credits, or ElevenLabs credits for sound): the session after it stops and waits for your OK before generating anything.
 
 **Audio**
@@ -20,10 +21,10 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [x] 💳 Approve ElevenLabs spend for A6b *(you)*: up to 300 credits
 - [x] **A6b** Sound effects round 2: the dive, the menu sounds and a shoe squeak *(added at CP-G)*
 - [x] **S14b** Sound fix-up: a louder miss whoosh, Effects default 5, shoe squeaks, A6b's files *(added at CP-G)*
-- [ ] **P2** Prerequisites for music *(you)*: the full ElevenLabs connector, and the free plan's terms for music *(added at CP-G)*
-- [ ] 💳 Approve ElevenLabs spend for A6c *(you)* (A6c gives the price first)
-- [ ] **A6c** Menu music: a few short loops in different styles; the owner picks one *(added at CP-G)*
-- [ ] **S14c** Music in the game: a Music level, the loop on the title and menus only *(added at CP-G)*
+- [-] **P2** Prerequisites for music *(you)*: the full ElevenLabs connector, and the free plan's terms for music *(added at CP-G; on hold 2026-11-03, the owner's call)*
+- [-] 💳 Approve ElevenLabs spend for A6c *(you)* (A6c gives the price first) *(on hold)*
+- [-] **A6c** Menu music: a few short loops in different styles; the owner picks one *(added at CP-G; on hold)*
+- [-] **S14c** Music in the game: a Music level, the loop on the title and menus only *(added at CP-G; on hold)*
 
 **More characters**
 - [ ] 💳 Approve SpriteCook spend for A7 *(you)*
@@ -346,6 +347,8 @@ Build S14b's "In scope" list only. Nothing in js/sim/.
 Go through "Done when", tick S14b, add a Session log entry, and commit. Ask me before pushing.
 ```
 
+> **Music is on hold (2026-11-03, the owner's call):** P2, A6c and S14c are skipped for now, and the owner will decide later whether the game wants music at all. They stay written here in case it does; if so, untick them (`[ ]`) and run them next. CP-J's "what comes next" is the latest point to decide.
+
 ## P2: Prerequisites for music *(you)* *(added at CP-G)*
 
 - **Add the full ElevenLabs connector.** The connector used for A6 is the restricted one, with no music. Add the full one as a custom connector at `https://api.elevenlabs.io/v1/mcp` and check that a music tool appears in a new Claude Code session.
@@ -446,7 +449,7 @@ Carried over from `docs/plan.md` ("Art sessions: shared rules"), for A7–A12:
 
 **Not in scope:** animations (A8–A10), game code, the select screen (S15).
 
-**Depends on:** S14c (CP-G's fix-ups and the menu music come first), and the 💳 approval line above it.
+**Depends on:** S14b (CP-G's fix-ups come first; the menu music is on hold), and the 💳 approval line above it.
 
 **Main files:** `art/character/`, `art/mockups/a7-roster.png`, `art/spritecook-manifest.md`, `art/palette/hogg-squash.gpl`, `docs/art-style-guide.md`.
 
@@ -460,7 +463,7 @@ Carried over from `docs/plan.md` ("Art sessions: shared rules"), for A7–A12:
 **Starter prompt**
 ```text
 We're doing Session A7 of docs/plan-v2.md: "Art: concepts for three new characters".
-Read CLAUDE.md, docs/decisions.md ("Characters"), docs/art-style-guide.md, docs/theme.md and docs/plan-v2.md ("Art sessions: shared rules" + A7). Check S14c is ticked.
+Read CLAUDE.md, docs/decisions.md ("Characters"), docs/art-style-guide.md, docs/theme.md and docs/plan-v2.md ("Art sessions: shared rules" + A7). Check S14b is ticked (the music lines are on hold, so they don't count).
 First agree the three characters with me, then check my SpriteCook balance and list the planned generations with estimated credits, then STOP and wait for my OK before generating anything.
 No game code changes. Never use ROM/MAME/Gaelco images as references. Finish with "Done when", tick A7, add a Session log entry, and commit. Ask me before pushing.
 ```
@@ -802,3 +805,6 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Download size:** sound files 97 KB on disk (18 MP3s); S14b adds the two squeaks (9 KB) to what a page fetches.
   - **For the owner:** listen to a match: is the whoosh right now, and do the squeaks come often enough without getting repetitive? `SQUEAK.CHANCE` and the squeak's level in `sfx.json` are the knobs. Tune the menu and dive levels by ear too.
   - **Next:** P2 (the owner: the full ElevenLabs connector and the free plan's terms for music).
+- 2026-11-03, music on hold (planning only, no version change): A6c was started and stopped at its first checks (P2 not done, no music tool in the connector, the free plan's music terms not yet looked up). Nothing was generated and no credits were spent. The owner then chose to skip music for now and decide later whether the game wants it at all.
+  - **Plan changes:** P2, A6c's 💳 line, A6c and S14c are marked `[-]` (on hold; the Status section says what that means) but stay written; A7 now depends on S14b. The game stays effects only, with no Music level. `decisions.md`, "Audio".
+  - **Next:** 💳 approve A7's spend, then A7.
