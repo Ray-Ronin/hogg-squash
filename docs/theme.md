@@ -20,7 +20,7 @@ These are a general reference. Nothing has to match or be copied exactly.
 - Bright, even lighting. (The photo itself isn't stored in the repo, since it shows students.)
 
 ## Our colours (A1, 2026-10-20; open question 5)
-The shared palette is `art/palette/hogg-squash.gpl` (36 colours). The Hogg shades:
+The shared palette is `art/palette/hogg-squash.gpl` (36 colours in A1, 47 of 48 since A7z). The Hogg shades:
 
 | Role | Hex |
 |---|---|
@@ -45,8 +45,9 @@ The rest of the palette:
 | Glass | `#6f8794`, `#9fb4c0` |
 | Effects (flash) | `#d4a83a`, `#ffec8c` |
 | Mission Success nod | orange `#f58220`, teal `#00a19a` |
+| Coach Zain (A7z) | skin `#2a1710`, `#7f4529` (with skin 1–4, his ramp); shirt black `#262529`, shirt black light `#3b3a41`, shirt print `#dcdce0` (his shirt only) |
 
-**Kits:** P1 wears Hogg red and black; P2 and the CPU wear white and black (the swap table is in `art-style-guide.md` §2).
+**Kits:** P1 wears Hogg red and black; P2 and the CPU wear white and black (the swap table is in `art-style-guide.md` §2). Coach Zain wears the black Hogg Squash Team shirt, and a white version for P2 / CPU (his own swap, `art-style-guide.md`, "Characters").
 
 ## Ideas for using the theme (not decided)
 - Hogg shield / "RAZORBACKS" on the front wall, on ad boards along the side walls, and on the title screen.

@@ -116,3 +116,47 @@ A first dive submission with edge margin 30 was refused by the service before it
 **Then not used on the title:** the owner chose the school's Hogg Razorbacks shield for the title instead (`docs/decisions.md`). The cleaned mascot stays as a hidden layer in `art/ui/title.aseprite`. The refine round was skipped.
 
 **A5 total: 32 of the 64 approved credits.** Account after A5: 488 credits.
+
+## A7z: Coach Zain's concept (back and front)
+
+**Approved spend:** up to 192 credits (back round 56, front round 64, two optional refines 72, at the estimate of reference images billed once per job), 2026-11-07. After the back round showed references are billed **once per variation**, the front round was re-priced to 2 variations (64) and approved; the refines were dropped.
+
+**Reference uploads** (no credits): the owner's photos of Coach Zain, who has agreed to be in the game. The files stay outside the repo in `C:\Hogg Squash\Character References\zain\` and are never committed; only their asset IDs are recorded.
+
+| Photo | sha12 | Asset ID |
+|---|---|---|
+| `face-1.jpg` (200×200) | `2ad48f680097` | `9291f03d-9271-42e6-afb7-62a8be64cc69` |
+| `face-2.jpg` (447×447) | `f6bbc07d1b86` | `f27f442b-a67d-4e50-b981-cb8066dee1de` |
+| `shirt-back.jpg` | `3f15f89315b0` | `a846894c-c3f4-47b6-bc9f-c9ce07eb8660` |
+| `shirt-front.jpg` | `e1202f0de7f6` | `46e2b384-8b73-4ebf-b759-06b57ab115fe` |
+
+### Back round (job `97875b95-541e-401f-b6d0-caa4660af816`): 128 credits
+
+- **Model:** GPT 2.5 Flare (`gpt-image-2.5-flare`), quality medium, 1K square, pixel art, transparent background, 4 variations, size hint 128×128, smart crop tightest, outline repair on.
+- **References (3):** `reference_asset_id` the shirt-back photo; `style_asset_ids` A1 concept 4 (`db1eb2a8-…`) and face-2. Billed 4 × (8 + 3 × 8) = 128.
+- **Prompt:** Full-body adult male squash coach seen directly from behind (back view, we see his back and the back of his head, not his face), in a ready stance waiting for the ball: knees bent, feet shoulder-width apart, weight forward, racket held up in the right hand in front of the body. He is a little taller and slimmer than an average player, with narrower shoulders and slim arms and legs. Short dark brown-black hair, faded short at the sides and back of the head, and a short trimmed full dark beard just visible along the jaw from behind. Warm medium-brown skin. He wears a plain black short-sleeve round-neck sports team shirt like the shirt in the reference photo: on the back, a small red boar's head emblem between the shoulder blades and the word SQUASH in light grey block capitals running vertically down the spine, one letter under another. Black shorts, white socks, white court shoes. Single character, centred, whole body visible from head to feet.
+- **Style:** clean 16-bit sports game sprite, bold readable shapes, dark outline, limited palette, bright even lighting, matching the style guide sprite
+- **Theme:** indoor squash court sports game, school colours red, black and white
+
+| File (`art/spritecook/a7z/`) | sha12 | Asset ID | Size | Notes |
+|---|---|---|---|---|
+| `back-1.png` | `05b7c9de2147` | `f0d4fa29-48a4-4bb3-afa3-ec6e4bfadc8c` | 140×140 | small and noisy; SQUASH runs across |
+| `back-2.png` | `6d45962755ab` | `c3d9d0f1-96d1-4977-955c-62ae83127058` | 250×250 | strong, square-on |
+| `back-3.png` | `60df0df4f544` | `e60bd106-76db-4638-a31d-d397282be092` | 278×278 | **picked**: slimmest, beard along the jaw |
+| `back-4.png` | `370d158b58a4` | `03b96d9b-623d-41d9-9f3f-a7b5a6cb5d0e` | 232×232 | off-style, three-quarter view |
+
+### Front round (job `2c1c1402-1c6f-4268-8cd5-09ee86345d87`): 64 credits
+
+- **Settings:** as the back round, 2 variations.
+- **References (3):** `reference_asset_id` back concept 3 (`e60bd106-…`); `style_asset_ids` face-2 and the shirt-front photo. Billed 2 × (8 + 3 × 8) = 64.
+- **Prompt:** The same squash coach as the reference sprite, now seen directly from the front (front view, facing the camera, we see his face), in the same ready stance waiting for the ball: knees bent, feet shoulder-width apart, weight forward, racket held up in his right hand in front of the body (on the left side of the picture). Same tall slim build, same pixel art style, same proportions and size. His face looks like the man in the face photo: short dark brown-black hair, faded short at the sides, a neat short full dark beard and moustache, dark eyebrows, dark eyes, a friendly confident expression. Warm medium-brown skin. He wears the same plain black short-sleeve round-neck sports team shirt; on the front, a small chest print on the left side of his chest (right side of the picture) like the shirt photo: the word HOGG in white over SQUASH TEAM in red, small. Black shorts, white socks, white court shoes. Single character, centred, whole body visible from head to feet.
+- **Style:** clean 16-bit sports game sprite, bold readable shapes, dark outline, limited palette, bright even lighting, matching the reference sprite exactly
+
+| File (`art/spritecook/a7z/`) | sha12 | Asset ID | Size | Notes |
+|---|---|---|---|---|
+| `front-1.png` | `abcd3378fa7b` | `f5b47d79-0fad-4680-8868-d09f2f6124a5` | 188×188 | **picked**, cleaned at 90% width (the owner's call: slimmer, like the back) |
+| `front-2.png` | `1de4bd70839a` | `6765a183-c452-43d5-b327-76723111d7d5` | 290×290 | broader legs, a stray highlight on the nose |
+
+**Cleaned** by `art/tools/a7z-build.lua` into `art/character/zain.aseprite` (`ready` from the back, `front_ready` from the front, 106 px head to soles); prints redrawn by hand. Previews: `art/mockups/a7z-print.png`, `art/mockups/a7z-zain.png`.
+
+**A7z total: 192 of the 192 approved credits.** Account after A7z: 296 credits.

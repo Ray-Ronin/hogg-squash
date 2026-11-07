@@ -36,8 +36,8 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [-] **A9** Art: character 3, every animation *(on hold)*
 - [-] 💳 Approve SpriteCook spend for A10 *(you)* *(on hold)*
 - [-] **A10** Art: character 4, every animation *(on hold)*
-- [ ] 💳 Approve SpriteCook spend for A7z *(you)* *(added 2026-11-07: the first finalized character)*
-- [ ] **A7z** Art: Coach Zain's concept, from the back and the front, in both kits
+- [x] 💳 Approve SpriteCook spend for A7z *(you)* *(added 2026-11-07: the first finalized character; 192 approved)*
+- [x] **A7z** Art: Coach Zain's concept, from the back and the front, in both kits
 - [ ] 💳 Approve SpriteCook spend for A8z *(you)* (a credit top-up may be needed first)
 - [ ] **A8z** Art: Coach Zain, every animation and the front-view idle
 - [ ] **S15b** Finalized characters in the game: per-character kits, the front view on select, Coach Zain replaces Will
@@ -630,6 +630,7 @@ No game code changes. Never use ROM/MAME/Gaelco images as references. Finish wit
   - Start from v1's prompts (`art/spritecook-manifest.md`, A2 and A3), with the player described as Zain ("a tall, slim coach in a black short-sleeve team shirt with a red boar's head on the back…").
   - Use the lessons in v1's A2/A3 Session log (the racket changing hands, the dive's direction).
   - Add `front_ready`, an 8-frame front-view idle, from the front concept.
+  - *(A7z)* Animate back concept 3 (`e60bd106-76db-4638-a31d-d397282be092`) and front concept 1 (`f5b47d79-0fad-4680-8868-d09f2f6124a5`). The front is cleaned at **90% width** (the owner's call), so `front_ready` gets the same squeeze (`a7z-build.lua`'s `clean(file, 0.9)`). Reference images are billed once per variation on still images; price any reference-heavy job with that in mind.
 - Clean in Aseprite to the contract, with `art/tools/a2-build.lua`, `pixel-lib.lua` and a `zain` build script if needed:
   - the same height in every frame (about 106 px), feet lined up on the `feet` slice;
   - the contact frames, and the `racket <tag>` slices (`racket-slices.lua`);
@@ -1004,3 +1005,13 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Why S15b needs code:** the white kit swap only changes the kit's reds, and a black shirt shares its blacks with the shorts. So the shirt and print get their own palette entries, and a character can carry its own `kit` swap. The select screen has no front view, so an optional `front_ready` tag is added. Height needs no code: every frame is scaled by `ART_HEIGHT`, so a taller drawing plays taller.
   - **Credits:** about 30–60 for A7z's concept and front view and up to about 320 for A8z, against 488 at the last record (2026-10-23).
   - **Next:** 💳 approve A7z's spend, then A7z.
+- 2026-11-07, A7z (Coach Zain's concept, no version change): Zain's look from the back and the front, cleaned to a ready frame at the 100 px scale (106 px head to soles), approved by the owner in both kits. No game code changed.
+  - **Spend:** 192 of the 192 approved credits; 488 → 296. The four photos were uploaded as references (no charge; they stay in `C:\Hogg Squash\Character References\zain\`, not in the repo). **Reference images are billed once per variation**, not once per job as estimated: the back round (4 variations, 3 references: A1 concept 4, face-2, the shirt back) cost 128, not 56, so the front round was re-priced to 2 variations (concept 3, face-2, the shirt front: 64) and the optional refines were dropped. All in `art/spritecook-manifest.md`.
+  - **Picked:** back concept 3 (the slimmest, with the beard along the jaw) and front concept 1 (slimmer than front 2; the face reads). The owner then asked for the front a little skinnier from the same image: it's squeezed to 90% width before cleaning (69 → 62 px), with the height unchanged.
+  - **Built:** `art/tools/a7z-build.lua` → `art/character/zain.aseprite` (150 × 150 frames, `ready` from the back, `front_ready` from the front, the `feet` pivot at 73, 148) and the previews `art/mockups/a7z-print.png` (the print at 4×, both kits) and `a7z-zain.png` (beside Ronin on the court, both kits). The cleaner is `pixel-lib.lua`'s, limited to Zain's skin ramp; inside a shirt mask the generator's blacks (and the dark shadows it matched to `hair dark`) become the shirt's own entries, and small outline-coloured creases there become shirt black, or the white kit would show them as black specks.
+  - **Palette:** five entries added at the end of the `.gpl` (no index moves), 47 of 48: skin 0 `#2a1710` and skin 2b `#7f4529` (Maya's ramp), shirt black `#262529`, shirt black light `#3b3a41`, shirt print `#dcdce0`. The shirt entries appear only inside the shirt by construction (the shirt mask and the prints are the only places the script writes them).
+  - **The print, redrawn by hand:** back, a red boar's head (about 7 × 6) over SQUASH in 3 × 3 capitals down the spine. The plan's 4-px letters don't fit: the shirt is 31 rows from collar to hem and boar plus six 4-row letters need 35. Front, four letter blocks ("HOGG") over two red lines ("SQUASH TEAM"); at this size it reads as a chest logo, not words.
+  - **The planned `kit` swap for S15b:** `[["#262529", "#e6e6ea"], ["#3b3a41", "#ffffff"], ["#dcdce0", "#252429"]]` (shirt → white kit shade, highlight → white, print → black kit; the reds and the shorts are untouched). `art-style-guide.md`, "Characters".
+  - **Checks:** `npm test` passes, as before (nothing in the game changed). The previews were checked by eye in both kits.
+  - **For A8z:** the balance (296) is under its estimate (about 320), so a top-up of about 50–100 credits is likely first. The front idle needs the same 90% squeeze.
+  - **Next:** 💳 approve A8z's spend, then A8z.

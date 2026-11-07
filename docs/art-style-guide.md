@@ -18,7 +18,7 @@ a whole-number upscale with no smoothing, then a smooth shrink to fit, so pixels
 - Court: white walls, red lines, light wood floor (like the Hogg courts). Bright and readable. The **ball must stand out from every background** (walls and floor), with a dark shadow under it on the floor.
 - Players: a darker outline (or selective outlining) so they read against the floor.
 
-**The palette (A1, 2026-10-20):** `art/palette/hogg-squash.gpl`, 36 colours, 42 since S15's skin and hair tones (hex values in `theme.md`). Load it in Aseprite and keep sprites in indexed mode on it. Characters use only the neutrals, reds, skin and hair; wood, glass, effects and the Mission colours are for the court and UI. New colours go into the `.gpl` file (up to 48), never ad hoc.
+**The palette (A1, 2026-10-20):** `art/palette/hogg-squash.gpl`, 36 colours, 42 since S15's skin and hair tones, 47 since A7z's Coach Zain entries (hex values in `theme.md`). Load it in Aseprite and keep sprites in indexed mode on it. Characters use only the neutrals, reds, skin and hair (and a finalized character's own shirt entries); wood, glass, effects and the Mission colours are for the court and UI. New colours go into the `.gpl` file (up to 48), never ad hoc.
 
 **Kit swap (P2 / CPU, white and black):** recolour these palette entries, and nothing else:
 
@@ -120,6 +120,7 @@ Also needed: the ball + shadow, landing marker, front-wall impact ring, the cour
 **SpriteCook account (checked 2026-10-18):** free tier, **0 credits**. Still images cost roughly **5–25 credits each** depending on model and quality (e.g. GPT 2.5 Flare: 5 low / 8 medium / 25 high at 1K; it supports pixel art and transparency). Animations cost more. Credits are needed before any generation.
 **Update (2026-10-20, A1):** the account is now on the Apprentice tier (800 credits when A1 started). A1 spent 32 (`art/spritecook-manifest.md`). Flare bills a non-square 1K image as 2K and adds 8 credits per reference image.
 **After A5 (2026-10-22):** 488 credits (A4 spent 8, A5 32).
+**After A7z (2026-11-07):** 296 credits (A7z spent 192). **Flare bills each reference image once per variation**, not once per job: 4 variations with 3 references cost 4 × (8 + 3 × 8) = 128.
 
 ## Characters (S15)
 The roster is `public/hogg-squash/assets/characters.json`, in order; for now every character is a recolour of `player-100` (A7–A10, new bodies, are on hold). A recolour is a list of [from, to] palette colours: **skin** applies everywhere, **hair** only to the head (the largest blob of the sheet's two hair colours in each frame, which are also the shorts' shading). The white kit is the kit swap above, on top. A recolour must not use the kit's reds. Preview: `art/mockups/s15-roster.png` (both kits, ready, forehand contact, dive).
@@ -130,6 +131,20 @@ The roster is `public/hogg-squash/assets/characters.json`, in order; for now eve
 | Adam (P2's start) | as drawn | as drawn |
 | Ben | as drawn | hair dark, outline |
 | Will | skin 8, 7, 6, 5, 4, 2 | blond `#d9b060`, blond dark `#a87e3c` |
+
+**Coach Zain (A7z, 2026-11-07), the first finalized character** (`plan-v2.md`, "Finalized characters"): his own body and art, replacing Will in S15b. The concept is `art/character/zain.aseprite` (built by `art/tools/a7z-build.lua` from SpriteCook back concept 3 and front concept 1, `art/spritecook-manifest.md`), 150 × 150 frames with the `feet` pivot at 73, 148 like `player-100`: frame 1 `ready` (from the back), frame 2 `front_ready` (from the front, squeezed to 90% width). Previews: `art/mockups/a7z-print.png` (the print at 4×), `art/mockups/a7z-zain.png` (beside Ronin on the court).
+
+| | |
+|---|---|
+| Height | 106 px head to soles (the others 100), slimmer: 58 px wide from the back, 62 from the front |
+| Skin | skin 0, 1, 2, 2b, 3, 4 (`#2a1710 #3e2216 #6b3a24 #7f4529 #9c5232 #c46a40`), drawn in; no recolour |
+| Hair and beard | hair dark, hair (short, faded at the sides; short full beard) |
+| P1 shirt | black Hogg Squash Team shirt in its own entries: `shirt black` `#262529`, `shirt black light` `#3b3a41`, used nowhere else |
+| Print, back | a red boar's head (kit red, red 2, a white tusk) between the shoulder blades, over SQUASH down the spine in `shirt print` `#dcdce0`, 3 × 3 capitals (the shirt is 31 rows from collar to hem, so 4-row letters don't fit with the boar) |
+| Print, front | on his left chest: four `shirt print` letter blocks ("HOGG") over a kit red and a Hogg red line ("SQUASH TEAM") |
+| Shorts, socks, shoes | black kit, white, as everyone's |
+
+**His `kit` swap (for S15b's `characters.json`, replacing the standard one):** `[["#262529", "#e6e6ea"], ["#3b3a41", "#ffffff"], ["#dcdce0", "#252429"]]`: the shirt turns white (shirt black → white kit shade, its highlight → white) and the print black; the reds (the boar, the chest lines, the racket, the shoe trim) stay red and the shorts stay black.
 
 A new sheet must keep player-100's contract (§3; `SHEET_CONTRACT` in `js/render/roster.js`), or the game leaves its characters out with a console warning.
 

@@ -3,7 +3,7 @@ Name: Hogg Squash
 Columns: 8
 #
 # The shared palette for every Hogg Squash sprite, court piece and UI element (A1, 2026-10-20).
-# 42 colours (S15 added six for the roster's recolours). Sprites are locked to it in Aseprite. Add new colours here
+# 47 colours (S15 added six for the roster's recolours, A7z five for Coach Zain). Sprites are locked to it in Aseprite. Add new colours here
 # (up to 48), never ad hoc.
 #
 # Neutrals and outline
@@ -56,3 +56,10 @@ Columns: 8
 # Mission Success nod (wall boards)
 245 130  32	Mission orange
   0 161 154	Mission teal
+# Coach Zain (A7z): two skin tones (his ramp is skin 0, 1, 2, 2b, 3, 4) and his shirt's own entries,
+# used nowhere else, so his P2 / CPU kit can swap them without touching the shorts
+ 42  23  16	skin 0 (deepest, A7z)
+127  69  41	skin 2b (A7z)
+ 38  37  42	shirt black (A7z)
+ 59  58  65	shirt black light (A7z)
+220 220 224	shirt print (A7z)
