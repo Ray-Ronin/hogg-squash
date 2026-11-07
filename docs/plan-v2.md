@@ -36,7 +36,12 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [-] **A9** Art: character 3, every animation *(on hold)*
 - [-] 💳 Approve SpriteCook spend for A10 *(you)* *(on hold)*
 - [-] **A10** Art: character 4, every animation *(on hold)*
-- [ ] **CP-H** Play-test 6 *(you)*: the characters (the recolours and the select screen)
+- [ ] 💳 Approve SpriteCook spend for A7z *(you)* *(added 2026-11-07: the first finalized character)*
+- [ ] **A7z** Art: Coach Zain's concept, from the back and the front, in both kits
+- [ ] 💳 Approve SpriteCook spend for A8z *(you)* (a credit top-up may be needed first)
+- [ ] **A8z** Art: Coach Zain, every animation and the front-view idle
+- [ ] **S15b** Finalized characters in the game: per-character kits, the front view on select, Coach Zain replaces Will
+- [ ] **CP-H** Play-test 6 *(you)*: the characters (the recolours, Coach Zain and the select screen)
 
 **Crowd**
 - [ ] 💳 Approve SpriteCook and ElevenLabs spend for A11 *(you)* (after A11's placement mockups)
@@ -509,6 +514,7 @@ Go through "Done when", tick S15, add a Session log entry, and commit. Ask me be
 ## A8, A9, A10: Art: characters 2, 3 and 4, every animation
 
 *On hold (2026-11-03, the owner's call), with A7. If they come back, S15's roster takes them with no game code change.*
+*(2026-11-07) New characters now come one at a time as **finalized characters** (below: the template, then A7z, A8z and S15b for Coach Zain). A7–A10 stay on hold as written.*
 
 One session per character, the same shape each time (A2 and A3 of v1 in one session).
 
@@ -542,18 +548,177 @@ First check my SpriteCook balance and list the planned generations with estimate
 No game code changes. Never use ROM/MAME/Gaelco images as references. Finish with "Done when", tick the session, add a Session log entry, and commit. Ask me before pushing.
 ```
 
+## Finalized characters: shared rules and template *(added 2026-11-07)*
+
+A **finalized character** has its own body, its own sheet and, if wanted, its own shirt, and takes a recolour's place in the roster. Coach Zain is the first (A7z, A8z, S15b below). S15b builds the code once. After it, each later character is art plus one roster entry, with no game code.
+
+**Changes to "Art sessions: shared rules"** for finalized characters (everything else there still applies):
+- **Real people** are allowed when they have agreed (`decisions.md`, "Characters"). Their reference photos stay **outside the repo**, in `C:\Hogg Squash\Character References\<id>\`. They are never committed and never go in `art/`. They are uploaded to SpriteCook as references only, and the manifest records their asset IDs, not the files.
+- **Their own shirt** is allowed. The shirt body and its print use **their own palette entries**, used nowhere else on the sprite (not the shorts, socks, skin or hair). That lets a per-character `kit` swap in `characters.json` make a P2 / CPU version that is clearly different from P1 (usually white) without touching the shorts. A character in the usual red kit needs no `kit` and gets the standard swap.
+- **Height and build may differ.** The character is drawn inside the 150×150 frame, about 94 to 108 px head to soles against the standard 100. `ART_HEIGHT` stays 100: the game scales every frame by the same factor, so a taller drawing plays taller. The overhead's racket must still fit the frame. Play is unchanged (the sim never sees characters).
+- **Front view:** an optional `front_ready` tag (8 frames, loops, the same `feet` pivot). The select screen shows it once S15b is in.
+- **Palette:** 48 colours at most. Coach Zain brings it to about 47. Will's blond hair tones are free once Zain replaces him, but the next character may still need **the owner's call on the cap** (raise it, or share tones) before its concept.
+
+**Template for each later character**
+1. **Agree with the owner first** (planning only, no credits):
+   - who they are, their name (the full name for select, plus a `short` one if the full one is wider than the 62 px name slot in `large-white`), and that a real person has agreed;
+   - their body (height, build), skin and hair, the shirt and its P2 version;
+   - the photos, and which recolour they replace.
+   Then add their concept, animation and 💳 lines to the Status list, copying A7z and A8z.
+2. **Concept session**, like A7z.
+3. **Animation session**, like A8z. It also adds the roster entry (art sessions may), checks the character in the game, and changes no version.
+
+## A7z: Art: Coach Zain's concept *(added 2026-11-07)*
+
+**Goal:** Coach Zain's look, approved from the back and the front in both kits, so A8z can animate him.
+
+**Agreed with the owner (2026-11-07)**
+- **Who:** Coach Zain, a real coach who has agreed to be in the game. The owner's reference photos (two of his face, the shirt's front and back) are in `C:\Hogg Squash\Character References\zain\`, outside the repo.
+- **Body:** a little taller and slimmer than the others, about 106 px head to soles (they are 100), with narrower shoulders and limbs. Short dark hair faded at the sides, and a full dark beard trimmed short.
+- **Skin:** the unused Maya look's ramp (from `art/mockups/s15-looks.png`), drawn into his sheet rather than recoloured. Dark to light: `#2a1710 #3e2216 #6b3a24 #7f4529 #9c5232 #c46a40`. `#7f4529` and `#2a1710` aren't in the palette yet.
+- **P1 kit:** the real Hogg Squash Team shirt, black with short sleeves and a round neck.
+  - Front: "HOGG" in white over "SQUASH TEAM" in red, small on the left chest.
+  - Back: a red boar's head over "SQUASH" running down the spine in light grey capitals.
+  - Black shorts; white socks and shoes, like everyone.
+- **P2 / CPU kit:** a white version of the same shirt. The print stays readable: the white letters turn black, the red stays red. The shorts stay black.
+- **Print:** simplified to what reads at sprite size. The back is about 30 px tall, so the letters are about 4 px and the boar about 6. The owner sees a close-up before anything is animated.
+- **Name:** "Coach Zain" on the select screen and "Zain" on the score panel and the result. The full name is 106 px in `large-white` and the slot is 62; S15b adds the short name.
+- **Replaces:** Will, so the roster becomes Ronin, Adam, Ben, Coach Zain.
+
+**In scope**
+- **Spend gate:** check the SpriteCook balance (488 at the last record, 2026-10-23). List the generations with model, quality and estimated credits, then stop for the owner's OK.
+- Upload the four photos to SpriteCook (the `spritecook-upload-assets` flow).
+- A back-view concept in the ready stance (4 variations). Style reference: A1 concept 4 (`db1eb2a8-7816-44de-b78a-ee5810bd5790`), with the photos as references. An optional refine round.
+- The front view, made from the picked back concept (`rotate_sprite` or `make_rotation_sheet`, or a concept round with the picked one as reference).
+- Clean both in Aseprite to a ready frame at the 100 px scale, with him about 106 px tall, locked to the palette.
+  - New entries in `art/palette/hogg-squash.gpl`: Maya's two tones, the shirt's two blacks and the print's white. That makes about 47 of 48.
+  - Write down the planned `kit` swap (a [from, to] list) for S15b.
+- Previews for the owner, with the white kit made by the planned swap:
+  - a 4× close-up of the print, back and front, in both kits (`art/mockups/a7z-print.png`);
+  - Zain beside Ronin on the court, back and front, in both kits (`art/mockups/a7z-zain.png`).
+- Record the look, the asset IDs and the costs in `art/spritecook-manifest.md`, and add Zain to the "Characters" table in `docs/art-style-guide.md`.
+
+**Not in scope:** animations (A8z), game code, the roster file (S15b).
+
+**Depends on:** S15, and the 💳 line above it.
+
+**Main files:** `art/character/zain.aseprite`, `art/mockups/a7z-*.png`, `art/palette/hogg-squash.gpl`, `art/spritecook-manifest.md`, `docs/art-style-guide.md`.
+
+**Done when…**
+- The owner has approved the look and the print, from the back and the front, in both kits.
+- The manifest shows the credits spent within the approved amount.
+- `npm test` still passes, because nothing in the game changed.
+
+**You check or decide at the end:** approve the look and the print, or ask for changes (each change is another spend approval). Top up SpriteCook credits if A8z won't fit.
+
+**Starter prompt**
+```text
+We're doing Session A7z of docs/plan-v2.md: "Art: Coach Zain's concept".
+Read CLAUDE.md, docs/decisions.md ("Characters"), docs/art-style-guide.md, docs/theme.md and docs/plan-v2.md ("Art sessions: shared rules", "Finalized characters", A7z). Check S15 is ticked.
+The reference photos are in C:\Hogg Squash\Character References\zain\ (never commit them).
+First check my SpriteCook balance and list the planned generations with estimated credits, then STOP and wait for my OK before generating anything.
+No game code changes. Never use ROM/MAME/Gaelco images as references. Finish with "Done when", tick A7z, add a Session log entry, and commit. Ask me before pushing.
+```
+
+## A8z: Art: Coach Zain, every animation *(added 2026-11-07)*
+
+**Goal:** Coach Zain's full sheet, cleaned to the contract, plus a front-view idle for the select screen.
+
+**In scope**
+- **Spend gate** as in A7z: 10 animations at about 20 credits each by v1's prices, so approve up to about 320. If the balance won't cover it, say how many credits to top up.
+- `animate_game_art` on the picked back concept for every contract tag: `ready`, `run_side`, `run_up`, `run_down`, `serve`, `forehand`, `backhand`, `overhead`, `dive`.
+  - Start from v1's prompts (`art/spritecook-manifest.md`, A2 and A3), with the player described as Zain ("a tall, slim coach in a black short-sleeve team shirt with a red boar's head on the back…").
+  - Use the lessons in v1's A2/A3 Session log (the racket changing hands, the dive's direction).
+  - Add `front_ready`, an 8-frame front-view idle, from the front concept.
+- Clean in Aseprite to the contract, with `art/tools/a2-build.lua`, `pixel-lib.lua` and a `zain` build script if needed:
+  - the same height in every frame (about 106 px), feet lined up on the `feet` slice;
+  - the contact frames, and the `racket <tag>` slices (`racket-slices.lua`);
+  - the shirt and print colours in their own palette entries only (a check: none of them appear anywhere else, in any frame);
+  - the overhead fits the 150 px frame.
+- Export `public/hogg-squash/assets/zain-100.png` + `.json` (source: `art/character/zain.aseprite`). It doesn't go in the roster yet; S15b adds it with the kit.
+- Previews: a strip and GIFs per tag in both kits (`art/mockups/a8z-*`), with the white kit made by the planned swap.
+
+**Not in scope:** game code, the roster file, a win celebration (later).
+
+**Depends on:** A7z, and the 💳 line above it.
+
+**Main files:** `art/character/zain.aseprite`, `art/tools/`, `public/hogg-squash/assets/zain-100.png` + `.json`, `art/spritecook-manifest.md`, `docs/art-style-guide.md`.
+
+**Done when…**
+- The owner has approved every animation and the front idle, in both kits.
+- The sheet passes `sheetProblems` (`js/render/roster.js`) in Node, and has an 8-frame `front_ready` tag.
+- The manifest shows the credits spent within the approved amount.
+- `npm test` still passes.
+
+**You check or decide at the end:** approve the animations, or ask for re-runs (another spend approval).
+
+**Starter prompt**
+```text
+We're doing Session A8z of docs/plan-v2.md: "Art: Coach Zain, every animation".
+Read CLAUDE.md, docs/decisions.md ("Characters"), docs/art-style-guide.md (§3, §4, "Characters"), docs/plan-v2.md ("Art sessions: shared rules", "Finalized characters", A7z's Session log entry, A8z) and the A2/A3 entries in docs/plan.md's Session log. Check A7z is ticked.
+First check my SpriteCook balance and list the planned generations with estimated credits, then STOP and wait for my OK before generating anything.
+No game code changes. Never use ROM/MAME/Gaelco images as references. Finish with "Done when", tick A8z, add a Session log entry, and commit. Ask me before pushing.
+```
+
+## S15b: Finalized characters in the game *(added 2026-11-07)*
+
+**Goal:** the game shows a finalized character in its own kits and, on the select screen, from the front. Coach Zain replaces Will. After this, later finalized characters need only data.
+
+**In scope**
+- **A per-character kit:** a `characters.json` entry may have `kit`, a list of [from, to] palette colours (`#rrggbb`). It replaces `KIT_SWAP` for the P2 / CPU kit (`colouring` in `js/render/roster.js`). `parseRoster` checks it (well formed, no colour listed twice). An entry without it gets the standard swap, so the recolours are unchanged.
+- **A short name:** an optional `short`, used where the full name doesn't fit the 62 px name slot (the score panels, the wall's notes, the result). The select screen shows `name`. `sideNames` tries `name`, then `short`, then P1 / P2 / CPU as now.
+- **The front view:** an optional `front_ready` tag in the sheet contract (if present: it loops and has at least 1 frame).
+  - `previewOf` builds the select screen's atlas from it when the sheet has one, and `js/ui/select.js` plays it on the cards and the big figures.
+  - A sheet without it shows `ready` from the back, as now.
+- **The roster:** replace Will with `{ "id": "zain", "name": "Coach Zain", "short": "Zain", "sheet": "zain-100", "kit": [...] }`, using A7z's swap. No skin or hair recolours (they're drawn into the sheet).
+- **Memory and download:** Zain's sheet is a second image. Note its size, and the atlas memory if the frame isn't 150×150.
+- **Tests** (`test/roster.test.js`):
+  - `kit`: a good one, a bad colour, and that it's used for kit 1 only;
+  - `short`: it fits, and the fallback order;
+  - `front_ready`: optional, and a broken one is left out with a warning;
+  - the real roster with Zain;
+  - Zain's white kit has no shirt black left on any frame (like S15's recolour test).
+- **Docs:** `decisions.md` ("Characters", as built), `art-style-guide.md` §2 and §3 (the per-character kit, the optional tag, heights), `CLAUDE.md`'s status line.
+
+**Not in scope:** a win celebration or result-screen art, other characters, anything in `js/sim/`.
+
+**Depends on:** A8z (the sheet). The code can be written against a small test sheet as soon as A7z has fixed the kit swap, but it ships with A8z's sheet.
+
+**Main files:** `assets/characters.json`, `js/render/roster.js`, `js/render/sprites.js`, `js/ui/select.js`, `js/main.js`, `test/roster.test.js`, `docs/decisions.md`, `docs/art-style-guide.md`, `CLAUDE.md`.
+
+**Done when…**
+- `npm test` and `npm run typecheck` pass.
+- In the browser:
+  - a cold load with no console warnings;
+  - the select screen shows Ronin, Adam, Ben and Coach Zain, with Zain from the front;
+  - a match with Zain as P1 (black shirt) and as P2 / CPU (white shirt): visibly taller and slimmer, and the racket meets the ball on every swing and the dive;
+  - a Zain mirror match, a rematch, keyboard and touch;
+  - "Coach Zain" on the select screen, the short name on the panel and the result.
+- Version 1.15.1.
+
+**You check or decide at the end:** how Zain looks in the game in both kits; the front view next to the others' back views on the select screen.
+
+**Starter prompt**
+```text
+We're doing Session S15b of docs/plan-v2.md: "Finalized characters in the game".
+Read CLAUDE.md, docs/decisions.md (Screens, Characters), docs/art-style-guide.md (§2 and §3) and docs/plan-v2.md (rules, "Finalized characters", the A7z and A8z Session log entries, S15b). Check A8z is ticked.
+Build S15b's "In scope" list only. Characters are looks only: nothing in js/sim/ changes.
+Go through "Done when", tick S15b, add a Session log entry, and commit. Ask me before pushing.
+```
+
 ## CP-H: Play-test 6: the characters *(you)*
 
 1. Play a match as each character, 1P and 2P. Can you tell them apart at the front and back of the court, in both kits?
 2. Does any recolour look off (skin or hair against the kit, the floor or the walls)?
-3. Is the select screen clear? Is the CPU's pick right (random or chosen)?
-4. Are the recolours enough for now, or should A7–A10 (new bodies) come back before the crowd or the tournament?
+3. **Coach Zain:** does he look like himself, taller and slimmer, in both shirts? Does the print read?
+4. Is the select screen clear, with Zain from the front and the others from the back? Is the CPU's pick right (random or chosen)?
+5. Who is the next finalized character, and which recolour do they replace (the template under "Finalized characters")?
 
 **Starter prompt** (planning-only session)
 ```text
 Planning only: change no files except docs/plan-v2.md and docs/decisions.md.
 Read docs/plan-v2.md and its Session log. My CP-H feedback: <notes>.
-Add the fixes as a small fix-up session (S15b, or an art re-run with its own 💳 line) before A11 if needed, tick CP-H, and commit. Don't push.
+Add the fixes as a small fix-up session (S15c, or an art re-run with its own 💳 line) before A11 if needed, and the next finalized character's lines if I named one (the "Finalized characters" template), tick CP-H, and commit. Don't push.
 ```
 
 ---
@@ -827,3 +992,15 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Memory and loading:** a full sheet in one kit is about 7.6 MB of canvas; only the match's two are kept (built when the match is set up, about 20 ms each in Node), plus the select screen's `ready` loops (0.76 MB each, up to 8): about 21 MB, against v1's 15 MB. The loading bar counts the roster and each sheet. **Download size:** no new images (the four share `player-100.png`, 72 KB); the roster file is 1.2 KB and the new code about 13 KB.
   - **For the owner (CP-H):** the screen's layout and wording; random or chosen CPU picks; whether the four are told apart well enough at the front of the court. Also seen: on a phone the speaker button sits over the right score panel's name (S13's place; it covered "CPU" the same way before).
   - **Next:** CP-H (play-test 6: the characters).
+- 2026-11-07, finalized characters planned (planning only, no version change): the owner wants characters with their own bodies and art, one at a time, each replacing a recolour. The first is **Coach Zain**, a real coach based on the owner's photos.
+  - **Plan changes:** a "Finalized characters" section (rule changes and a template for later ones), and A7z (concept), A8z (animations) and S15b (code, 1.15.1) with their 💳 lines, all before CP-H. A7–A10 stay on hold as written. CP-H's questions now include Zain and the next character; its fix-up session is S15c.
+  - **The owner's answers:**
+    - **Body:** slightly taller and slimmer, about 106 px against 100. Skin from the unused Maya look.
+    - **Kit:** the real black Hogg Squash Team shirt (the print simplified to what reads, a close-up approved before animating), black shorts. P2 / CPU wears a white version, so the two sides and a mirror match can be told apart.
+    - **Front view:** a front-facing idle on the select screen only. A win celebration comes later.
+    - **Photos:** the face and shirt photos are uploaded to SpriteCook as references. Zain has agreed. They're kept in `C:\Hogg Squash\Character References\zain\`, outside the repo.
+    - **Roster:** Zain replaces Will (Ronin, Adam, Ben, Coach Zain).
+    - **Name:** "Coach Zain". It measures 106 px in `large-white` against the 62 px name slot, so S15b adds a short name ("Zain", 40 px) for the score panel and the result.
+  - **Why S15b needs code:** the white kit swap only changes the kit's reds, and a black shirt shares its blacks with the shorts. So the shirt and print get their own palette entries, and a character can carry its own `kit` swap. The select screen has no front view, so an optional `front_ready` tag is added. Height needs no code: every frame is scaled by `ART_HEIGHT`, so a taller drawing plays taller.
+  - **Credits:** about 30–60 for A7z's concept and front view and up to about 320 for A8z, against 488 at the last record (2026-10-23).
+  - **Next:** 💳 approve A7z's spend, then A7z.
