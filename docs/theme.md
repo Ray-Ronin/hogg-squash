@@ -39,8 +39,8 @@ The rest of the palette:
 
 | Group | Hex |
 |---|---|
-| Skin (dark → light) | `#3e2216`, `#6b3a24`, `#9c5232`, `#c46a40`, `#e88b58`, `#f7ad7c` |
-| Hair | `#1e1410`, `#3b261c` |
+| Skin (dark → light) | `#3e2216`, `#6b3a24`, `#9c5232`, `#c46a40`, `#e88b58`, `#f7ad7c`, `#fbc6a0`, `#ffdcc0` (the last two S15's) |
+| Hair | `#1e1410`, `#3b261c`; auburn `#8a4a24`, `#5c2e18`; blond `#d9b060`, `#a87e3c` (S15's recolours) |
 | Wood floor (dark → light) | `#8f6a3e`, `#b48a56`, `#cfa772`, `#dfbd8c` (floor), `#ecd3a8` |
 | Glass | `#6f8794`, `#9fb4c0` |
 | Effects (flash) | `#d4a83a`, `#ffec8c` |

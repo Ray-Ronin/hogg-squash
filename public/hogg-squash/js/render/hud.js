@@ -5,6 +5,8 @@
 // rally callouts (the reason's word, the winner's point under it), the score, FIRST TO and the new finish after a
 // point that raised it (win by 2, S12e), GAME at the end and the serve notice.
 // The scorer's new score flashes white once when a point is won (pointFlash).
+// Each side is named by its character (S15; roster.js's sideNames: P1 / P2 / CPU when there are none, a name doesn't
+// fit or it's a mirror match), on the score panel and in the wall's notes.
 // The pause menu and the result are screens of their own (js/ui/). The optional logo slot (LOGO) is in the right margin.
 import { project } from './projection.js';
 import { WIDTH, HEIGHT } from '../engine/screen.js';
@@ -55,9 +57,6 @@ export function pointFlash(w, side) {
 /** Each side margin's width beside the floor at the glass (100 px with the S1 camera, 78 with wide or zoom). */
 const marginW = () => Math.floor(project(-LINES.SIDE, 0, LINES.BACK).sx);
 
-/** P1 / P2, or CPU for a slot the computer plays. @param {World} w @param {number} side */
-const name = (w, side) => (w.cpu[side] ? 'CPU' : `P${side + 1}`);
-
 /**
  * Text centred in a box, the capitals (with their outline and shadow) in its middle.
  * @param {CanvasRenderingContext2D} ctx @param {FontName} font @param {string} str
@@ -80,8 +79,9 @@ function sliceAt(ctx, name, cx, cy) {
  * One side's score panel with its top-left at x, y: the name in the header, the score, and the serve tag if serving.
  * Without the UI sheet the text is still drawn, in the same places.
  * @param {CanvasRenderingContext2D} ctx @param {World} w @param {0 | 1} side @param {number} x @param {number} y
+ * @param {string} name
  */
-function scorePanel(ctx, w, side, x, y) {
+function scorePanel(ctx, w, side, x, y, name) {
   const key = `score panel p${side + 1}`;
   const panel = slice(key) ?? { x: 0, y: 0, w: 66, h: 84 };
   /** A sub-slice moved to the panel's place on screen. @param {string} part @param {number} dy @param {number} h */
@@ -90,7 +90,7 @@ function scorePanel(ctx, w, side, x, y) {
     return { x: x + s.x - panel.x, y: y + s.y - panel.y, w: s.w, h: s.h };
   };
   drawSlice(ctx, key, x, y);
-  textIn(ctx, side === 0 ? 'large-white' : 'large-red', name(w, side), part('name', 2, 20));
+  textIn(ctx, side === 0 ? 'large-white' : 'large-red', name, part('name', 2, 20));
   const score = part('score', 24, 42);
   textIn(ctx, 'huge-white', String(w.match.scores[side]), score);
   const f = pointFlash(w, side);
@@ -145,16 +145,17 @@ export function loadLogo(on) {
 /**
  * @param {CanvasRenderingContext2D} ctx
  * @param {World} w
- * @param {{ help: HelpInfo, footer: string, slow: number }} opts
- *   footer: one line under the court (pause and controller hints); slow: the ?slow factor (1: normal speed)
+ * @param {{ help: HelpInfo, footer: string, slow: number, names: string[] }} opts
+ *   footer: one line under the court (pause and controller hints); slow: the ?slow factor (1: normal speed); names:
+ *   each side's name (P1 first)
  */
 export function drawHud(ctx, w, opts) {
   const m = w.match;
 
   // side margins: P1 left, P2 right
   const margin = marginW(), px = Math.round(margin / 2 - 33);
-  scorePanel(ctx, w, 0, px, LAYOUT.PANEL_Y);
-  scorePanel(ctx, w, 1, WIDTH - px - 66, LAYOUT.PANEL_Y);
+  scorePanel(ctx, w, 0, px, LAYOUT.PANEL_Y, opts.names[0]);
+  scorePanel(ctx, w, 1, WIDTH - px - 66, LAYOUT.PANEL_Y, opts.names[1]);
   drawPanel(ctx, 'panel dark', px, LAYOUT.INFO_Y, 66, LAYOUT.INFO_H);
   drawText(ctx, 'small', `FIRST TO ${m.target}`, margin / 2, LAYOUT.INFO_Y + 7, 'center');
   drawText(ctx, 'small-grey', 'WIN BY 2', margin / 2, LAYOUT.INFO_Y + 17, 'center');
@@ -179,7 +180,7 @@ export function drawHud(ctx, w, opts) {
   if (w.phase === 'point' && w.result) {
     if (w.timer < TIMING.CALLOUT) {
       callout(ctx, CALLOUTS[w.result.reason]);
-      drawText(ctx, 'small-dark', `${name(w, w.result.winner)}'s point`, cx, LAYOUT.NOTE_Y, 'center');
+      drawText(ctx, 'small-dark', `${opts.names[w.result.winner]}'s point`, cx, LAYOUT.NOTE_Y, 'center');
     } else if (w.timer >= TIMING.CALLOUT + TIMING.POINT) {
       firstTo(ctx, winningScore(m));
     } else {
@@ -189,7 +190,7 @@ export function drawHud(ctx, w, opts) {
   } else if (w.phase === 'over' && m.winner !== null) {
     callout(ctx, 'callout GAME');               // the result screen (js/ui/result.js) says who won
   } else if (w.phase === 'serve') {
-    drawText(ctx, 'small-dark', `${name(w, m.server)} to serve`, cx, LAYOUT.NOTE_Y, 'center');
+    drawText(ctx, 'small-dark', `${opts.names[m.server]} to serve`, cx, LAYOUT.NOTE_Y, 'center');
   }
 
 }

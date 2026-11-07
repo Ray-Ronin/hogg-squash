@@ -1,11 +1,13 @@
 // The screens' state machine (node:test, run by npm test): every path through title → 1P / 2P → match length →
-// level (1P only) → controllers → match → result → rematch / menu, the pause menu, and the words the screens draw
-// in the font they use. js/ui/ only touches a canvas when drawing.
+// level (1P only) → characters (S15, with a roster) → controllers → match → result → rematch / menu, the pause menu,
+// and the words the screens draw in the font they use. js/ui/ only touches a canvas when drawing.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { makeUi, navigate, matchOver, autoPause, assignInMatch, showsMatch, DEFAULT_SETTINGS, TITLE_ITEMS, PAUSE_ITEMS,
-  RESULT_ITEMS, OPTION_ITEMS, KEY_CELLS, keyCell, captureKey } from '../public/hogg-squash/js/ui/screens.js';
+  RESULT_ITEMS, OPTION_ITEMS, KEY_CELLS, keyCell, captureKey, setRoster, tap, pickIndices, SELECT_REROLL }
+  from '../public/hogg-squash/js/ui/screens.js';
+import { SELECT_TEXT } from '../public/hogg-squash/js/ui/select.js';
 import { OPTIONS_HINT, OPTIONS_LAYOUT, EFFECTS_NOTE } from '../public/hogg-squash/js/ui/options.js';
 import { KEYTEST_TEXT, KEYS, keyBox } from '../public/hogg-squash/js/ui/keytest.js';
 import { defaultLayouts, keyLabel, helpLines, seatLabel, ACTIONS } from '../public/hogg-squash/js/input/keymap.js';
@@ -20,11 +22,11 @@ import { makeWorld } from '../public/hogg-squash/js/sim/world.js';
 /** Make moves in turn, returning each one's effect. @param {any} ui @param {string[]} navs */
 const run = (ui, navs) => navs.map(n => navigate(ui, /** @type {any} */ (n)));
 
-test('the defaults: the title, 1 player, first to 9, level 5', () => {
+test('the defaults: the title, 1 player, first to 9, level 5, no characters picked yet', () => {
   const ui = makeUi();
   assert.equal(ui.screen, 'title');
-  assert.deepEqual(ui.settings, { players: 1, target: 9, level: 5 });
-  assert.deepEqual(DEFAULT_SETTINGS, { players: 1, target: 9, level: 5 });
+  assert.deepEqual(ui.settings, { players: 1, target: 9, level: 5, picks: [] });
+  assert.deepEqual(DEFAULT_SETTINGS, { players: 1, target: 9, level: 5, picks: [] });
 });
 
 test('1P: title → length → level → controllers → match, with the choices kept', () => {
@@ -39,7 +41,7 @@ test('1P: title → length → level → controllers → match, with the choices
   run(ui, ['left', 'left', 'left', 'left', 'left', 'right']);   // stops at 1, then 2
   assert.deepEqual(run(ui, ['ok']), ['prepare'], 'the match is built for the controllers screen');
   assert.equal(ui.screen, 'assign');
-  assert.deepEqual(ui.settings, { players: 1, target: 11, level: 2 });
+  assert.deepEqual(ui.settings, { players: 1, target: 11, level: 2, picks: [] }, 'no roster: no characters screen');
   assert.deepEqual(run(ui, ['ok']), ['start']);
   assert.equal(ui.screen, 'match');
 });
@@ -51,7 +53,7 @@ test('every match length and level can be picked', () => {
       run(ui, ['ok', 'left', 'left', 'left', ...Array(i).fill('right'), 'ok',
         ...Array(8).fill('left'), ...Array(level - 1).fill('right'), 'ok']);
       assert.equal(ui.screen, 'assign');
-      assert.deepEqual(ui.settings, { players: 1, target, level });
+      assert.deepEqual(ui.settings, { players: 1, target, level, picks: [] });
     }
   }
 });
@@ -243,7 +245,7 @@ test('the font has every character the screens draw, and the lines fit', () => {
   /** [font, lines, the widest they may be] */
   const used = [
     ['large-red', [...TITLE_ITEMS, 'MATCH LENGTH', 'LEVEL', '5 7 9 11', '1 2 3 4 5 6 7 8 9', 'PAUSED'], 306],
-    ['large-white', [...TITLE_ITEMS, ...PAUSE_ITEMS, 'SOUND OFF', ...RESULT_ITEMS, '11', resultLine(w), 'CONTROLLERS',
+    ['large-white', [...TITLE_ITEMS, ...PAUSE_ITEMS, 'SOUND OFF', ...RESULT_ITEMS, '11', resultLine(w, ['P1', 'CPU']), 'CONTROLLERS',
       'CONTROLLER DISCONNECTED'], 306],
     ['small', [TITLE_HINT, EFFECTS_NOTE, SETUP_HINT, ASSIGN_TEXT.play, ASSIGN_TEXT.carryOn, 'keys arrows Num0 Num.  +  (unplugged controller)'], 620],
     ['small-dark', [SOUND_NOTE.text, ...levels, lengthNote(11), modeLine({ players: 1, target: 9, level: 5 }) + ', FIRST TO 11',
@@ -252,7 +254,8 @@ test('the font has every character the screens draw, and the lines fit', () => {
       matchLine({ players: 1, target: 11, level: 9 }), matchLine({ players: 2, target: 11, level: 5 })], 400],
     ['small-red', ['P1'], 50],
   ];
-  assert.equal(resultLine(w), 'CPU WINS 11–9');
+  assert.equal(resultLine(w, ['P1', 'CPU']), 'CPU WINS 11–9');
+  assert.equal(resultLine(w, ['Ronin', 'Will']), 'WILL WINS 11–9', 'the name, in capitals');
   for (const [font, lines, max] of used) {
     for (const line of lines) {
       for (const ch of line) if (ch !== ' ') assert.ok(glyphFor(fonts[font], ch), `${font} has ${ch} (${line})`);
@@ -352,4 +355,116 @@ test('S12: the touch wording (hints, margins, controllers) and the How to play c
   assert.ok(c.x > MENU.x + 40 + widest + 6 + 4, 'clear of the menu and its highlight bar');
   assert.ok(c.x + c.w <= 366, 'clear of the shield');
   assert.ok(c.y >= MENU.y && c.y + c.lines.length * c.ROW + 12 <= MENU.y + MENU.h, 'inside the menu area\'s height');
+});
+
+/** A ui with the S15 roster, its random numbers from a list (the CPU's picks). @param {number[]} rolls */
+function withRoster(rolls = [0]) {
+  const ui = makeUi();
+  setRoster(ui, ['ronin', 'adam', 'ben', 'will']);
+  let i = 0;
+  ui.rand = () => rolls[i++ % rolls.length];
+  return ui;
+}
+
+test('S15, 1P: level → characters → controllers; P1 starts on Ronin, the CPU\'s pick is random and rolls again', () => {
+  const ui = withRoster([0.6, 0.1, 0.9]);
+  run(ui, ['ok', 'ok']);                                    // 1P, first to 9
+  assert.deepEqual(run(ui, ['ok']), [null], 'no match built yet');
+  assert.equal(ui.screen, 'select');
+  assert.deepEqual(ui.pick, { at: [0, 2], locked: [false, true] }, 'P1 on Ronin; the CPU on Ben (0.6 of 4)');
+  run(ui, ['down']);                                        // another: never the same one
+  assert.notEqual(ui.pick.at[1], 2);
+  const cpu = ui.pick.at[1];
+  run(ui, ['right', 'right', 'left']);
+  assert.equal(ui.pick.at[0], 1, 'P1 on Adam');
+  assert.equal(ui.pick.at[1], cpu, 'the CPU keeps its pick');
+  run(ui, ['left', 'left']);
+  assert.equal(ui.pick.at[0], 3, 'left from Ronin wraps to Will');
+  assert.deepEqual(navigate(ui, 'ok', 1), 'prepare', 'in 1P every control is P1\'s, and the CPU has picked');
+  assert.equal(ui.screen, 'assign');
+  assert.deepEqual(ui.settings.picks, ['will', ['ronin', 'adam', 'ben', 'will'][cpu]]);
+});
+
+test('S15, 2P: each player picks with their own controls; Enter picks for the first still choosing; back undoes', () => {
+  const ui = withRoster();
+  run(ui, ['down', 'ok', 'ok']);                            // 2P, first to 9 (no level)
+  assert.equal(ui.screen, 'select');
+  assert.deepEqual(ui.pick, { at: [0, 1], locked: [false, false] }, 'P1 on Ronin, P2 on Adam');
+  navigate(ui, 'right', 1);
+  navigate(ui, 'right', 1);
+  assert.deepEqual(ui.pick.at, [0, 3], 'P2 moved, P1 didn\'t');
+  assert.equal(navigate(ui, 'ok', 1), null, 'P2 picked; P1 still choosing');
+  navigate(ui, 'left', 1);
+  assert.equal(ui.pick.at[1], 3, 'a pick stays put');
+  navigate(ui, 'back', 1);
+  assert.deepEqual(ui.pick.locked, [false, false], 'SOFT undoes P2\'s pick');
+  navigate(ui, 'ok', 1);
+  navigate(ui, 'down', 0);
+  assert.deepEqual(ui.pick.at, [0, 3], 'up / down do nothing in 2P');
+  assert.equal(navigate(ui, 'ok'), 'prepare', 'Enter picks for P1, the one still choosing');
+  assert.deepEqual(ui.settings.picks, ['ronin', 'will']);
+  run(ui, ['back']);
+  assert.equal(ui.screen, 'select', 'back from the controllers goes to the characters');
+  assert.deepEqual(ui.pick, { at: [0, 3], locked: [false, false] }, 'both choosing again, from their picks');
+  run(ui, ['back']);
+  assert.equal(ui.screen, 'length', 'back with nothing picked: the match length (2P)');
+});
+
+test('S15: a mirror match is allowed; rematch and restart keep the picks; the next visit starts on them', () => {
+  const ui = withRoster([0.3]);
+  run(ui, ['ok', 'ok', 'ok']);                              // 1P: the CPU on Adam (0.3 of 4)
+  run(ui, ['right']);
+  assert.deepEqual(run(ui, ['ok']), ['prepare']);
+  assert.deepEqual(ui.settings.picks, ['adam', 'adam'], 'both Adam');
+  run(ui, ['ok']);
+  matchOver(ui);
+  assert.deepEqual(run(ui, ['ok']), ['rematch']);
+  assert.deepEqual(ui.settings.picks, ['adam', 'adam'], 'the rematch keeps them');
+  run(ui, ['back', 'down']);
+  assert.deepEqual(run(ui, ['ok']), ['restart']);
+  assert.deepEqual(ui.settings.picks, ['adam', 'adam']);
+  run(ui, ['back', 'up', 'ok']);                            // quit to the title
+  assert.equal(ui.screen, 'title');
+  run(ui, ['ok', 'ok', 'ok']);
+  assert.equal(ui.screen, 'select');
+  assert.equal(ui.pick.at[0], 1, 'P1 starts on their last pick');
+  assert.deepEqual(pickIndices({ ...ui.settings, picks: ['gone', 'will'] }, ui.roster), [0, 3],
+    'a pick no longer in the roster falls back to the first');
+});
+
+test('S15: back steps out of the characters (1P) to the level; touch picks by tapping', () => {
+  const ui = withRoster([0.99]);
+  run(ui, ['ok', 'ok', 'ok']);
+  assert.equal(ui.pick.at[1], 3, 'the CPU on Will (0.99 of 4)');
+  run(ui, ['back']);
+  assert.equal(ui.screen, 'level');
+  run(ui, ['ok']);
+  assert.equal(tap(ui, null), null, 'a tap off the cards does nothing');
+  assert.equal(tap(ui, SELECT_REROLL), null);
+  assert.notEqual(ui.pick.at[1], 3, 'a tap on the CPU rolls another');
+  assert.equal(tap(ui, 2), 'prepare', 'a tap on a card is P1\'s pick');
+  assert.equal(ui.settings.picks[0], 'ben');
+});
+
+test('S15: without a roster (the sprites didn\'t load) the characters screen is skipped', () => {
+  const ui = makeUi();
+  run(ui, ['down', 'ok']);
+  assert.deepEqual(run(ui, ['ok']), ['prepare']);
+  assert.equal(ui.screen, 'assign');
+  run(ui, ['back']);
+  assert.equal(ui.screen, 'length');
+});
+
+test('S15: the characters screen\'s words are in the font and fit its panel', () => {
+  const fonts = parseFonts(JSON.parse(fs.readFileSync('public/hogg-squash/assets/font.json', 'utf8')));
+  const fits = (/** @type {any} */ font, /** @type {string} */ line, /** @type {number} */ max) => {
+    for (const ch of line) if (ch !== ' ') assert.ok(glyphFor(fonts[font], ch), `${font} has ${ch} (${line})`);
+    assert.ok(measureWith(fonts, font, line) <= max, `${font} "${line}" fits in ${max} px`);
+  };
+  for (const t of SELECT_TEXT.title) fits('large-red', t, 580);
+  for (const l of [SELECT_TEXT.hint1, SELECT_TEXT.hint2, SELECT_TEXT.touchHint]) fits('small', l, 580);
+  fits('small-grey', SELECT_TEXT.same, 580);
+  fits('small-grey', '1 PLAYER VS CPU, LEVEL 9, FIRST TO 11', 580);
+  for (const l of [...SELECT_TEXT.cpu, ...SELECT_TEXT.cpuTouch, SELECT_TEXT.choose]) fits('small-grey', l, 140);
+  fits('small-red', SELECT_TEXT.picked, 140);
 });

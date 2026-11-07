@@ -202,7 +202,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **Ball feel and test feed:** the ball feels like the arcade, and the S1 feed (back to about the short line) is fine. No change.
 
 ## Screens (2026-10-18)
-- Flow: **title → 1P / 2P → match length (5/7/9/11) → difficulty 1–9 (1P only) → controller assignment → match → result → rematch / menu.**
+- Flow: **title → 1P / 2P → match length (5/7/9/11) → difficulty 1–9 (1P only) → characters → controller assignment → match → result → rematch / menu.** (The characters step since S15; rematch keeps the picks.)
 - **Pause menu on Esc** (and Start on a gamepad). Pause also triggers automatically when the window loses focus or leaves fullscreen.
 - **Options screen:** key remapping and a key test; the **Effects** level (S13). The pause menu also has **Sound on/off** (S13).
 - **GO TO HOME on the title (2026-10-22, the owner's request; first named RONINRAY.COM):** the title's fourth item goes back to the website's start page (https://roninray.com/), where the game and the build log are.
@@ -259,6 +259,20 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **Invented people only,** never real students or staff.
 - **Credits:** 488 on 2026-10-23; the plan needs about 1,000, so a top-up of about 500–600 is needed before the third character's art.
 - **Recolours only for now (2026-11-03, the owner's call):** the three new bodies (A7–A10 in `plan-v2.md`) are on hold, to save credits. S15's roster holds the current player and three recolours (skin and hair), all on the one sheet. New bodies can still be added later with no game code change.
+- **The roster (2026-11-07, S15, the owner's picks):** four characters on `player-100`, in this order. **Ronin is the main player** (first in the roster, P1's starting pick); Adam is the sheet as drawn (A2's colours), P2's starting pick. Ben and Will follow. The owner chose the names and looks after seeing five candidates (`art/mockups/s15-looks.png`; the agreed four: `s15-roster.png`).
+
+  | # | Name | Skin | Hair |
+  |---|---|---|---|
+  | 1 | **Ronin** | a new ramp halfway between Adam's and Will's (each tone one step lighter) | auburn |
+  | 2 | **Adam** | as drawn (the original player) | dark brown, as drawn |
+  | 3 | **Ben** | as drawn | black |
+  | 4 | **Will** | fair (each tone two steps lighter) | sandy blond |
+
+  - The names replace "invented people only" above for these four: they are the owner's own picks.
+- **As built (S15):** `assets/characters.json` lists each character (id, name, sheet, optional `skin` and `hair` as [from, to] palette colours); `js/render/roster.js` checks every entry and sheet (`SHEET_CONTRACT`: the nine tags, their frame counts, the swings' contact frames, `feet`, the `racket <tag>` slices) and leaves out a broken one with a console warning. The skin is recoloured everywhere; **the hair only on the head**, because the sheet's two hair colours are also the shorts' dark shading: in each frame the head is the largest connected blob of those colours (checked on all 73 frames, the dive included; `hairMask` in `js/render/sprites.js`). Recolours may not use the kit's reds. Six new palette tones (42 of 48): skin 7 and 8, auburn and blond hair, two each.
+  - **The select screen** (`js/ui/select.js`): each player picks with their own keys or pad (P1 left in red, P2 right in white, each choice playing `ready` in the kit it will wear); HARD picks, SOFT undoes; in 1P the CPU's pick is random, and up / down or a tap on it rolls another. Touch: tap a character. A mirror match is allowed. With no roster (the sprites didn't load) the screen is skipped.
+  - **Names:** the score panels, the wall's notes and the result use the characters' names ("RONIN WINS 9–5"). P1 / P2 / CPU come back in a mirror match (the names alone wouldn't say who is who), when a name is wider than the panel's 62 px name slot, or with no roster.
+  - **Memory:** a character's full sheet in one kit is about 7.6 MB of canvas; only the match's two are kept (built when the match is set up, about 20 ms each), plus the select screen's `ready` loops (0.76 MB each, 8 at most). About 21 MB in all, against v1's 15. No extra download: the four share `player-100.png`.
 
 ## Still open
 Nothing blocking. Details for the plan to settle are in `open-questions.md`.

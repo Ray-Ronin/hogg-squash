@@ -18,7 +18,7 @@ a whole-number upscale with no smoothing, then a smooth shrink to fit, so pixels
 - Court: white walls, red lines, light wood floor (like the Hogg courts). Bright and readable. The **ball must stand out from every background** (walls and floor), with a dark shadow under it on the floor.
 - Players: a darker outline (or selective outlining) so they read against the floor.
 
-**The palette (A1, 2026-10-20):** `art/palette/hogg-squash.gpl`, 36 colours (hex values in `theme.md`). Load it in Aseprite and keep sprites in indexed mode on it. Characters use only the neutrals, reds, skin and hair; wood, glass, effects and the Mission colours are for the court and UI. New colours go into the `.gpl` file (up to 48), never ad hoc.
+**The palette (A1, 2026-10-20):** `art/palette/hogg-squash.gpl`, 36 colours, 42 since S15's skin and hair tones (hex values in `theme.md`). Load it in Aseprite and keep sprites in indexed mode on it. Characters use only the neutrals, reds, skin and hair; wood, glass, effects and the Mission colours are for the court and UI. New colours go into the `.gpl` file (up to 48), never ad hoc.
 
 **Kit swap (P2 / CPU, white and black):** recolour these palette entries, and nothing else:
 
@@ -120,6 +120,18 @@ Also needed: the ball + shadow, landing marker, front-wall impact ring, the cour
 **SpriteCook account (checked 2026-10-18):** free tier, **0 credits**. Still images cost roughly **5–25 credits each** depending on model and quality (e.g. GPT 2.5 Flare: 5 low / 8 medium / 25 high at 1K; it supports pixel art and transparency). Animations cost more. Credits are needed before any generation.
 **Update (2026-10-20, A1):** the account is now on the Apprentice tier (800 credits when A1 started). A1 spent 32 (`art/spritecook-manifest.md`). Flare bills a non-square 1K image as 2K and adds 8 credits per reference image.
 **After A5 (2026-10-22):** 488 credits (A4 spent 8, A5 32).
+
+## Characters (S15)
+The roster is `public/hogg-squash/assets/characters.json`, in order; for now every character is a recolour of `player-100` (A7–A10, new bodies, are on hold). A recolour is a list of [from, to] palette colours: **skin** applies everywhere, **hair** only to the head (the largest blob of the sheet's two hair colours in each frame, which are also the shorts' shading). The white kit is the kit swap above, on top. A recolour must not use the kit's reds. Preview: `art/mockups/s15-roster.png` (both kits, ready, forehand contact, dive).
+
+| Character | Skin (skin 6 → skin 1 become) | Hair (`hair`, `hair dark` become) |
+|---|---|---|
+| Ronin (P1's start) | skin 7, 6, 5, 4, 3, 2 | auburn `#8a4a24`, auburn dark `#5c2e18` |
+| Adam (P2's start) | as drawn | as drawn |
+| Ben | as drawn | hair dark, outline |
+| Will | skin 8, 7, 6, 5, 4, 2 | blond `#d9b060`, blond dark `#a87e3c` |
+
+A new sheet must keep player-100's contract (§3; `SHEET_CONTRACT` in `js/render/roster.js`), or the game leaves its characters out with a console warning.
 
 ## 5. Still to settle (in the build)
 - (Decided: character height 70–100 px on the smooth curve, art at 100 px, scaled smoothly; see §3.)

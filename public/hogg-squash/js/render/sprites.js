@@ -1,6 +1,7 @@
 // @ts-check
 // The character sprites: Aseprite's JSON (frames, durations, tags, the feet slice) read into a Sheet, one atlas per
-// kit (P2 / CPU recoloured once at load), and a per-player animation player that is stepped once per sim step.
+// character and kit (P2 / CPU's kit and a character's skin and hair recoloured once, when the atlas is built; S15),
+// and a per-player animation player that is stepped once per sim step.
 //
 // Timing is in sim frames, never wall-clock time. Each tag's frame durations (ms) become sim-frame start times
 // (rounded to the nearest of the sim's 57.4 Hz frames), so a slowed or frozen sim slows or freezes the animation too.
@@ -277,39 +278,135 @@ const clamp = (gap, max) => Math.max(-max, Math.min(max, gap));
 const GUTTER = 2;
 
 /**
- * Build one kit's atlas from the sheet's PNG. The recolouring is done once, here.
+ * How to colour an atlas (S15): the kit swap (KIT_SWAP for the white kit, none for red) and a character's recolours.
+ * Each is a list of [from, to] colours (#rrggbb), all looked up on the sheet's own colours (never chained). `skin`
+ * applies everywhere; `hair` only to the head's hair (hairMask), because the sheet's two hair colours are also the
+ * shorts' dark shading. A pixel the hair takes isn't recoloured again; otherwise the skin, then the kit.
+ * @typedef {{ swap?: readonly (readonly [string, string])[], skin?: readonly (readonly [string, string])[],
+ *   hair?: readonly (readonly [string, string])[] }} Colouring
+ */
+
+/** Hair pixels this close (px) to the head's blob's box count as the head's too (a stray strand, a parting). */
+const HAIR_NEAR = 2;
+
+/** @param {string} hex  #rrggbb */
+const rgbOf = hex => parseInt(hex.slice(1), 16);
+
+/**
+ * Which pixels of one frame are the head's hair: the largest 8-connected blob of the `from` colours (in every frame of
+ * player-100 that is the head, the dive included; the shorts' shading comes in smaller pieces), plus any pixel of those
+ * colours within HAIR_NEAR px of its bounding box.
+ * @param {Uint8ClampedArray | Uint8Array} d  RGBA pixels, `width` px a row
+ * @param {number} width
+ * @param {{ x: number, y: number }} cell  the frame's top-left
+ * @param {number} fw @param {number} fh  frame size
+ * @param {Set<number>} from  the hair colours (0xrrggbb)
+ * @returns {Uint8Array} 1 for the head's hair, fw × fh
+ */
+export function hairMask(d, width, cell, fw, fh, from) {
+  const at = (/** @type {number} */ x, /** @type {number} */ y) => ((cell.y + y) * width + cell.x + x) * 4;
+  const isHair = (/** @type {number} */ x, /** @type {number} */ y) => {
+    const i = at(x, y);
+    return d[i + 3] !== 0 && from.has((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]);
+  };
+  const blob = new Int32Array(fw * fh).fill(-1);
+  /** @type {{ n: number, x0: number, x1: number, y0: number, y1: number }[]} */
+  const blobs = [];
+  for (let y = 0; y < fh; y++) {
+    for (let x = 0; x < fw; x++) {
+      if (blob[y * fw + x] >= 0 || !isHair(x, y)) continue;
+      const id = blobs.length, b = { n: 0, x0: x, x1: x, y0: y, y1: y }, todo = [x, y];
+      blob[y * fw + x] = id;
+      while (todo.length) {
+        const v = /** @type {number} */ (todo.pop()), u = /** @type {number} */ (todo.pop());
+        b.n++;
+        b.x0 = Math.min(b.x0, u); b.x1 = Math.max(b.x1, u); b.y0 = Math.min(b.y0, v); b.y1 = Math.max(b.y1, v);
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = u + dx, ny = v + dy;
+            if (nx < 0 || ny < 0 || nx >= fw || ny >= fh || blob[ny * fw + nx] >= 0 || !isHair(nx, ny)) continue;
+            blob[ny * fw + nx] = id;
+            todo.push(nx, ny);
+          }
+        }
+      }
+      blobs.push(b);
+    }
+  }
+  const mask = new Uint8Array(fw * fh);
+  if (!blobs.length) return mask;
+  const head = blobs.reduce((a, b) => (b.n > a.n ? b : a));
+  for (let y = Math.max(0, head.y0 - HAIR_NEAR); y <= Math.min(fh - 1, head.y1 + HAIR_NEAR); y++) {
+    for (let x = Math.max(0, head.x0 - HAIR_NEAR); x <= Math.min(fw - 1, head.x1 + HAIR_NEAR); x++) {
+      if (blob[y * fw + x] >= 0) mask[y * fw + x] = 1;
+    }
+  }
+  return mask;
+}
+
+/**
+ * Recolour an atlas's pixels in place (Node can call it: no canvas).
+ * @param {Uint8ClampedArray | Uint8Array} d  RGBA pixels, `width` px a row
+ * @param {number} width
+ * @param {({ x: number, y: number } | undefined)[]} cells  each frame's top-left (holes: frames not in the atlas)
+ * @param {number} fw @param {number} fh  frame size
+ * @param {Colouring} colouring
+ */
+export function recolour(d, width, cells, fw, fh, { swap = [], skin = [], hair = [] }) {
+  const map = (/** @type {readonly (readonly [string, string])[]} */ list) =>
+    new Map(list.map(([from, to]) => [rgbOf(from), rgbOf(to)]));
+  const kit = map(swap), body = map(skin), head = map(hair);
+  const set = (/** @type {number} */ i, /** @type {number} */ to) => {
+    d[i] = to >> 16;
+    d[i + 1] = (to >> 8) & 255;
+    d[i + 2] = to & 255;
+  };
+  const hairFrom = new Set(head.keys());
+  for (const cell of cells) {
+    if (!cell) continue;
+    const mask = hairFrom.size ? hairMask(d, width, cell, fw, fh, hairFrom) : null;
+    for (let y = 0; y < fh; y++) {
+      for (let x = 0; x < fw; x++) {
+        const i = ((cell.y + y) * width + cell.x + x) * 4;
+        if (d[i + 3] === 0) continue;
+        const c = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
+        const to = (mask?.[y * fw + x] ? head.get(c) : undefined) ?? body.get(c) ?? kit.get(c);
+        if (to !== undefined) set(i, to);
+      }
+    }
+  }
+}
+
+/**
+ * Build one atlas from the sheet's PNG: one kit of one character. The recolouring is done once, here.
  * @param {HTMLImageElement} img
  * @param {Sheet} sheet
- * @param {readonly (readonly [string, string])[]} [swap]  colour → colour (#rrggbb), e.g. KIT_SWAP
- * @returns {Atlas}
+ * @param {Colouring} [colouring]  the kit swap and the character's recolours (none: the sheet as drawn)
+ * @param {number[]} [only]  just these frames (the select screen's `ready` loop); default every frame
+ * @returns {Atlas}  cells by frame index (holes for frames left out)
  */
-export function buildAtlas(img, sheet, swap = []) {
+export function buildAtlas(img, sheet, colouring = {}, only) {
   const { frameW: w, frameH: h } = sheet;
-  const cols = Math.max(1, Math.floor(img.width / w));
+  const frames = only ?? sheet.frames.map((_, i) => i);
+  const cols = Math.max(1, Math.min(frames.length, Math.floor(img.width / w)));
   const stepX = w + 2 * GUTTER, stepY = h + 2 * GUTTER;
-  const rows = Math.ceil(sheet.frames.length / cols);
+  const rows = Math.ceil(frames.length / cols);
   const canvas = document.createElement('canvas');
   canvas.width = cols * stepX;
   canvas.height = rows * stepY;
-  const c = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d', { willReadFrequently: swap.length > 0 }));
-  const cells = sheet.frames.map((f, i) => {
-    const cell = { x: (i % cols) * stepX + GUTTER, y: Math.floor(i / cols) * stepY + GUTTER };
+  const busy = !!(colouring.swap?.length || colouring.skin?.length || colouring.hair?.length);
+  const c = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d', { willReadFrequently: busy }));
+  /** @type {{ x: number, y: number }[]} */
+  const cells = [];
+  frames.forEach((fi, k) => {
+    const f = sheet.frames[fi];
+    const cell = { x: (k % cols) * stepX + GUTTER, y: Math.floor(k / cols) * stepY + GUTTER };
     c.drawImage(img, f.x, f.y, w, h, cell.x, cell.y, w, h);
-    return cell;
+    cells[fi] = cell;
   });
-  if (swap.length) {
-    const rgb = (/** @type {string} */ hex) => parseInt(hex.slice(1), 16);
-    const map = new Map(swap.map(([from, to]) => [rgb(from), rgb(to)]));
+  if (busy) {
     const data = c.getImageData(0, 0, canvas.width, canvas.height);
-    const d = data.data;
-    for (let i = 0; i < d.length; i += 4) {
-      if (d[i + 3] === 0) continue;
-      const to = map.get((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]);
-      if (to === undefined) continue;
-      d[i] = to >> 16;
-      d[i + 1] = (to >> 8) & 255;
-      d[i + 2] = to & 255;
-    }
+    recolour(data.data, canvas.width, cells, w, h, colouring);
     c.putImageData(data, 0, 0);
   }
   return { canvas, cells };

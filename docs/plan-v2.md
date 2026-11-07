@@ -29,7 +29,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 **More characters**
 - [-] 💳 Approve SpriteCook spend for A7 *(you)* *(on hold)*
 - [-] **A7** Art: concepts for three new characters *(on hold 2026-11-03, the owner's call: recolours only for now)*
-- [ ] **S15** Character roster and the character select screen, with recolours of the current player as the roster for now
+- [x] **S15** Character roster and the character select screen, with recolours of the current player as the roster for now
 - [-] 💳 Approve SpriteCook spend for A8 *(you)* *(on hold)*
 - [-] **A8** Art: character 2, every animation *(on hold)*
 - [-] 💳 Approve SpriteCook spend for A9 *(you)* (a credit top-up is likely needed first) *(on hold)*
@@ -496,6 +496,8 @@ No game code changes. Never use ROM/MAME/Gaelco images as references. Finish wit
 
 **You check or decide at the end:** the screen's layout and wording, where it sits in the flow, and whether the CPU's pick should be random or chosen.
 
+*(As built, 2026-11-07: Ronin, Adam, Ben and Will, Ronin first; see the Session log and `decisions.md`, "Characters".)*
+
 **Starter prompt**
 ```text
 We're doing Session S15 of docs/plan-v2.md: "Character roster and the character select screen".
@@ -816,3 +818,12 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Trade-off:** everyone shares one body and its animations, so the tournament's opponents differ by skin, hair and name only.
   - **If A7 comes back:** these were proposed but never agreed. Maya: a woman in her 20s, slim and compact, long dark ponytail, medium brown skin. Otis: a tall, lanky man in his 30s, black short flat-top, deep brown skin, narrow shoulders and long limbs. Hank: a stocky coach of about 60, grey hair thinning on the crown, light weathered skin. All three stay 100 px head to soles, and their names fit the name slot (at most 48 px of 62).
   - **Next:** S15.
+- 2026-11-07, S15 (character roster and select screen, 1.15.0): four characters, all recolours of `player-100`, picked on a new screen after the level (1P) or the length (2P). New: `assets/characters.json` (the roster), `js/render/roster.js` (entry and sheet checks, `SHEET_CONTRACT`, the atlas cache, each side's name), `js/ui/select.js`; `sprites.js` gains `recolour` and `hairMask` (`buildAtlas` takes a colouring and an optional frame list); `screens.js` gains the `select` screen (per-side moves, the CPU's random pick and re-roll, taps), `settings.picks`; the HUD and result take names; `main.js` loads the roster, then each sheet it names, and builds the match's two atlases from the picks. Nothing in `js/sim/` changed. 12 new tests (169 unit tests in all; `test/roster.test.js`, `test/png.js` reads the sheet in Node).
+  - **Agreed with the owner first:** five candidates were drawn (`art/mockups/s15-looks.png`). The owner picked the names and looks, and asked for **Ronin to be the main player** (P1's starting pick, first in the roster): Ronin (a new skin ramp between Adam's and Will's, auburn hair), Adam (the original art), Ben (Adam's skin, black hair), Will (fair skin, blond hair). Preview of the four as built, coloured by the game's own code: `art/mockups/s15-roster.png`. Six palette tones added (42 of 48). The plan's "Dez" isn't used.
+  - **The hair problem and its fix:** the sheet's two hair colours are also the shorts' dark shading (`hair dark` is 9,019 pixels, most of them not hair), so a plain colour swap would speckle the shorts on any hair lighter than black. The hair is recoloured only in each frame's largest blob of those colours, plus any of them within 2 px of its box; that is the head in all 73 frames, the dive included (a test checks every frame: one head's worth of pixels, above y 75 standing or at the head end of the dive).
+  - **The CPU's pick:** random by default; up / down (or a tap on it) rolls another, never the same one. A mirror match is allowed; its names fall back to P1 / P2 / CPU.
+  - **Checked in the browser** (Chrome in the app, `?dev`, real key events): 1P by keyboard (the CPU rolled, P1 picked Will by wrapping left from Ronin), the match named Will and Ben on the panels and the wall, played out (P1 handed to a CPU) to "WILL WINS 11–9"; a rematch kept the picks and the same sheets; 2P with each player's own keys (P2's arrows moved only P2; F locked only P1), back from the controllers to the characters, a mirror match (both Will, red and white, named P1 / P2); touch at 844 × 390 with real touch events (a tap on the CPU rolled it, a tap below it where SOFT sits did nothing, a tap on Adam's card picked him, the match started); a roster with three broken entries (a bad id, a kit-red hair, a missing sheet) loaded the four good characters with one warning for each; a cold load to the result with no console messages; the `?level=` shortcut still skips the menus. **By tests only:** the roster's validation, the sheet contract on a broken copy, the recolour on every frame in both kits, the screen's moves (2P picks twice, the CPU's pick, rematch, back, taps, no roster), the names' fallback, the words fitting the font.
+  - **Fixed on the way:** with touch showing, the SOFT button covered the CPU's "Tap for another" line, so a tap there would have gone back; the lines now sit above the CPU's figure and only the figure rolls.
+  - **Memory and loading:** a full sheet in one kit is about 7.6 MB of canvas; only the match's two are kept (built when the match is set up, about 20 ms each in Node), plus the select screen's `ready` loops (0.76 MB each, up to 8): about 21 MB, against v1's 15 MB. The loading bar counts the roster and each sheet. **Download size:** no new images (the four share `player-100.png`, 72 KB); the roster file is 1.2 KB and the new code about 13 KB.
+  - **For the owner (CP-H):** the screen's layout and wording; random or chosen CPU picks; whether the four are told apart well enough at the front of the court. Also seen: on a phone the speaker button sits over the right score panel's name (S13's place; it covered "CPU" the same way before).
+  - **Next:** CP-H (play-test 6: the characters).

@@ -122,8 +122,8 @@ export function ballCentre(x, y, z) {
 /** @typedef {import('../sim/player.js').Player} Player */
 
 /**
- * The character sprites: the sheet, each player's kit atlas and animation (P1 first).
- * @typedef {{ sheet: import('./sprites.js').Sheet, atlases: import('./sprites.js').Atlas[],
+ * The character sprites: each player's sheet, atlas (their character in their kit) and animation (P1 first).
+ * @typedef {{ sheets: import('./sprites.js').Sheet[], atlases: import('./sprites.js').Atlas[],
  *   anims: import('./sprites.js').Animator[] }} Sprites
  */
 
@@ -171,11 +171,11 @@ export function drawActors(ctx, ball, players, opts) {
     heights[i] = Math.round(hExact);
     const sp = opts.sprites;
     items.push({ z, draw: sp ? () => {
-      const p = project(pl.x / FP, 0, z), a = sp.anims[i], c = a.contact;
+      const p = project(pl.x / FP, 0, z), a = sp.anims[i], c = a.contact, sheet = sp.sheets[i];
       const ball = c && opts.racket !== false ? ballCentre(c.x, c.y, c.z) : null;
-      shifts[i] = racketShift(sp.sheet, a, p.sy, heights[i], ball?.sy ?? null);
-      sideShifts[i] = racketSideShift(sp.sheet, a, p.sx, heights[i], ball?.sx ?? null);
-      drawSprite(ctx, sp.sheet, sp.atlases[i], a, p.sx, p.sy, heights[i], shifts[i], sideShifts[i]);
+      shifts[i] = racketShift(sheet, a, p.sy, heights[i], ball?.sy ?? null);
+      sideShifts[i] = racketSideShift(sheet, a, p.sx, heights[i], ball?.sx ?? null);
+      drawSprite(ctx, sheet, sp.atlases[i], a, p.sx, p.sy, heights[i], shifts[i], sideShifts[i]);
     } : () => drawBox(ctx, pl, hExact, COLOURS.players[i]) });
   });
   items.sort((a, b) => a.z - b.z).forEach(it => it.draw());

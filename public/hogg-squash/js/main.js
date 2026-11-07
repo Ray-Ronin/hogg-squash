@@ -1,8 +1,8 @@
 // @ts-check
 // Boot: wires the loop, the keyboard and gamepads, the screens (js/ui/), the CPU, the world (all game logic is in
 // js/sim/) and the renderer.
-// The screens (docs/decisions.md, "Screens"): title → 1P / 2P → match length → level (1P only) → controllers →
-// match → result → rematch or menu, and title → options (remap keys, saved in localStorage) → key test. Menus take arrows / WASD (any player's movement keys), Enter / Space or a HARD key
+// The screens (docs/decisions.md, "Screens"): title → 1P / 2P → match length → level (1P only) → characters (S15) →
+// controllers → match → result → rematch (the same characters) or menu, and title → options (remap keys, saved in localStorage) → key test. Menus take arrows / WASD (any player's movement keys), Enter / Space or a HARD key
 // for OK, Esc or a SOFT key for back, and on a pad the D-pad or stick, A (OK), B / X (back) and Start.
 // In a match Esc or Start opens the pause menu (Resume / Restart match / Quit to title); so do losing focus, hiding
 // the tab and leaving fullscreen. 1P: WASD + F HARD / G SOFT against the CPU, the human serving first. 2P: P1 as
@@ -34,8 +34,11 @@
 // ?scale=int whole-number scaling only (default: fill the window),
 // ?slow=<n> slow motion (the sim runs n times slower), ?dev exposes the game as window.hogg for testing,
 // ?court=code|lines starts on that court view, ?logo=on shows the logo slot (LOGO in render/hud.js) for testing.
-// The players are the animated sprites (assets/player-100.png + .json, loaded before the game starts; P2 / the CPU in
-// the swapped kit). \ or ?boxes shows the placeholder boxes instead (debug); they're also the fallback if loading fails.
+// The players are the animated sprites of the characters they picked (S15: assets/characters.json, the roster; each
+// character's sheet, e.g. player-100.png + .json, loaded before the game starts, recoloured for its skin and hair, P2 /
+// the CPU in the swapped kit). A roster entry or sheet that breaks the contract is left out with a warning (roster.js).
+// The score panels, the wall and the result name each side by its character. Characters are looks only: the sim never
+// sees them. \ or ?boxes shows the placeholder boxes instead (debug); they're also the fallback if loading fails.
 // The court, ball, effects, font, HUD pieces and title (A4, A5) load alongside; without them the code court and
 // shapes are drawn, with plain canvas text.
 import { startLoop, SIM_HZ } from './engine/loop.js';
@@ -55,15 +58,16 @@ import { useCamera } from './render/projection.js';
 import { drawCourt, useCourt, COURT_VIEWS } from './render/court.js';
 import { drawActors, heights, shifts } from './render/actors.js';
 import { loadAssets } from './engine/assets.js';
-import { parseSheet, buildAtlas, createAnimator, stepAnimator, frameAt, KIT_SWAP, RACKET } from './render/sprites.js';
+import { parseSheet, createAnimator, stepAnimator, frameAt, RACKET } from './render/sprites.js';
+import { parseRoster, sheetProblems, sideNames, atlasOf, previewOf, keepFor, NAME_SLOT } from './render/roster.js';
 import { createEffects } from './render/effects.js';
 import { drawHud, loadLogo, LOGO } from './render/hud.js';
-import { useFont, drawText, lineHeight } from './render/text.js';
+import { useFont, drawText, lineHeight, textWidth } from './render/text.js';
 import { useUi } from './render/ui.js';
 import { useFx } from './render/fx.js';
 import { drawDebug, createShotLog } from './render/debug.js';
 import { makeUi, navigate, captureKey, matchOver, autoPause, assignInMatch, showsMatch, setTouch, tap, toggleSound,
-  DEFAULT_SETTINGS, SITE_URL } from './ui/screens.js';
+  setRoster, pickIndices, DEFAULT_SETTINGS, SITE_URL } from './ui/screens.js';
 import { createAudio, loadSound, saveSound } from './audio/audio.js';
 import { cuesFor, menuSound, menuState, squeakCues, SQUEAK } from './audio/sounds.js';
 import { FP } from './squash-physics.js';
@@ -75,6 +79,7 @@ import { drawSetup } from './ui/setup.js';
 import { drawAssign } from './ui/assign.js';
 import { drawPause } from './ui/pause.js';
 import { drawResult } from './ui/result.js';
+import { drawSelect } from './ui/select.js';
 import { VERSION } from './version.js';
 
 const query = new URLSearchParams(location.search);
@@ -130,7 +135,9 @@ audio.setLevel(ui.sound.level);
 let focused = true;
 /** A pad has been used (with sound still locked, the title says to press a key or tap). */
 let padUsed = false;
-/** The character sprites, once loaded (null: boxes). @type {import('./render/actors.js').Sprites | null} */
+/** The characters players can pick, once loaded (empty: the sprites didn't load, so boxes). @type {import('./render/roster.js').Loaded[]} */
+let roster = [];
+/** The match's character sprites (null: boxes). @type {import('./render/actors.js').Sprites | null} */
 let sprites = null;
 let showBoxes = query.has('boxes');
 const shotLog = createShotLog();
@@ -168,7 +175,7 @@ function newMatch(s) {
   world = makeWorld({ target: set.target, seed: s, params, cpu: [false, !two] });
   cpus = world.cpu.map((on, i) => (on ? makeCpu(world, /** @type {0 | 1} */ (i)) : null));
   effects = createEffects();
-  if (sprites) sprites.anims = [createAnimator(), createAnimator()];
+  matchSprites();
   overSteps = 0;
   lastEvent = null;
   lastContact = null;
@@ -178,13 +185,34 @@ function newMatch(s) {
 }
 newMatch(nextSeed++);
 
+/** P1's and P2's characters (the settings' picks, else the roster's first two); empty without a roster. */
+function matchCharacters() {
+  return roster.length ? pickIndices(ui.settings, ui.roster).map(i => roster[i]) : [];
+}
+
+/** The match's sprites: each player's character in their kit (P1 red, P2 / CPU white), built now if not kept. */
+function matchSprites() {
+  const chars = matchCharacters();
+  if (!chars.length) { sprites = null; return; }
+  keepFor(roster, chars);
+  sprites = { sheets: chars.map(c => c.sheetOf), atlases: chars.map((c, kit) => atlasOf(c, kit)),
+    anims: [createAnimator(), createAnimator()] };
+}
+
+/** Each side's name for the HUD and the result (P1 / P2 / CPU without characters, or in a mirror match). */
+function names() {
+  const chars = matchCharacters();
+  return sideNames([0, 1].map(i => chars[i]?.name ?? null), world.cpu, n => textWidth('large-white', n) <= NAME_SLOT);
+}
+
 /**
  * One menu move, and what it asks of the match.
  * @param {import('./ui/screens.js').Nav} n
+ * @param {0 | 1 | null} [side]  whose controls made it (the characters screen), null for the shared keys
  */
-function nav(n) {
+function nav(n, side = null) {
   const before = menuState(ui);
-  doEffect(before, navigate(ui, n), n);
+  doEffect(before, navigate(ui, n, side), n);
 }
 
 /**
@@ -269,11 +297,14 @@ const portrait = () => touchShowing(touchState) && window.innerHeight > window.i
 /** A playing pad was unplugged and nobody has carried on yet. */
 const lost = () => seats.some(s => s?.lost);
 
-/** The menu move a key makes, if any. @param {string} code @returns {import('./ui/screens.js').Nav | null} */
+/**
+ * The menu move a key makes, if any, and whose it is: P1's or P2's keys, or null for the shared ones (Enter, Space, Esc).
+ * @param {string} code @returns {{ n: import('./ui/screens.js').Nav, side: 0 | 1 | null } | null}
+ */
 function keyNav(code) {
-  if (code in MENU_KEYS) return MENU_KEYS[code];
-  for (const l of layouts) {
-    for (const [action, c] of Object.entries(l)) if (c === code) return ACTION_NAV[action];
+  if (code in MENU_KEYS) return { n: MENU_KEYS[code], side: null };
+  for (const [p, l] of layouts.entries()) {
+    for (const [action, c] of Object.entries(l)) if (c === code) return { n: ACTION_NAV[action], side: p ? 1 : 0 };
   }
   return null;
 }
@@ -349,7 +380,9 @@ function pollPads() {
     } else if (ui.screen === 'match') {
       if (p.pressed.start) nav('start');
     } else {
-      for (const n of padNavs(p)) nav(n);
+      // whose pad it is (the characters screen): the player it played for last, else the first pad P1's, the next P2's
+      const side = slot >= 0 ? slot : Math.min(1, list.indexOf(p));
+      for (const n of padNavs(p)) nav(n, side ? 1 : 0);
     }
     if (slot >= 0) bySlot[slot] = p;
   }
@@ -379,8 +412,8 @@ function simStep() {
         if (ui.listen) continue;
         break;
       }
-      const n = keyNav(code);
-      if (n) nav(n);
+      const k = keyNav(code);
+      if (k) nav(k.n, k.side);
       if (playing() || ui.listen) break;  // the key that starts or resumes the match (or asks for a key) does nothing more
     }
   }
@@ -389,7 +422,7 @@ function simStep() {
     if (touchNow.pressed.pause && playing()) nav('start');
   } else if (!playing()) {
     for (const n of touchNavs(touchNow)) {
-      nav(n);
+      nav(n, 0);                                  // touch plays P1
       if (playing()) break;
     }
     for (const [x, y] of tapped) {
@@ -423,7 +456,7 @@ function simStep() {
   if (sprites) {
     const sp = sprites;
     sp.anims.forEach((a, i) =>
-      stepAnimator(a, sp.sheet, world.players[i],
+      stepAnimator(a, sp.sheets[i], world.players[i],
         events.some(e => e.type === 'serveSwing' && e.side === i) ? world.ball : null));
   }
   effects.add(events, world);
@@ -462,6 +495,7 @@ function drawMatch() {
     footer: ui.touch ? TOUCH_FOOTER : `Esc pause     Controllers: A hard  B/X soft  Start pause${
       seats.some(s => s?.pad === null) ? '  (any button joins)' : ''}`,
     slow: SLOW,
+    names: names(),
   });
 }
 
@@ -477,7 +511,10 @@ function render() {
   clearHits();
   if (ui.screen === 'title') drawTitle(ctx, ui, padUsed && !audio.unlocked() && ui.sound.on && ui.sound.level > 0);
   else if (ui.screen === 'length' || ui.screen === 'level') drawSetup(ctx, ui);
-  else if (ui.screen === 'options') drawOptions(ctx, ui);
+  else if (ui.screen === 'select') {
+    drawSelect(ctx, ui, { t: stepCount, chars: roster.map(c => ({ name: c.name, sheet: c.sheetOf,
+      preview: (/** @type {number} */ kit) => previewOf(c, kit) })) });
+  } else if (ui.screen === 'options') drawOptions(ctx, ui);
   else if (ui.screen === 'keytest') drawKeyTest(ctx, kb.heldKeys(), layouts, ui.touch);
   else {
     drawMatch();
@@ -485,7 +522,7 @@ function render() {
       drawAssign(ctx, { seats, keys: layouts.map(seatLabel), name: i => padName(padIds.get(i) ?? ''), level: world.params.level,
         inMatch: ui.inMatch, touch: ui.touch });
     } else if (ui.screen === 'pause') drawPause(ctx, ui);
-    else if (ui.screen === 'result') drawResult(ctx, ui, world);
+    else if (ui.screen === 'result') drawResult(ctx, ui, world, names());
     if (showDebug) {
       drawDebug(ctx, { stepsPerSec, world, heights, lastEvent, lastContact, shots: shotLog.shots, cpus,
         anims: animNames() });
@@ -506,6 +543,7 @@ if (query.has('dev')) {
     get cpus() { return cpus; },
     get seats() { return seats; },
     get sprites() { return sprites; },
+    get roster() { return roster; },
     get anims() { return animNames(); },
     get boxes() { return showBoxes; },
     set boxes(v) { showBoxes = v; },
@@ -524,18 +562,17 @@ if (query.has('dev')) {
 function animNames() {
   const sp = sprites;
   if (!sp) return ['boxes', 'boxes'];
-  return sp.anims.map(a => {
-    const tag = sp.sheet.tags[a.tag];
+  return sp.anims.map((a, i) => {
+    const tag = sp.sheets[i].tags[a.tag];
     return `${a.mirror ? '<' : ''}${a.tag} ${frameAt(tag, a.t)}/${tag.count}`;
   });
 }
 
 // --- loading: the sprites and the art (a loading bar meanwhile), then the game; without the sprites it plays with
 // boxes, and without the art with the code court and shapes and plain text ---
-const assets = loadAssets({
-  sheet: { kind: 'json', url: 'assets/player-100.json' },
-  image: { kind: 'image', url: 'assets/player-100.png' },
-});
+const assets = loadAssets({ roster: { kind: 'json', url: 'assets/characters.json' } });
+/** Each character sheet's loading (it joins the bar once the roster has said which sheets). @type {import('./engine/assets.js').LoadState[]} */
+const sheetLoads = [];
 const art = loadAssets({
   court: { kind: 'image', url: 'assets/court.png' },
   fx: { kind: 'image', url: 'assets/fx.png' },
@@ -550,7 +587,8 @@ let loading = true;
 document.getElementById('loading')?.remove();           // index.html's text, until this module had loaded
 (function drawLoading() {
   if (!loading) return;
-  const done = assets.state.done + art.state.done, total = assets.state.total + art.state.total;
+  const states = [assets.state, art.state, ...sheetLoads];
+  const done = states.reduce((n, st) => n + st.done, 0), total = states.reduce((n, st) => n + st.total, 0);
   ctx.fillStyle = '#16161a';
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
   ctx.fillStyle = '#5a5962';                             // a bar, no text: the font is one of the things loading
@@ -573,13 +611,29 @@ try {
   console.warn('Hogg Squash: the court and HUD art did not load, so the code court and plain text are drawn.', e);
 }
 try {
-  const a = await assets.ready;
-  const sheet = parseSheet(a.sheet);
-  sprites = {
-    sheet,
-    atlases: [buildAtlas(a.image, sheet), buildAtlas(a.image, sheet, KIT_SWAP)],
-    anims: [createAnimator(), createAnimator()],
-  };
+  // the roster, then every sheet it names (all at once); a bad entry or sheet leaves out just those characters
+  const { characters, problems } = parseRoster((await assets.ready).roster);
+  for (const p of problems) console.warn(`Hogg Squash: left out of the roster: ${p}`);
+  const sheets = [...new Set(characters.map(c => c.sheet))].map(name => {
+    const load = loadAssets({ json: { kind: 'json', url: `assets/${name}.json` }, image: { kind: 'image', url: `assets/${name}.png` } });
+    sheetLoads.push(load.state);
+    return load.ready.then(a => {
+      const bad = sheetProblems(a.json);
+      if (bad.length) throw new Error(bad.join('; '));
+      return { name, sheet: parseSheet(a.json), image: a.image };
+    }).catch(e => {
+      console.warn(`Hogg Squash: the sheet ${name} can't be used, so its characters are left out: ${e instanceof Error ? e.message : e}`);
+      return null;
+    });
+  });
+  const ok = (await Promise.all(sheets)).filter(x => x !== null);
+  roster = characters.flatMap(c => {
+    const sh = ok.find(x => x?.name === c.sheet);
+    return sh ? [{ ...c, sheetOf: sh.sheet, image: sh.image, atlases: [], previews: [] }] : [];
+  });
+  if (!roster.length) throw new Error('no character can be played');
+  setRoster(ui, roster.map(c => c.id));
+  matchSprites();
 } catch (e) {
   console.warn('Hogg Squash: the character sprites did not load, so the players are drawn as boxes.', e);
 }

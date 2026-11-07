@@ -191,10 +191,14 @@ export function squeakCues(events, tracks, random) {
   return out;
 }
 
-/** The part of the screens' state a menu sound depends on. @typedef {{ screen: string, sel: number, listen: boolean }} MenuState */
+/**
+ * The part of the screens' state a menu sound depends on (pick: the characters screen's choices and picks, else '').
+ * @typedef {{ screen: string, sel: number, listen: boolean, pick?: string }} MenuState
+ */
 
 /** @param {import('../ui/screens.js').Ui} ui @returns {MenuState} */
-export const menuState = ui => ({ screen: ui.screen, sel: ui.sel, listen: ui.listen });
+export const menuState = ui => ({ screen: ui.screen, sel: ui.sel, listen: ui.listen,
+  pick: ui.screen === 'select' ? `${ui.pick.at}|${ui.pick.locked}` : '' });
 
 /**
  * The sound a menu move makes: back for a step back, OK for a step on (or anything done), a tick for a new
@@ -210,6 +214,9 @@ export function menuSound(nav, before, after, effect) {
   if (effect === 'sound' && (nav === 'left' || nav === 'right')) return 'menu-move';   // heard at the new level
   if (effect || before.screen !== after.screen || before.listen !== after.listen) {
     return nav === 'back' ? 'menu-back' : 'menu-ok';
+  }
+  if (before.pick !== after.pick) {             // the characters screen: a pick taken or undone, or a choice moved
+    return nav === 'back' ? 'menu-back' : nav === 'ok' || nav === 'start' ? 'menu-ok' : 'menu-move';
   }
   return before.sel !== after.sel ? 'menu-move' : null;
 }

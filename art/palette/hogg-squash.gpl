@@ -3,7 +3,8 @@ Name: Hogg Squash
 Columns: 8
 #
 # The shared palette for every Hogg Squash sprite, court piece and UI element (A1, 2026-10-20).
-# 36 colours. Sprites are locked to it in Aseprite. Add new colours here (up to 48), never ad hoc.
+# 42 colours (S15 added six for the roster's recolours). Sprites are locked to it in Aseprite. Add new colours here
+# (up to 48), never ad hoc.
 #
 # Neutrals and outline
  11  10  13	outline
@@ -31,9 +32,15 @@ Columns: 8
 196 106  64	skin 4
 232 139  88	skin 5
 247 173 124	skin 6 (highlight)
+251 198 160	skin 7 (light, S15)
+255 220 192	skin 8 (lightest, S15)
 # Hair
  30  20  16	hair dark
  59  38  28	hair
+138  74  36	hair auburn (S15)
+ 92  46  24	hair auburn dark (S15)
+217 176  96	hair blond (S15)
+168 126  60	hair blond dark (S15)
 # Wood floor
 143 106  62	wood 1
 180 138  86	wood 2

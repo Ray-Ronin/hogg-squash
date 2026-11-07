@@ -1,20 +1,27 @@
 // @ts-check
 // The screens (docs/decisions.md, "Screens") as a small state machine, with no drawing and no devices, so Node can
 // test it (test/screens.test.js). The flow:
-//   title (1P / 2P) → match length → level (1P only) → controllers → match → result → rematch, or back to the title
+//   title (1P / 2P) → match length → level (1P only) → characters (S15) → controllers → match → result → rematch, or
+//   back to the title
 // and the pause menu over the match (Resume / Restart match / Sound on/off / Quit to title), and from the title the options (each
 // player's six keys, remapped by pressing a key; presets; the key test; the Effects level), and GO TO HOME back to the
 // website. The pause menu also turns Sound on and off (S13). main.js turns key presses, pad buttons and touch into Navs (a tap on a menu item is tap()), calls navigate, and does what the
 // Effect it returns asks (build the match, start it, …). While the touch controls show, 2P can't be picked (touch is
 // 1P vs CPU only; docs/decisions.md, "Mobile and touch").
+// On the characters screen each player picks with their own controls (navigate's side): P1 on the left, P2 on the
+// right; in 1P the CPU's pick is random and up / down rolls another. With no roster (the sprites didn't load) it's
+// skipped. Characters are looks only: the picks go to the drawing and the names, never to the sim.
 // Each screen's drawing is in its own file in js/ui/; the menus' words are here, so the tests can check the font.
 import { MATCH_LENGTHS } from '../sim/match.js';
 import { LEVELS, DEFAULT_LEVEL } from '../sim/difficulty.js';
 import { ACTIONS, defaultLayouts, refusal, duplicateNote, keyLabel, resetLayouts, laptopPreset } from '../input/keymap.js';
 import { defaultSound, SOUND_LEVELS } from '../audio/audio.js';
 
-/** @typedef {'title' | 'length' | 'level' | 'assign' | 'match' | 'pause' | 'result' | 'options' | 'keytest'} ScreenName */
-/** @typedef {{ players: 1 | 2, target: number, level: number }} Settings  target: points to win; level: 1P only */
+/** @typedef {'title' | 'length' | 'level' | 'select' | 'assign' | 'match' | 'pause' | 'result' | 'options' | 'keytest'} ScreenName */
+/**
+ * @typedef {{ players: 1 | 2, target: number, level: number, picks: string[] }} Settings  target: points to win; level:
+ *   1P only; picks: P1's and P2's (or the CPU's) character ids, once picked (empty: the roster's first two)
+ */
 
 /**
  * One menu move. ok: Enter / Space / a HARD key / A; back: Esc / a SOFT key / B or X; start: a pad's Start (pauses
@@ -44,10 +51,19 @@ import { defaultSound, SOUND_LEVELS } from '../audio/audio.js';
  * @property {boolean} touch       the touch controls are showing (then 2P can't be picked)
  * @property {import('../audio/audio.js').SoundSettings} sound  the Effects level (the options) and Sound on/off (the
  *   pause menu; the speaker button changes it too)
+ * @property {string[]} roster   the characters' ids, in the roster's order (empty until loaded, or if it failed)
+ * @property {{ at: number[], locked: boolean[] }} pick  the characters screen: each side's character (an index into
+ *   roster) and whether it's picked (in 1P the CPU's side is always picked)
+ * @property {() => number} rand  random numbers in [0, 1) for the CPU's pick (Math.random; never the sim's)
  */
 
-/** The defaults: 1 player, first to 9, level 5 (the plan's suggestion; the owner decides at the end of S10). */
-export const DEFAULT_SETTINGS = Object.freeze({ players: /** @type {1 | 2} */ (1), target: 9, level: DEFAULT_LEVEL });
+/** The defaults: 1 player, first to 9, level 5 (the plan's suggestion; the owner decides at the end of S10), and no
+ * characters picked yet (P1 starts on the roster's first, Ronin; P2 on its second). */
+export const DEFAULT_SETTINGS = Object.freeze({ players: /** @type {1 | 2} */ (1), target: 9, level: DEFAULT_LEVEL,
+  picks: /** @type {string[]} */ ([]) });
+
+/** The tap target (hit selection) that rolls the CPU's character again on the characters screen. */
+export const SELECT_REROLL = 100;
 
 export const TITLE_ITEMS = ['1 PLAYER', '2 PLAYERS', 'OPTIONS', 'GO TO HOME'];
 /** Where the title's last item goes: the website's start page (the game, and how it was built). */
@@ -94,8 +110,25 @@ export function setTouch(ui, on) {
  * @returns {Ui}
  */
 export function makeUi(settings = {}, screen = 'title', keys = defaultLayouts(), sound = defaultSound()) {
-  return { screen, settings: { ...DEFAULT_SETTINGS, ...settings }, sel: 0, inMatch: false, keys, listen: false, note: '',
-    touch: false, sound };
+  return { screen, settings: { ...DEFAULT_SETTINGS, picks: [], ...settings }, sel: 0, inMatch: false, keys, listen: false,
+    note: '', touch: false, sound, roster: [], pick: { at: [0, 0], locked: [false, false] }, rand: Math.random };
+}
+
+/** The roster has loaded: its characters' ids, in order (main.js). @param {Ui} ui @param {string[]} ids */
+export function setRoster(ui, ids) {
+  ui.roster = ids;
+}
+
+/**
+ * Each side's character as an index into the roster: the settings' picks, else P1 the first and P2 the second.
+ * @param {Settings} s @param {string[]} roster  (not empty)
+ * @returns {number[]}
+ */
+export function pickIndices(s, roster) {
+  return [0, 1].map(side => {
+    const i = roster.indexOf(s.picks[side]);
+    return i >= 0 ? i : Math.min(side, roster.length - 1);
+  });
 }
 
 /** Sound on or off (the pause menu, the speaker button). @param {Ui} ui @returns {Effect} */
@@ -136,9 +169,11 @@ function go(ui, screen, sel = 0) {
  * Apply one move to the screens.
  * @param {Ui} ui
  * @param {Nav} nav
+ * @param {0 | 1 | null} [side]  whose controls made it (the characters screen: P1's keys or pad 0, P2's 1); null for
+ *   the shared keys (Enter, Space, Esc), which work the first side still choosing
  * @returns {Effect}
  */
-export function navigate(ui, nav) {
+export function navigate(ui, nav, side = null) {
   const s = ui.settings;
   switch (ui.screen) {
     case 'title':
@@ -165,14 +200,14 @@ export function navigate(ui, nav) {
       if (isOk(nav)) {
         s.target = MATCH_LENGTHS[ui.sel];
         if (s.players === 1) go(ui, 'level', LEVELS.indexOf(s.level));
-        else return toAssign(ui);                          // 2P has no CPU, so no level
+        else return toSelect(ui);                          // 2P has no CPU, so no level
       } else if (nav === 'back') go(ui, 'title', s.players - 1);
       return null;
     case 'level':
       leftRight(ui, nav, LEVELS.length);
       if (isOk(nav)) {
         s.level = LEVELS[ui.sel];
-        return toAssign(ui);
+        return toSelect(ui);
       }
       if (nav === 'back') go(ui, 'length', MATCH_LENGTHS.indexOf(s.target));
       return null;
@@ -188,10 +223,14 @@ export function navigate(ui, nav) {
         return 'start';
       }
       if (nav === 'back') {
-        if (s.players === 1) go(ui, 'level', LEVELS.indexOf(s.level));
-        else go(ui, 'length', MATCH_LENGTHS.indexOf(s.target));
+        if (ui.roster.length) {                           // back to the characters, both choosing again
+          ui.pick.locked = [false, s.players === 1];
+          go(ui, 'select');
+        } else backFromSelect(ui);
       }
       return null;
+    case 'select':
+      return select(ui, nav, side);
     case 'match':
       if (nav === 'back' || nav === 'start') go(ui, 'pause');
       return null;
@@ -284,11 +323,18 @@ export function captureKey(ui, code) {
 
 /**
  * A tap on the screen (touch). On a menu item (sel: the selection it is, from the drawing): select it and OK. Off the
- * items: OK on the controllers screen, back on the key test, and cancel when the options wait for a key.
+ * items: OK on the controllers screen, back on the key test, and cancel when the options wait for a key. On the
+ * characters screen a character is P1's pick, and the CPU's panel (SELECT_REROLL) rolls another.
  * @param {Ui} ui @param {number | null} sel @returns {Effect}
  */
 export function tap(ui, sel) {
   if (ui.listen) return navigate(ui, 'back');
+  if (ui.screen === 'select') {                // touch is 1P: a character is P1's pick; the CPU's panel rolls again
+    if (sel === SELECT_REROLL) return navigate(ui, 'down', 0);
+    if (sel === null || sel >= ui.roster.length) return null;
+    ui.pick.at[0] = sel;
+    return navigate(ui, 'ok', 0);
+  }
   if (sel === null) {
     if (ui.screen === 'assign') return navigate(ui, 'ok');
     if (ui.screen === 'keytest') return navigate(ui, 'back');
@@ -297,6 +343,60 @@ export function tap(ui, sel) {
   if (ui.screen === 'title' && titleOff(ui).includes(sel)) return null;
   ui.sel = sel;
   return navigate(ui, 'ok');
+}
+
+/** The screen before the characters (and before the controllers when there are none). @param {Ui} ui */
+function backFromSelect(ui) {
+  const s = ui.settings;
+  if (s.players === 1) go(ui, 'level', LEVELS.indexOf(s.level));
+  else go(ui, 'length', MATCH_LENGTHS.indexOf(s.target));
+}
+
+/**
+ * On to the characters screen: each side starts on its last pick (P1 the roster's first, P2 its second), and in 1P the
+ * CPU's pick is random. Skipped when there's no roster. @param {Ui} ui @returns {Effect}
+ */
+function toSelect(ui) {
+  const s = ui.settings, n = ui.roster.length;
+  if (!n) return toAssign(ui);
+  const at = pickIndices(s, ui.roster);
+  if (s.players === 1) at[1] = Math.min(n - 1, Math.floor(ui.rand() * n));
+  ui.pick = { at, locked: [false, s.players === 1] };
+  go(ui, 'select');
+  return null;
+}
+
+/** The CPU picks another character, never the one it had (1P). @param {Ui} ui */
+export function reroll(ui) {
+  const n = ui.roster.length;
+  if (n > 1) ui.pick.at[1] = (ui.pick.at[1] + 1 + Math.min(n - 2, Math.floor(ui.rand() * (n - 1)))) % n;
+}
+
+/**
+ * A move on the characters screen. Left / right move that side's choice (wrapping), OK picks it, back undoes the pick
+ * (or, with nothing picked, goes back a screen); when every side has picked, the picks are kept and the controllers
+ * screen comes up. In 1P every control is P1's, and up / down rolls the CPU's pick again. A mirror match is allowed.
+ * @param {Ui} ui @param {Nav} nav @param {0 | 1 | null} side @returns {Effect}
+ */
+function select(ui, nav, side) {
+  const s = ui.settings, p = ui.pick, n = ui.roster.length, one = s.players === 1;
+  /** @type {0 | 1} */
+  const who = one ? 0 : side ?? (nav === 'back' ? (p.locked[1] ? 1 : 0) : (p.locked[0] ? 1 : 0));
+  if (nav === 'left' || nav === 'right') {
+    if (!p.locked[who]) p.at[who] = (p.at[who] + (nav === 'left' ? n - 1 : 1)) % n;
+  } else if (nav === 'up' || nav === 'down') {
+    if (one) reroll(ui);
+  } else if (isOk(nav)) {
+    p.locked[who] = true;
+    if (p.locked.every(Boolean)) {
+      s.picks = p.at.map(i => ui.roster[i]);
+      return toAssign(ui);
+    }
+  } else if (nav === 'back') {
+    if (p.locked[who] && !(one && who === 1)) p.locked[who] = false;
+    else backFromSelect(ui);
+  }
+  return null;
 }
 
 /** On to the controllers screen, with the match built behind it. @param {Ui} ui @returns {Effect} */

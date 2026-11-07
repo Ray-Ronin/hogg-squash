@@ -162,7 +162,7 @@ test('menu sounds: a tick for a move, OK on, back back, nothing if nothing chang
   assert.equal(menuSound('back', st('match'), st('pause'), null), null);
   assert.equal(menuSound('ok', st('assign'), st('match'), 'start'), 'menu-ok');
   const ui = makeUi();
-  assert.deepEqual(menuState(ui), { screen: 'title', sel: 0, listen: false });
+  assert.deepEqual(menuState(ui), { screen: 'title', sel: 0, listen: false, pick: '' });
 });
 
 test('the sound settings: defaults, saved and loaded, clamped; damaged, blocked or full storage never throws', () => {
