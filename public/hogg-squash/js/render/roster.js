@@ -1,9 +1,11 @@
 // @ts-check
 // The roster (S15; docs/decisions.md, "Characters"): assets/characters.json lists the characters players can pick, each
-// a name, a sheet and optional skin and hair recolours (sprites.js, Colouring). Characters are looks only: the sim
-// never sees them. A sheet must keep player-100's contract (docs/art-style-guide.md §3: the same tags, frame counts and
-// contact frames, the feet slice and the racket slices), so any character's sheet can be swapped in; a character whose
-// entry or sheet breaks it is left out with a console warning, and the rest still play.
+// a name, a sheet and optional skin and hair recolours (sprites.js, Colouring). A finalized character (S15b) has a sheet
+// of its own and may also have its own P2 / CPU kit swap (`kit`), a shorter name for tight places (`short`) and, in its
+// sheet, a front view for the select screen (the `front_ready` tag). Characters are looks only: the sim never sees
+// them. A sheet must keep player-100's contract (docs/art-style-guide.md §3: the same tags, frame counts and contact
+// frames, the feet slice and the racket slices), so any character's sheet can be swapped in; a character whose entry
+// or sheet breaks it is left out with a console warning, and the rest still play.
 // Node can import this file: only atlasOf and previewOf touch a canvas, and only when called.
 import { parseSheet, buildAtlas, KIT_SWAP } from './sprites.js';
 
@@ -25,14 +27,19 @@ export const SHEET_CONTRACT = {
   dive: { count: 14, contact: 3 },
 };
 
+/** An optional tag: the character from the front, for the select screen (loops, the same feet pivot; S15b). */
+const FRONT_TAG = 'front_ready';
+
 /**
  * One roster entry, as characters.json gives it (the colours are checked by parseRoster).
  * @typedef {object} Character
  * @property {string} id      lower-case, unique (kept in the settings: P1's and P2's picks)
- * @property {string} name    shown on the select screen, the score panel and the result
+ * @property {string} name    shown on the select screen, and on the score panel and the result if it fits
+ * @property {string | null} short  shown on the score panel and the result when `name` doesn't fit
  * @property {string} sheet   assets/<sheet>.png + .json
  * @property {[string, string][]} skin  [from, to] colours, everywhere
  * @property {[string, string][]} hair  [from, to] colours, on the head only
+ * @property {[string, string][] | null} kit  [from, to] colours of the P2 / CPU kit, in place of KIT_SWAP (null: KIT_SWAP)
  */
 
 const HEX = /^#[0-9a-f]{6}$/;
@@ -66,6 +73,9 @@ export function sheetProblems(json) {
     if (t.contact !== want.contact) out.push(`${name}'s contact frame is ${t.contact}, not ${want.contact}`);
     if (!t.racket) out.push(`no "racket ${name}" slice`);
   }
+  const front = sheet.tags[FRONT_TAG];
+  if (front?.once) out.push(`${FRONT_TAG} should loop`);
+  if (front && front.length < 1) out.push(`${FRONT_TAG} has no frames`);
   return out;
 }
 
@@ -81,6 +91,25 @@ function colourPairs(list, what, out) {
     } else if (p.some(c => KIT_REDS.has(c))) {
       out.push(`${what} uses a kit red (${p.find(c => KIT_REDS.has(c))}), which the white kit would recolour`);
     } else pairs.push([p[0], p[1]]);
+  }
+  return pairs;
+}
+
+/**
+ * A per-character kit swap. Unlike a recolour it may use the kit's reds (it replaces the swap that owns them), but a
+ * colour can only go one way, and an empty swap would leave the two sides in the same kit.
+ * @param {any} list @param {string[]} out @returns {[string, string][] | null}
+ */
+function kitPairs(list, out) {
+  if (list === undefined) return null;
+  if (!Array.isArray(list) || !list.length) { out.push('kit isn\'t a list of colour pairs'); return null; }
+  /** @type {[string, string][]} */
+  const pairs = [];
+  for (const p of list) {
+    if (!Array.isArray(p) || p.length !== 2 || !p.every(c => typeof c === 'string' && HEX.test(c))) {
+      out.push(`kit has ${JSON.stringify(p)}, not a pair of #rrggbb colours`);
+    } else if (pairs.some(([from]) => from === p[0])) out.push(`kit lists ${p[0]} twice`);
+    else pairs.push([p[0], p[1]]);
   }
   return pairs;
 }
@@ -102,27 +131,28 @@ export function parseRoster(json) {
     if (typeof id !== 'string' || !ID.test(id)) out.push('its id should be lower-case letters, digits or -');
     else if (characters.some(k => k.id === id)) out.push(`the id ${id} is used twice`);
     if (typeof c?.name !== 'string' || !c.name.trim()) out.push('it has no name');
+    if (c?.short !== undefined && (typeof c.short !== 'string' || !c.short.trim())) out.push('its short name is empty');
     if (typeof c?.sheet !== 'string' || !ID.test(c.sheet)) out.push('its sheet should be a file name like player-100');
-    const skin = colourPairs(c?.skin, 'skin', out), hair = colourPairs(c?.hair, 'hair', out);
+    const skin = colourPairs(c?.skin, 'skin', out), hair = colourPairs(c?.hair, 'hair', out), kit = kitPairs(c?.kit, out);
     if (out.length) problems.push(`character ${i + 1} (${typeof id === 'string' ? id : '?'}): ${out.join('; ')}`);
-    else characters.push({ id, name: c.name, sheet: c.sheet, skin, hair });
+    else characters.push({ id, name: c.name, short: c.short ?? null, sheet: c.sheet, skin, hair, kit });
   });
   return { characters, problems };
 }
 
 /**
- * The name each side shows on the score panel, the wall and the result: the character's name, or P1 / P2 / CPU when
- * there's no roster, the name doesn't fit the panel's name slot, or both picked the same character (a mirror match:
- * the names alone wouldn't say who is who).
- * @param {(string | null)[]} names  each side's character name (null: none)
+ * The name each side shows on the score panel, the wall and the result: the character's name, else its short name,
+ * or P1 / P2 / CPU when there's no roster, neither fits the panel's name slot, or the two sides would read the same
+ * (a mirror match: the names alone wouldn't say who is who).
+ * @param {({ name: string, short?: string | null } | null)[]} chars  each side's character (null: none)
  * @param {boolean[]} cpu  which sides the CPU plays
  * @param {(name: string) => boolean} fits  the name fits the score panel's name slot
  * @returns {string[]}
  */
-export function sideNames(names, cpu, fits) {
-  const fallback = (/** @type {number} */ side) => (cpu[side] ? 'CPU' : `P${side + 1}`);
-  const usable = names.every(n => n !== null && fits(n)) && names[0] !== names[1];
-  return names.map((n, side) => (usable ? /** @type {string} */ (n) : fallback(side)));
+export function sideNames(chars, cpu, fits) {
+  const names = chars.map(c => (!c ? null : [c.name, c.short].find(n => n && fits(n)) ?? null));
+  const usable = names.every(n => n !== null) && names[0] !== names[1];
+  return names.map((n, side) => (usable ? /** @type {string} */ (n) : cpu[side] ? 'CPU' : `P${side + 1}`));
 }
 
 /** The score panel's name slot (ui.json's `score panel p1 name`): the widest name, in large-white, px. */
@@ -130,24 +160,33 @@ export const NAME_SLOT = 62;
 
 /**
  * A character ready to draw: its entry, its sheet and image, and its atlases (built when first needed: a full one per
- * kit for a match, a `ready`-only one per kit for the select screen). Kit 0 is P1's Hogg red, kit 1 P2 / the CPU's
- * white. A full atlas is about 7.6 MB of canvas (1232 × 1540 px), a `ready` one 0.76 MB, so only the match's two full
- * ones are kept (keepFor).
+ * kit for a match, a one-tag one per kit for the select screen). Kit 0 is P1's Hogg red, kit 1 P2 / the CPU's white. A
+ * full atlas is about 7.6 MB of canvas (1232 × 1540 px; 8.3 MB with a front_ready tag, 1232 × 1694), a one-tag one
+ * 0.76 MB, so only the match's two full ones are kept (keepFor).
  * @typedef {Character & { sheetOf: import('./sprites.js').Sheet, image: HTMLImageElement,
  *   atlases: (import('./sprites.js').Atlas | undefined)[], previews: (import('./sprites.js').Atlas | undefined)[] }} Loaded
  */
 
-/** @param {Character} ch @param {number} kit @returns {import('./sprites.js').Colouring} */
-const colouring = (ch, kit) => ({ swap: kit ? KIT_SWAP : [], skin: ch.skin, hair: ch.hair });
+/**
+ * How a character is coloured in a kit: kit 0 is the sheet's own, kit 1 its own `kit` swap or the standard one.
+ * @param {Character} ch @param {number} kit @returns {import('./sprites.js').Colouring}
+ */
+export const colouring = (ch, kit) => ({ swap: kit ? ch.kit ?? KIT_SWAP : [], skin: ch.skin, hair: ch.hair });
+
+/**
+ * The tag the select screen plays: the front view if the sheet has one, else `ready` from the back.
+ * @param {import('./sprites.js').Sheet} sheet
+ */
+export const previewTag = sheet => (sheet.tags[FRONT_TAG] ? FRONT_TAG : 'ready');
 
 /** A character's full atlas in a kit (built and kept on first use). @param {Loaded} ch @param {number} kit */
 export function atlasOf(ch, kit) {
   return (ch.atlases[kit] ??= buildAtlas(ch.image, ch.sheetOf, colouring(ch, kit)));
 }
 
-/** A character's `ready` loop in a kit, for the select screen (built and kept on first use). @param {Loaded} ch @param {number} kit */
+/** A character's previewTag loop in a kit, for the select screen (built and kept on first use). @param {Loaded} ch @param {number} kit */
 export function previewOf(ch, kit) {
-  const t = ch.sheetOf.tags.ready;
+  const t = ch.sheetOf.tags[previewTag(ch.sheetOf)];
   return (ch.previews[kit] ??= buildAtlas(ch.image, ch.sheetOf, colouring(ch, kit),
     Array.from({ length: t.count }, (_, i) => t.from + i)));
 }

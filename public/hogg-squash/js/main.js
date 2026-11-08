@@ -36,7 +36,8 @@
 // ?court=code|lines starts on that court view, ?logo=on shows the logo slot (LOGO in render/hud.js) for testing.
 // The players are the animated sprites of the characters they picked (S15: assets/characters.json, the roster; each
 // character's sheet, e.g. player-100.png + .json, loaded before the game starts, recoloured for its skin and hair, P2 /
-// the CPU in the swapped kit). A roster entry or sheet that breaks the contract is left out with a warning (roster.js).
+// the CPU in the swapped kit, the character's own swap if it has one, S15b). A roster entry or sheet that breaks the
+// contract is left out with a warning (roster.js).
 // The score panels, the wall and the result name each side by its character. Characters are looks only: the sim never
 // sees them. \ or ?boxes shows the placeholder boxes instead (debug); they're also the fallback if loading fails.
 // The court, ball, effects, font, HUD pieces and title (A4, A5) load alongside; without them the code court and
@@ -202,7 +203,7 @@ function matchSprites() {
 /** Each side's name for the HUD and the result (P1 / P2 / CPU without characters, or in a mirror match). */
 function names() {
   const chars = matchCharacters();
-  return sideNames([0, 1].map(i => chars[i]?.name ?? null), world.cpu, n => textWidth('large-white', n) <= NAME_SLOT);
+  return sideNames([0, 1].map(i => chars[i] ?? null), world.cpu, n => textWidth('large-white', n) <= NAME_SLOT);
 }
 
 /**

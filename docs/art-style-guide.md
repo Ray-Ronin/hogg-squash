@@ -31,6 +31,8 @@ a whole-number upscale with no smoothing, then a smooth shrink to fit, so pixels
 | kit red `#e8202a` | front wall `#f4f4f0` |
 | red highlight `#ff5a52` | white `#ffffff` |
 
+**A character's own kit (S15b):** a roster entry may carry `kit`, its own [from, to] list, which replaces the table above for its P2 / CPU kit (kit 0 is always the sheet as drawn). A character in the usual red kit has none and gets the table. Use the colours as they are on the sheet and in the `.gpl`: a swap of a colour that isn't there silently does nothing (`test/roster.test.js` checks every entry against its sheet).
+
 ## 3. Sprites needed for v1 (one character)
 Viewed from behind, like the arcade.
 
@@ -65,6 +67,10 @@ Tags that play once have `"repeat": "1"`; tags with a contact frame have `"data"
 | `dive` | 14 | 40, 40, 42, 100, 6 × ≈230, 4 × 100 ms, once | dives to the right (mirror it for left): lunge, full stretch on contact (frame 4, 122 ms), lies flat 1.4 s with the racket on the floor, springs back up; done at 2003 ms (`DIVE`, 115 sim frames) |
 
 The runners stand up straighter than the crouched ready pose, so their heads are 4–10 px higher at the same scale. That is the pose, not a size change. Mirrored, `run_side` and `dive` hold the racket in the left hand.
+
+**Optional tag (S15b):** `front_ready`, the character from the front (it must loop; the same `feet` pivot). The select screen plays it on the cards and the big figures when a sheet has one, and `ready` from the back when it doesn't. The game never plays it in a match.
+
+**Heights (S15b):** every frame is scaled by the same factor (`ART_HEIGHT` stays 100), so a character drawn taller plays taller. A finalized character may be about 94 to 108 px head to soles in the 150 × 150 frame; Coach Zain is 106. Play is unchanged.
 
 The v1 character is an **adult player in red and black**. The CPU and P2 in versus use the same character, **palette-swapped** (different shirt colour). No second character needed.
 
@@ -124,28 +130,28 @@ Also needed: the ball + shadow, landing marker, front-wall impact ring, the cour
 **After A8z (2026-11-08):** 96 credits (A8z spent 200). An animation is still 20 credits on pixel-engine v1.1, whatever the frame count. **Pixel animation sources must be 256 px or smaller** (a larger one is refused, free of charge), and cells stop at 256 px, so a 256 px source gets no edge margin.
 
 ## Characters (S15)
-The roster is `public/hogg-squash/assets/characters.json`, in order; for now every character is a recolour of `player-100` (A7–A10, new bodies, are on hold). A recolour is a list of [from, to] palette colours: **skin** applies everywhere, **hair** only to the head (the largest blob of the sheet's two hair colours in each frame, which are also the shorts' shading). The white kit is the kit swap above, on top. A recolour must not use the kit's reds. Preview: `art/mockups/s15-roster.png` (both kits, ready, forehand contact, dive).
+The roster is `public/hogg-squash/assets/characters.json`, in order: since S15b Ronin, Adam and Ben, recolours of `player-100`, and Coach Zain on his own sheet (A7–A10 stay on hold; new bodies come one at a time as finalized characters). A recolour is a list of [from, to] palette colours: **skin** applies everywhere, **hair** only to the head (the largest blob of the sheet's two hair colours in each frame, which are also the shorts' shading). The white kit is the kit swap above, on top. A recolour must not use the kit's reds. Preview: `art/mockups/s15-roster.png` (both kits, ready, forehand contact, dive).
 
 | Character | Skin (skin 6 → skin 1 become) | Hair (`hair`, `hair dark` become) |
 |---|---|---|
 | Ronin (P1's start) | skin 7, 6, 5, 4, 3, 2 | auburn `#8a4a24`, auburn dark `#5c2e18` |
 | Adam (P2's start) | as drawn | as drawn |
 | Ben | as drawn | hair dark, outline |
-| Will | skin 8, 7, 6, 5, 4, 2 | blond `#d9b060`, blond dark `#a87e3c` |
+| Will (replaced by Coach Zain in S15b; his blond tones stay in the palette, unused) | skin 8, 7, 6, 5, 4, 2 | blond `#d9b060`, blond dark `#a87e3c` |
 
-**Coach Zain (A7z, 2026-11-07), the first finalized character** (`plan-v2.md`, "Finalized characters"): his own body and art, replacing Will in S15b. The concept is `art/character/zain.aseprite` (built by `art/tools/a7z-build.lua` from SpriteCook back concept 3 and front concept 1, `art/spritecook-manifest.md`), 150 × 150 frames with the `feet` pivot at 73, 148 like `player-100`: frame 1 `ready` (from the back), frame 2 `front_ready` (from the front, squeezed to 90% width). Previews: `art/mockups/a7z-print.png` (the print at 4×), `art/mockups/a7z-zain.png` (beside Ronin on the court).
+**Coach Zain (A7z, 2026-11-07), the first finalized character** (`plan-v2.md`, "Finalized characters"): his own body and art, in the roster since S15b in Will's place. The concept is `art/character/zain.aseprite` (built by `art/tools/a7z-build.lua` from SpriteCook back concept 3 and front concept 1, `art/spritecook-manifest.md`), 150 × 150 frames with the `feet` pivot at 73, 148 like `player-100`: frame 1 `ready` (from the back), frame 2 `front_ready` (from the front, squeezed to 90% width). Previews: `art/mockups/a7z-print.png` (the print at 4×), `art/mockups/a7z-zain.png` (beside Ronin on the court).
 
 | | |
 |---|---|
 | Height | 106 px head to soles (the others 100), slimmer: 58 px wide from the back, 62 from the front |
 | Skin | skin 0, 1, 2, 2b, 3, 4 (`#2a1710 #3e2216 #6b3a24 #7f4529 #9c5232 #c46a40`), drawn in; no recolour |
 | Hair and beard | hair dark, hair (short, faded at the sides; short full beard) |
-| P1 shirt | black Hogg Squash Team shirt in its own entries: `shirt black` `#262529`, `shirt black light` `#3b3a41`, used nowhere else |
+| P1 shirt | black Hogg Squash Team shirt in its own entries: `shirt black` `#26252a`, `shirt black light` `#3b3a41`, used nowhere else |
 | Print, back | a red boar's head (kit red, red 2, a white tusk) between the shoulder blades, over SQUASH down the spine in `shirt print` `#dcdce0`, 3 × 3 capitals (the shirt is 31 rows from collar to hem, so 4-row letters don't fit with the boar) |
 | Print, front | on his left chest: four `shirt print` letter blocks ("HOGG") over a kit red and a Hogg red line ("SQUASH TEAM") |
 | Shorts, socks, shoes | black kit, white, as everyone's |
 
-**His `kit` swap (for S15b's `characters.json`, replacing the standard one):** `[["#262529", "#e6e6ea"], ["#3b3a41", "#ffffff"], ["#dcdce0", "#252429"]]`: the shirt turns white (shirt black → white kit shade, its highlight → white) and the print black; the reds (the boar, the chest lines, the racket, the shoe trim) stay red and the shorts stay black.
+**His `kit` swap (in `characters.json`, replacing the standard one):** `[["#26252a", "#e6e6ea"], ["#3b3a41", "#ffffff"], ["#dcdce0", "#252429"]]` (A7z wrote `#262529` by mistake; S15b corrected it to the palette's and the sheet's colour): the shirt turns white (shirt black → white kit shade, its highlight → white) and the print black; the reds (the boar, the chest lines, the racket, the shoe trim) stay red and the shorts stay black.
 
 **His sheet (A8z, 2026-11-08):** `public/hogg-squash/assets/zain-100.png` + `.json`, from `art/character/zain.aseprite` (built by `art/tools/a8z-build.lua`, exported by `art/tools/a8z-export.sh`, previews by `art/tools/a8z-preview.lua`): 81 frames of 150 × 150 px in rows of 8, the nine tags, frame counts, timings and contact frames of §3, plus `front_ready` (8 × 125 ms, loops, from the front, squeezed to 90% width). The source frames for each tag are in `art/spritecook-manifest.md`.
 
@@ -154,7 +160,7 @@ The roster is `public/hogg-squash/assets/characters.json`, in order; for now eve
 | `racket serve` | 58, 74 | on his left, at chest height |
 | `racket forehand` | 117, 75 | out to the right at shoulder height |
 | `racket backhand` | 39, 75 | out to the left at shoulder height |
-| `racket overhead` | 97, 53 | up on the right, lower than `player-100`'s 79, 15 |
+| `racket overhead` | 97, 53 | up on the right, beside his head (the racket's top is level with his crown), lower than `player-100`'s 79, 15, which is straight up. How it looks in play: `plan-v2.md`, S15b's Session log entry |
 | `racket dive` | 118, 130 | on the floor at the end of the right arm |
 
 A new sheet must keep player-100's contract (§3; `SHEET_CONTRACT` in `js/render/roster.js`), or the game leaves its characters out with a console warning.

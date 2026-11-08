@@ -269,6 +269,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
   | 4 | **Will** | fair (each tone two steps lighter) | sandy blond |
 
   - The names replace "invented people only" above for these four: they are the owner's own picks.
+  - **Will left the roster in S15b** (Coach Zain took his place; see "Finalized characters" below).
 - **As built (S15):** `assets/characters.json` lists each character (id, name, sheet, optional `skin` and `hair` as [from, to] palette colours); `js/render/roster.js` checks every entry and sheet (`SHEET_CONTRACT`: the nine tags, their frame counts, the swings' contact frames, `feet`, the `racket <tag>` slices) and leaves out a broken one with a console warning. The skin is recoloured everywhere; **the hair only on the head**, because the sheet's two hair colours are also the shorts' dark shading: in each frame the head is the largest connected blob of those colours (checked on all 73 frames, the dive included; `hairMask` in `js/render/sprites.js`). Recolours may not use the kit's reds. Six new palette tones (42 of 48): skin 7 and 8, auburn and blond hair, two each.
   - **The select screen** (`js/ui/select.js`): each player picks with their own keys or pad (P1 left in red, P2 right in white, each choice playing `ready` in the kit it will wear); HARD picks, SOFT undoes; in 1P the CPU's pick is random, and up / down or a tap on it rolls another. Touch: tap a character. A mirror match is allowed. With no roster (the sprites didn't load) the screen is skipped.
   - **Names:** the score panels, the wall's notes and the result use the characters' names ("RONIN WINS 9–5"). P1 / P2 / CPU come back in a mirror match (the names alone wouldn't say who is who), when a name is wider than the panel's 62 px name slot, or with no roster.
@@ -279,6 +280,12 @@ Settled decisions. Newest at the bottom of each section. If something here confl
   - **Height and build may differ** (Zain: about 106 px against 100). They are still looks only: play is the same.
   - **Front view:** an optional `front_ready` tag, shown on the select screen when a sheet has it. The others keep showing `ready` from the back. A front-facing win celebration is for later.
   - **Names:** an optional `short` name for the 62 px name slot when the full one doesn't fit ("Coach Zain" on the select screen, "Zain" on the panel and the result).
+  - **As built (S15b, 2026-11-08):** the roster is **Ronin, Adam, Ben, Coach Zain**; Will is gone. Later finalized characters need only art and a roster entry.
+    - **`kit`** (`characters.json`): [from, to] colours for the P2 / CPU kit, in place of `KIT_SWAP` (`colouring` in `js/render/roster.js`). `parseRoster` checks it: well formed, not empty, no `from` colour twice. Unlike a recolour it may use the kit's reds, since it replaces the swap that owns them. Zain's is `[["#26252a", "#e6e6ea"], ["#3b3a41", "#ffffff"], ["#dcdce0", "#252429"]]`.
+    - **`short`:** `sideNames` tries the name, then the short name, then P1 / P2 / CPU (for both sides, as before). It compares what the two sides would show, so a mirror match, or two characters who would read the same, falls back too. The select screen always shows `name`.
+    - **`front_ready`:** optional in `sheetProblems` (if it's there it must loop and have frames, or the character is left out with a warning). `previewTag` picks it, `previewOf` builds the select screen's atlas from it, and `js/ui/select.js` plays it; a sheet without it shows `ready`.
+    - **The select screen's cards:** 60 px wide, 64 apart (they were 58 and 62), so "Coach Zain" (53 px) clears a picked card's 3 px frame. In a mirror match P2's inner frame stops above the name.
+    - **Memory and download:** Zain's frames are 150 × 150, but his 81 frames make his full atlas 1232 × 1694, 8.3 MB of canvas (the others 7.6 MB); a Zain mirror match with all eight previews is about 23 MB. His sheet adds 67 KB (PNG) and 24 KB (JSON, 1.2 KB gzipped) to the download.
 
 ## Still open
 Nothing blocking. Details for the plan to settle are in `open-questions.md`.

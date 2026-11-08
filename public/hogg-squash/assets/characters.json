@@ -1,5 +1,5 @@
 {
-  "note": "The roster (S15; docs/art-style-guide.md, \"Characters\"). Each character: id, name (fits the score panel's 62 px name slot), sheet (assets/<sheet>.png + .json), and optional recolours as [from, to] palette colours: skin everywhere, hair only on the head. Both kits come from the kit swap. The game reads the order as listed; P1 starts on the first, P2 on the second.",
+  "note": "The roster (S15, S15b; docs/art-style-guide.md, \"Characters\"). Each character: id, name, sheet (assets/<sheet>.png + .json), and optional: short (for the score panel's 62 px name slot and the result, when name doesn't fit), skin and hair recolours as [from, to] palette colours (skin everywhere, hair only on the head), kit as [from, to] palette colours (the P2 / CPU kit, in place of the standard swap). The game reads the order as listed; P1 starts on the first, P2 on the second.",
   "characters": [
     {
       "id": "ronin", "name": "Ronin", "sheet": "player-100",
@@ -13,10 +13,8 @@
       "hair": [["#3b261c", "#1e1410"], ["#1e1410", "#0b0a0d"]]
     },
     {
-      "id": "will", "name": "Will", "sheet": "player-100",
-      "skin": [["#f7ad7c", "#ffdcc0"], ["#e88b58", "#fbc6a0"], ["#c46a40", "#f7ad7c"], ["#9c5232", "#e88b58"],
-        ["#6b3a24", "#c46a40"], ["#3e2216", "#6b3a24"]],
-      "hair": [["#3b261c", "#d9b060"], ["#1e1410", "#a87e3c"]]
+      "id": "zain", "name": "Coach Zain", "short": "Zain", "sheet": "zain-100",
+      "kit": [["#26252a", "#e6e6ea"], ["#3b3a41", "#ffffff"], ["#dcdce0", "#252429"]]
     }
   ]
 }
