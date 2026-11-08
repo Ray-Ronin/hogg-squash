@@ -121,6 +121,7 @@ Also needed: the ball + shadow, landing marker, front-wall impact ring, the cour
 **Update (2026-10-20, A1):** the account is now on the Apprentice tier (800 credits when A1 started). A1 spent 32 (`art/spritecook-manifest.md`). Flare bills a non-square 1K image as 2K and adds 8 credits per reference image.
 **After A5 (2026-10-22):** 488 credits (A4 spent 8, A5 32).
 **After A7z (2026-11-07):** 296 credits (A7z spent 192). **Flare bills each reference image once per variation**, not once per job: 4 variations with 3 references cost 4 × (8 + 3 × 8) = 128.
+**After A8z (2026-11-08):** 96 credits (A8z spent 200). An animation is still 20 credits on pixel-engine v1.1, whatever the frame count. **Pixel animation sources must be 256 px or smaller** (a larger one is refused, free of charge), and cells stop at 256 px, so a 256 px source gets no edge margin.
 
 ## Characters (S15)
 The roster is `public/hogg-squash/assets/characters.json`, in order; for now every character is a recolour of `player-100` (A7–A10, new bodies, are on hold). A recolour is a list of [from, to] palette colours: **skin** applies everywhere, **hair** only to the head (the largest blob of the sheet's two hair colours in each frame, which are also the shorts' shading). The white kit is the kit swap above, on top. A recolour must not use the kit's reds. Preview: `art/mockups/s15-roster.png` (both kits, ready, forehand contact, dive).
@@ -145,6 +146,16 @@ The roster is `public/hogg-squash/assets/characters.json`, in order; for now eve
 | Shorts, socks, shoes | black kit, white, as everyone's |
 
 **His `kit` swap (for S15b's `characters.json`, replacing the standard one):** `[["#262529", "#e6e6ea"], ["#3b3a41", "#ffffff"], ["#dcdce0", "#252429"]]`: the shirt turns white (shirt black → white kit shade, its highlight → white) and the print black; the reds (the boar, the chest lines, the racket, the shoe trim) stay red and the shorts stay black.
+
+**His sheet (A8z, 2026-11-08):** `public/hogg-squash/assets/zain-100.png` + `.json`, from `art/character/zain.aseprite` (built by `art/tools/a8z-build.lua`, exported by `art/tools/a8z-export.sh`, previews by `art/tools/a8z-preview.lua`): 81 frames of 150 × 150 px in rows of 8, the nine tags, frame counts, timings and contact frames of §3, plus `front_ready` (8 × 125 ms, loops, from the front, squeezed to 90% width). The source frames for each tag are in `art/spritecook-manifest.md`.
+
+| Racket slice | Frame pixels | |
+|---|---|---|
+| `racket serve` | 58, 74 | on his left, at chest height |
+| `racket forehand` | 117, 75 | out to the right at shoulder height |
+| `racket backhand` | 39, 75 | out to the left at shoulder height |
+| `racket overhead` | 97, 53 | up on the right, lower than `player-100`'s 79, 15 |
+| `racket dive` | 118, 130 | on the floor at the end of the right arm |
 
 A new sheet must keep player-100's contract (§3; `SHEET_CONTRACT` in `js/render/roster.js`), or the game leaves its characters out with a console warning.
 

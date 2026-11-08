@@ -160,3 +160,35 @@ A first dive submission with edge margin 30 was refused by the service before it
 **Cleaned** by `art/tools/a7z-build.lua` into `art/character/zain.aseprite` (`ready` from the back, `front_ready` from the front, 106 px head to soles); prints redrawn by hand. Previews: `art/mockups/a7z-print.png`, `art/mockups/a7z-zain.png`.
 
 **A7z total: 192 of the 192 approved credits.** Account after A7z: 296 credits.
+
+## A8z: Coach Zain, every animation
+
+**Approved spend:** up to 296 credits, the whole balance (10 animations at about 20 + up to 4 re-runs, no top-up), 2026-11-08. The owner also approved uploading a smaller copy of back concept 3 if the original was refused.
+
+**Source:** `animate_game_art` refused back concept 3 at 278×278 before it ran, with no charge ("Pixel animation sources must be 256x256 or smaller"). So `art/spritecook/a8z/back-3-256.png` (sha12 `b6e8e45d23a6`), the same image area-averaged to 256×256, was uploaded for free as asset `d2d2d9de-d8a4-437e-aa9c-b5e4b7b1a08a`. No reference images, and none of the owner's photos, were used in this session.
+
+All jobs: pixel-engine v1.1, pixel mode, Basic background removal, auto-enhance off, spritesheet output (8 fps), 20 credits each. The cells are 256 px whatever the edge margin (6, 15 or 25 were asked for, as in A2 and A3): a 256 px source has no room left for one. `front_ready` is the exception, with 212 px cells from the 188 px front concept.
+
+| File (`art/spritecook/a8z/`) | sha12 | Asset ID | Job | Frames | Source | Used in the sheet |
+|---|---|---|---|---|---|---|
+| `ready.png` | `724a18aba7e4` | `56fcb069-6196-4168-b8c0-b0fd0b4e6782` | `2c9c2f23-5652-4284-9818-02932694c5d6` | 8 | back | `ready`: 1–8 |
+| `run_side.png` | `a5c66554648c` | `3e73ed73-0eca-4468-9690-c490570bc124` | `c681c88e-72a0-401d-91d8-8d8d04fd2256` | 8 | back | `run_side`: 2–8 |
+| `run_up.png` | `108cffa48d94` | `8e97daf9-1b0e-4bbf-8a71-682b0d60ad73` | `dc63bc62-bb23-4936-b220-ebff7e4daa80` | 8 | back | `run_up`: 2–8 |
+| `run_down.png` | `f6516c4608ad` | `d5a92e0a-c281-4e44-af0a-64361230cfcb` | `c625adab-8181-44ce-913f-761c1303af5a` | 8 | back | `run_down`: 2–8 |
+| `serve.png` | `2b50226cd9ba` | `a368d99e-7ea9-467d-be1f-c05cfc9d374f` | `2932db7d-93d9-4d47-93cc-b81764b2d3ca` | 12 | back | `serve`: 2, 3, 4, 6, 7, 8 |
+| `forehand.png` | `abe2248b4d72` | `50f242ca-26d1-41bb-a8ca-9e6b2aa31c01` | `7ee457b5-985d-41ed-b0a8-4a89d545371d` | 12 | back | `forehand`: 2, 3, 4, then `backhand.png` 10 (contact), then 6, 8, 9, 11 |
+| `backhand.png` | `7df0380e822a` | `8f5022c5-b01d-4abc-ba28-b0cef3a5e057` | `399ad77e-e5b1-4914-8ee7-fb98772a413d` | 12 | back | `backhand`: 4, 6, 7, 8, 10, 10, 11, 12 |
+| `overhead.png` | `4dc2376446c9` | `8b662a5e-d5bb-4b8f-9a67-f623398fb496` | `fd170662-7db6-4994-bf01-9916e3620f87` | 12 | back | `overhead`: 4, 5, 3, 2, 6, 7, 8, 11 |
+| `dive.png` | `1c3b885adb7b` | `903522d3-81d6-476f-9334-aae768e84594` | `97e24859-2793-4821-b6c6-dc5c87cb2c60` | 16 | back | `dive`: 2, 5, 6, 9, 11, 9, 11, 9, 11, 9, 12, 13, 15, 16 |
+| `front_ready.png` | `210563edc574` | `e2cb2863-94c2-4291-8dd8-bec66a27ebec` | `2d1090d0-d23d-472d-a69a-1e8e936d35de` | 8 | front concept 1 | `front_ready`: 1, 2, 7, 3, 3, 8, 2, 1 |
+
+**Frames left out:** `forehand.png` 7 draws two rackets, so the contact frame comes from `backhand.png` 10, which shares its pose and scale. `backhand.png` 9 has a broken racket. `serve.png` 5 puts the racket over the shirt. `dive.png` 8 and 10 have a smeared racket or a ball touching the head. `front_ready.png` 4–6 draw a ball over the racket.
+
+**Prompts** (all but `front_ready` begin "The tall, slim coach in a black short-sleeve team shirt with a red boar's head and the word SQUASH on the back, black shorts, white socks and white shoes"; the rest follows v1's A2 and A3 prompts above with "the player" as "the coach", and "held up in front" as "held up on the right" or "on the right side of the picture", as in his source pose):
+- **ready, run_side, run_up, run_down, serve, forehand, backhand, overhead, dive:** the wording of v1's `ready`, `run_side`, `run_up` re-run, `run_down`, `serve`, `forehand`, `backhand`, `overhead` and `dive` re-run 2. `serve` adds "The racket stays in the right hand and clearly visible in every frame, never higher than a little above the head."
+- **Negative prompts:** v1's for each; `run_side` and `run_down`: "racket disappearing, racket in left hand, turning around, face visible"; `serve`: the same plus "jumping".
+- **front_ready:** "The tall, slim coach with short dark hair and a neat short beard, in a black short-sleeve team shirt with a small chest print, black shorts, white socks and white shoes is seen from the front, facing the camera, standing in a ready stance waiting for the ball. Knees stay bent and both feet stay planted in the same spot on the ground; the body bobs gently up and down in a light, springy rhythm, shoulders rising and falling slightly. The racket in his hand stays held up on the left side of the picture, swaying a little with the bounce. His face stays calm and keeps looking at the camera; he does not turn or step." Negative prompt: "racket disappearing, racket changing hands, turning around, stepping away, face changing".
+
+**Cleaned** by `art/tools/a8z-build.lua` into `art/character/zain.aseprite`, exported to `public/hogg-squash/assets/zain-100.png` + `.json`. Previews: `art/mockups/a8z-strips.png`, `art/mockups/a8z-<tag>-p1.gif` and `-p2.gif`, `art/mockups/a8z-review.html`.
+
+**A8z total: 200 of the 296 approved credits** (10 animations, no re-runs). Account after A8z: 96 credits.

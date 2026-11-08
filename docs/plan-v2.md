@@ -38,8 +38,8 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [-] **A10** Art: character 4, every animation *(on hold)*
 - [x] 💳 Approve SpriteCook spend for A7z *(you)* *(added 2026-11-07: the first finalized character; 192 approved)*
 - [x] **A7z** Art: Coach Zain's concept, from the back and the front, in both kits
-- [ ] 💳 Approve SpriteCook spend for A8z *(you)* (a credit top-up may be needed first)
-- [ ] **A8z** Art: Coach Zain, every animation and the front-view idle
+- [x] 💳 Approve SpriteCook spend for A8z *(you)* *(296 approved, no top-up needed)*
+- [x] **A8z** Art: Coach Zain, every animation and the front-view idle
 - [ ] **S15b** Finalized characters in the game: per-character kits, the front view on select, Coach Zain replaces Will
 - [ ] **CP-H** Play-test 6 *(you)*: the characters (the recolours, Coach Zain and the select screen)
 
@@ -1015,3 +1015,14 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Checks:** `npm test` passes, as before (nothing in the game changed). The previews were checked by eye in both kits.
   - **For A8z:** the balance (296) is under its estimate (about 320), so a top-up of about 50–100 credits is likely first. The front idle needs the same 90% squeeze.
   - **Next:** 💳 approve A8z's spend, then A8z.
+- 2026-11-08, A8z (Coach Zain, every animation, no version change): his full sheet, approved by the owner in both kits. No game code changed; he isn't in the roster yet (S15b).
+  - **Spend:** 200 of the 296 approved credits: 10 `animate_game_art` jobs at 20 each, no re-runs; 296 → 96. No top-up was needed. All in `art/spritecook-manifest.md`.
+  - **The source:** SpriteCook refuses pixel animation from anything over 256 px, at no charge, and back concept 3 is 278 px. So the jobs ran on a 256 px area-averaged copy, a free upload (`d2d2d9de-d8a4-437e-aa9c-b5e4b7b1a08a`). A 256 px source leaves no room for an edge margin: every cell is 256 px whatever margin is asked for. The racket and the dive still fit. Later characters should use a source of about 200 px if they need margins.
+  - **Built:** `art/tools/a8z-build.lua` → `art/character/zain.aseprite`, exported by `art/tools/a8z-export.sh` to `public/hogg-squash/assets/zain-100.png` + `.json`: 81 frames of 150 × 150, the nine contract tags plus `front_ready`, the `feet` pivot at 73, 148. Each file is read at its own scale, with its source pose at 106 px, and every frame's soles go on the ground line.
+  - **Frames picked, not re-run:** the generator's output was mostly good, with bad frames in places. The forehand's contact frame comes from `backhand.png` frame 10, because its own draws two rackets; the backhand shows one follow-through frame twice, replacing a broken one; the serve leaves out the frame with the racket over the shirt. The dive's 1.4 s on the floor alternates two frames, and `front_ready` loops over its clean frames, because three others draw a ball over the racket. Lists are in the manifest.
+  - **The shirt, in every frame:** the script finds the print by matching the file's first frame, which gives the torso's place and angle. From that it moves the shirt's blacks to the shirt's own entries and stamps A7z's hand-drawn print afresh, so it doesn't shimmer. Thick shadows inside the shirt, which quantize to outline, become shirt black, or they'd stay black on the white kit. In the dive the body is foreshortened, so the torso's place and a squeeze along the spine are set by hand for six frames; there the print is about half its length and doesn't read as letters.
+  - **Cleanup by hand:** three grey smears cut from the dive's raw frames and one ball erased from the serve. The generator turned the reds brown in `serve.png` and `dive.png`, so the racket and the shoe trim get kit red back, except the shoe trim in the dive.
+  - **Racket points:** serve 58, 74; forehand 117, 75; backhand 39, 75; overhead 97, 53; dive 118, 130. The overhead's is about 38 px lower than `player-100`'s (79, 15). The game's shift is capped at 1% of the height, so he doesn't float, but his racket sits lower against a high ball. **For S15b and CP-H:** check it in play.
+  - **Previews:** `art/mockups/a8z-strips.png` (every frame in both kits, the contact frames marked), `a8z-<tag>-p1.gif` and `-p2.gif`, and `a8z-review.html`, which shows them all together (serve the folder, as it won't load its GIFs from `file://`).
+  - **Checks:** `sheetProblems` finds nothing; `npm test` passes. A check in `art/tools/a8z-preview.lua` found no shirt-coloured pixels outside the shirt's rows, in any frame (it looks at rows only, so the rest was checked by eye in the white kit). **Not checked:** the sheet in the game, as it isn't in the roster until S15b.
+  - **Next:** S15b.

@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Coach Zain: A8z review</title>
+<style>
+  body { margin: 0; padding: 16px; background: #dfbd8c; color: #1a1a1d; font: 14px system-ui, sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  figure { margin: 0; background: #e9cda5; border: 1px solid #b9976a; padding: 6px; }
+  figcaption { font-weight: 600; margin-bottom: 4px; }
+  .pair { display: flex; }
+  img { width: 50%; image-rendering: pixelated; display: block; }
+</style>
+<h1>Coach Zain: every animation, P1 kit then P2 / CPU kit</h1>
+<div class="grid" id="grid"></div>
+<script>
+  for (const tag of ['ready', 'run_side', 'run_up', 'run_down', 'serve', 'forehand', 'backhand', 'overhead', 'dive', 'front_ready']) {
+    const fig = document.createElement('figure');
+    fig.innerHTML = `<figcaption>${tag}</figcaption><div class="pair"><img src="a8z-${tag}-p1.gif" alt="${tag}, P1 kit"><img src="a8z-${tag}-p2.gif" alt="${tag}, P2 kit"></div>`;
+    document.getElementById('grid').append(fig);
+  }
+</script>
