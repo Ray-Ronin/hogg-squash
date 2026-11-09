@@ -41,7 +41,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [x] 💳 Approve SpriteCook spend for A8z *(you)* *(296 approved, no top-up needed)*
 - [x] **A8z** Art: Coach Zain, every animation and the front-view idle
 - [x] **S15b** Finalized characters in the game: per-character kits, the front view on select, Coach Zain replaces Will
-- [ ] **CP-H** Play-test 6 *(you)*: the characters (the recolours, Coach Zain and the select screen)
+- [x] **CP-H** Play-test 6 *(you)*: the characters (the recolours, Coach Zain and the select screen)
 
 **Crowd**
 - [ ] 💳 Approve SpriteCook and ElevenLabs spend for A11 *(you)* (after A11's placement mockups)
@@ -722,6 +722,8 @@ Read docs/plan-v2.md and its Session log. My CP-H feedback: <notes>.
 Add the fixes as a small fix-up session (S15c, or an art re-run with its own 💳 line) before A11 if needed, and the next finalized character's lines if I named one (the "Finalized characters" template), tick CP-H, and commit. Don't push.
 ```
 
+**Outcome (2026-11-09):** no fixes and no new character, so there is no S15c and no art re-run. See the Session log.
+
 ---
 
 ## A11: Art and sound: the crowd
@@ -1039,3 +1041,7 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Memory and loading:** Zain's frames are 150 × 150, but with 81 frames his full atlas is 1232 × 1694, 8.3 MB of canvas against 7.6 (`front_ready`'s 8 frames come along, unused in a match). A Zain mirror match with all eight previews is about 23 MB, against S15's 21. **Download size:** his sheet adds 67 KB (PNG) and 24 KB of JSON (1.2 KB gzipped); the page's files come to about 414 KB as sent.
   - **For the owner (CP-H):** how Zain looks in both kits; the overhead above; the front view next to the back views. Also seen: with touch, the speaker button sits over the right score panel's name, as noted in S15, and "Coach Zain" under the CPU's figure just touches the SOFT button.
   - **Next:** CP-H (play-test 6: the characters).
+- 2026-11-09, CP-H (play-test 6: the characters; planning only, no version change): the owner's answer was "No fixes, no new character". There is no S15c and no art re-run.
+  - **Left as they are, as a result:** Zain's overhead, so no re-run (its 20 credits are unspent; 96 left, as S15b recorded); with touch, the speaker button over the right score panel's name, and "Coach Zain" touching the SOFT button; the CPU's random pick on the select screen.
+  - **Roster:** still Ronin, Adam, Ben and Coach Zain. No next finalized character was named, so no lines were added from the template, which stays ready for one. A7–A10 stay on hold.
+  - **Next:** A11, starting with its placement mockups (no credits), then the 💳 approval line.
