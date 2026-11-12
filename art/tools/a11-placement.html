@@ -1,0 +1,235 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>A11 placement generator</title>
+<style>body { background: #16161a; color: #eee; font: 14px system-ui; } canvas { display: block; margin: 8px 0; image-rendering: pixelated; max-width: 100%; }</style>
+<pre id="log">working…</pre>
+<div id="out"></div>
+<script type="module">
+// A11's placement mockups, no credits: stages placeholder spectators (code-drawn in the palette's colours) on a real
+// frame of the game (mockups/a11-base-desktop.png and a11-base-touch.png, captured from the running game with ?dev).
+// They only show where a crowd sits and what it covers: they aren't the art.
+const W = 640, H = 360;
+const OUT = '#0b0a0d', STAND = '#1f1e24', STAND2 = '#2a2930', RAIL = '#3a3940';
+const SKIN = ['#3e2216', '#6b3a24', '#9c5232', '#c46a40', '#e88b58', '#f7ad7c', '#fbc6a0'];
+const HAIR = ['#1e1410', '#3b261c', '#5c2e18', '#8a4a24', '#a87e3c', '#d9b060', '#8a8a94', '#1e1410'];
+const SHIRT = [['#c8102e', '#7a0a14'], ['#e8202a', '#a50d26'], ['#e6e6ea', '#8a8a94'], ['#ffffff', '#b4b4bc'],
+  ['#252429', '#0b0a0d'], ['#3a3940', '#252429'], ['#c8102e', '#7a0a14'], ['#e6e6ea', '#8a8a94'], ['#252429', '#0b0a0d']];
+
+function rng(seed) { let s = seed >>> 0; return n => { s = (s * 1664525 + 1013904223) >>> 0; return (s >>> 8) % n; }; }
+
+/** A filled pixel ellipse, row by row, so it has no soft edges. */
+function blob(g, cx, cy, rx, ry, col) {
+  g.fillStyle = col;
+  for (let y = -Math.ceil(ry); y <= Math.ceil(ry); y++) {
+    const t = 1 - ((y + (ry % 1 ? 0 : 0.5)) / (ry + 0.5)) ** 2;
+    if (t < 0) continue;
+    const half = Math.round(rx * Math.sqrt(t));
+    g.fillRect(Math.round(cx - half), Math.round(cy + y), half * 2, 1);
+  }
+}
+/** Shoulders and body: a rounded box, its lower part usually hidden by the row in front. */
+function torso(g, cx, top, w, h, col, shade) {
+  const x = Math.round(cx - w / 2);
+  g.fillStyle = OUT; g.fillRect(x + 2, top - 1, w - 4, 1); g.fillRect(x + 1, top, w - 2, 1); g.fillRect(x, top + 1, w, h);
+  g.fillStyle = col; g.fillRect(x + 2, top, w - 4, 1); g.fillRect(x + 1, top + 1, w - 2, h);
+  g.fillStyle = shade; g.fillRect(x + 1, top + h, w - 2, 1);
+}
+
+/** One placeholder spectator: head of width w. view: front, back, left (facing left) or right. */
+function person(g, cx, top, w, view, r, mascot = false) {
+  const rx = w / 2, ry = rx * 1.12, cy = top + ry, skin = SKIN[r(SKIN.length)], hair = HAIR[r(HAIR.length)], [shirt, shade] = SHIRT[r(SHIRT.length)];
+  const neck = top + ry * 2 - 1, sw = Math.round(w * 2.05), sh = Math.round(w * 1.5);
+  if (mascot) {   // a razorback costume: a red boar's head, ears and white tusks, on a red shirt
+    torso(g, cx, neck + 1, sw, sh, '#c8102e', '#7a0a14');
+    blob(g, cx, cy, rx + 1, ry + 1, OUT);
+    blob(g, cx, cy, rx, ry, '#a50d26');
+    g.fillStyle = '#7a0a14'; g.fillRect(Math.round(cx - rx) - 1, top - 1, 2, 3); g.fillRect(Math.round(cx + rx) - 1, top - 1, 2, 3);
+    if (view !== 'back') {
+      blob(g, cx, cy + ry * 0.35, rx * 0.55, ry * 0.4, '#f7ad7c');
+      g.fillStyle = '#ffffff'; g.fillRect(Math.round(cx - rx * 0.65), Math.round(cy + ry * 0.5), 1, Math.max(1, w >> 3)); g.fillRect(Math.round(cx + rx * 0.55), Math.round(cy + ry * 0.5), 1, Math.max(1, w >> 3));
+      g.fillStyle = OUT; g.fillRect(Math.round(cx - rx * 0.45), Math.round(cy - ry * 0.25), 1, 1); g.fillRect(Math.round(cx + rx * 0.35), Math.round(cy - ry * 0.25), 1, 1);
+    }
+    return;
+  }
+  torso(g, cx, neck + 1, sw, sh, shirt, shade);
+  g.fillStyle = skin; g.fillRect(Math.round(cx - w * 0.2), neck - 1, Math.max(2, Math.round(w * 0.4)), 3);
+  blob(g, cx, cy, rx + 1, ry + 1, OUT);
+  if (view === 'back') {
+    blob(g, cx, cy, rx, ry, hair);
+    if (w >= 14) {    // big heads: a neck, ears and some sheen, so they read as the backs of people
+      g.fillStyle = skin; g.fillRect(Math.round(cx - rx) - 1, Math.round(cy), 2, Math.round(ry * 0.5)); g.fillRect(Math.round(cx + rx) - 1, Math.round(cy), 2, Math.round(ry * 0.5));
+      blob(g, cx - rx * 0.25, cy - ry * 0.45, rx * 0.35, ry * 0.2, HAIR[(HAIR.indexOf(hair) + 1) % HAIR.length]);
+    }
+    return;
+  }
+  blob(g, cx, cy, rx, ry, skin);
+  const eyeY = Math.round(cy + ry * 0.05);
+  g.fillStyle = hair;
+  if (view === 'front') {
+    g.fillRect(Math.round(cx - rx), top, Math.round(w), Math.max(2, Math.round(ry * 0.8)));
+    g.fillStyle = OUT; g.fillRect(Math.round(cx - rx * 0.5), eyeY, 1, 1); g.fillRect(Math.round(cx + rx * 0.4), eyeY, 1, 1);
+  } else {
+    const d = view === 'left' ? -1 : 1;   // the hair behind, the face turned towards the court
+    g.fillRect(Math.round(cx - rx), top, Math.round(w), Math.max(2, Math.round(ry * 0.7)));
+    g.fillRect(d > 0 ? Math.round(cx - rx) : Math.round(cx + rx * 0.2), top, Math.round(w * 0.4), Math.round(ry * 1.3));
+    g.fillStyle = OUT; g.fillRect(Math.round(cx + d * rx * 0.45), eyeY, 1, 1);
+  }
+}
+
+/** A row of people, centres `step` apart, between x0 and x1. One in `mascotEvery` rows' worth can be the razorback. */
+function row(g, x0, x1, top, step, w, view, r, mascotAt = -1) {
+  for (let i = 0, x = x0 + step / 2; x < x1 - step / 2 + 1; i++, x += step) person(g, x + r(3) - 1, top + r(2), w, view, r, i === mascotAt);
+}
+
+// --- the options ---
+
+/** A: behind the back glass: the glass's frame, and big backs of heads along the bottom of the court. */
+function optionA(g) {
+  const glass = '#9fb4c0', glassD = '#6f8794';
+  g.globalAlpha = 0.45; g.fillStyle = glass; g.fillRect(78, 196, 484, 1); g.globalAlpha = 1;     // the top rail, 2.13 m up
+  g.fillStyle = glassD; g.fillRect(77, 196, 2, 150); g.fillRect(561, 196, 2, 150);               // the posts
+  g.fillStyle = glass; g.fillRect(78, 343, 484, 2);                                              // the floor channel
+  const r = rng(11);
+  g.fillStyle = STAND; g.fillRect(78, 345, 484, 15);
+  row(g, 70, 570, 326, 30, 17, 'back', r);        // the row behind, a little smaller
+  row(g, 56, 584, 334, 41, 21, 'back', r, 8);     // the near row
+}
+
+/** B: in the side margins, between the panels and the key help. */
+function optionB(g) {
+  const r = rng(23);
+  const stack = (x0, x1, y0, y1, view, mascot) => {
+    g.save(); g.beginPath(); g.rect(x0, y0, x1 - x0, y1 - y0); g.clip();
+    for (let y = y0; y < y1; y += 22) { g.fillStyle = (y - y0) % 44 ? STAND : STAND2; g.fillRect(x0, y, x1 - x0, 22); }
+    for (let y = y0 + 2, k = 0; y + 18 < y1; y += 22, k++) row(g, x0 + (k & 1 ? 2 : 0), x1, y, 24, 10, view, r, k === 2 ? mascot : -1);
+    g.restore();
+    g.fillStyle = RAIL; g.fillRect(x0, y1 - 2, x1 - x0, 2);
+  };
+  stack(2, 76, 144, 300, 'right', 1);
+  stack(564, 638, 180, 300, 'left', -1);
+  // anything hanging past the stands' edges (the bodies are longer than a row) is trimmed by the panels and text
+}
+
+/** The edge of the side wall's top: stands may fill above it. */
+const wallLineY = x => 46 + (210 - x) * (150 / 132);
+
+/** C: the gallery above the front wall, y 0–45. */
+function optionC(g) {
+  const r = rng(37);
+  g.fillStyle = STAND; g.fillRect(78, 0, 484, 45);
+  g.save(); g.beginPath(); g.rect(78, 0, 484, 41); g.clip();
+  g.fillStyle = STAND2; g.fillRect(78, 13, 484, 1); g.fillRect(78, 27, 484, 1);
+  row(g, 78, 562, 1, 16, 8, 'front', r);
+  row(g, 86, 554, 14, 16, 8, 'front', r, 15);
+  row(g, 78, 562, 27, 16, 8, 'front', r);
+  g.restore();
+  g.fillStyle = RAIL; g.fillRect(78, 41, 484, 4);
+  g.fillStyle = '#c8102e'; g.fillRect(78, 42, 484, 1);
+}
+
+/** D: the gallery, with wings down the empty triangles above the side walls (the plan's mix of C and more). */
+function optionD(g) {
+  optionC(g);
+  const r = rng(53);
+  for (const side of [0, 1]) {
+    const mx = x => (side ? W - x : x);
+    // the wing's backdrop, down to the wall's top edge
+    g.fillStyle = STAND;
+    g.beginPath(); g.moveTo(mx(78), 45); g.lineTo(mx(210), 45); g.lineTo(mx(78), wallLineY(78)); g.closePath(); g.fill();
+    for (let y = 46, k = 0; y < 182; y += 15, k++) {
+      const w = y < 90 ? 8 : 10, bottom = y + w * 2 + 4;      // bigger nearer the camera
+      const xEnd = 210 - (bottom - 46) * (132 / 150);
+      if (xEnd - 78 < 12) break;
+      g.save();
+      g.beginPath(); g.moveTo(mx(78), y); g.lineTo(mx(78), wallLineY(78)); g.lineTo(mx(210), 46); g.lineTo(mx(210), y); g.closePath(); g.clip();
+      for (let x = 86 + (k & 1 ? 8 : 0); x < xEnd - 2; x += 16) person(g, mx(x), y, w, side ? 'left' : 'right', r, side === 0 && k === 3 && x < 100);
+      g.restore();
+    }
+  }
+}
+
+const OPTIONS = { A: optionA, B: optionB, C: optionC, D: optionD };
+
+// --- the screens ---
+const load = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+const canvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; };
+
+/** The game's frame with an option on it. */
+function frame(base, draw) {
+  const [c, g] = canvas(W, H);
+  g.drawImage(base, 0, 0);
+  draw?.(g);
+  return c;
+}
+
+/** 1280×720: every pixel doubled, as the game does. */
+function desktop(c) {
+  const [o, g] = canvas(1280, 720);
+  g.drawImage(c, 0, 0, 1280, 720);
+  return o;
+}
+
+/** 844×390 with the touch controls, at the places the real page gives them (read from getBoundingClientRect there). */
+function phone(c, t) {
+  const [o, g] = canvas(844, 390);
+  g.fillStyle = '#16161a'; g.fillRect(0, 0, 844, 390);
+  const [up, ug] = canvas(1280, 720);       // sharp-bilinear, as the game: a whole-number upscale, then a smooth shrink
+  ug.drawImage(c, 0, 0, 1280, 720);
+  const dw = 390 * 16 / 9;
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  g.drawImage(up, (844 - dw) / 2, 0, dw, 390);
+  const circle = (r, fill, line, label) => {
+    const R = r.w / 2, cx = r.x + R, cy = r.y + R;
+    g.beginPath(); g.arc(cx, cy, R - 1, 0, 7); g.fillStyle = fill; g.fill(); g.lineWidth = 2; g.strokeStyle = line; g.stroke();
+    if (label) { g.fillStyle = '#fff'; g.font = 'bold 16px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = '#000'; g.shadowBlur = 2; g.shadowOffsetY = 1; g.fillText(label, cx, cy + 1); g.shadowColor = 'transparent'; g.shadowOffsetY = 0; g.shadowBlur = 0; }
+    return [cx, cy, R];
+  };
+  const fill = 'rgba(255,255,255,0.12)', line = 'rgba(255,255,255,0.45)';
+  const [sx, sy, sr] = circle(t.stick, fill, line);
+  g.beginPath(); g.arc(sx, sy, sr * 0.42, 0, 7); g.fillStyle = 'rgba(255,255,255,0.4)'; g.fill();
+  circle(t.hard, 'rgba(200,16,46,0.45)', 'rgba(255,160,170,0.6)', 'HARD');
+  circle(t.soft, fill, line, 'SOFT');
+  circle(t.pause, fill, line, 'II');
+  circle(t.full, fill, line, '[ ]');
+  circle(t.sound, fill, line, '♪');
+  return o;
+}
+
+const log = document.getElementById('log'), out = document.getElementById('out');
+async function save(name, c) {
+  const res = await fetch(`/save/${name}`, { method: 'POST', body: c.toDataURL('image/png') });
+  log.textContent += `\n${await res.text()}`.trimEnd();
+  const shown = document.createElement('canvas');
+  shown.width = c.width; shown.height = c.height; shown.getContext('2d').drawImage(c, 0, 0);
+  out.append(name, shown);
+}
+
+const [baseD, baseT, touch] = await Promise.all([load('/mockups/a11-base-desktop.png'), load('/mockups/a11-base-touch.png'),
+  fetch('/mockups/a11-touch-rects.json').then(r => r.json())]);
+log.textContent = '';
+
+const sheets = {};
+await save('a11-now-desktop.png', desktop(frame(baseD)));
+await save('a11-now-phone.png', phone(frame(baseT), touch));
+for (const [k, draw] of Object.entries(OPTIONS)) {
+  const d = desktop(frame(baseD, draw)), p = phone(frame(baseT, draw), touch);
+  await save(`a11-${k}-desktop.png`, d);
+  await save(`a11-${k}-phone.png`, p);
+  sheets[k] = [d, p];
+}
+
+// One overview: each option at 1280×720 and on the phone, side by side, at half size.
+const LABEL = { A: 'A  behind the back glass', B: 'B  in the side margins', C: 'C  gallery above the front wall (y 0-45)', D: 'D  gallery + wings over the side walls (a mix)' };
+const [ov, og] = canvas(1320, 4 * 400);
+og.fillStyle = '#16161a'; og.fillRect(0, 0, ov.width, ov.height);
+og.imageSmoothingEnabled = true;
+Object.entries(sheets).forEach(([k, [d, p]], i) => {
+  const y = i * 400;
+  og.fillStyle = '#fff'; og.font = 'bold 22px system-ui, sans-serif'; og.textBaseline = 'top'; og.textAlign = 'left';
+  og.fillText(LABEL[k], 10, y + 6);
+  og.drawImage(d, 10, y + 36, 640, 360);
+  og.drawImage(p, 660, y + 36, 650, 300);
+});
+await save('a11-placement.png', ov);
+log.textContent += '\nDONE';
+</script>

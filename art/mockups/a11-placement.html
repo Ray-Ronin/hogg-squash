@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A11 crowd placement</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 16px; background: #16161a; color: #e6e6ea; font: 15px/1.45 system-ui, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; } h2 { font-size: 17px; margin: 28px 0 6px; color: #fff; }
+  h2 b { color: #ff5a52; }
+  p, li { max-width: 980px; } .note { color: #b4b4bc; }
+  .pair { display: grid; grid-template-columns: 1280fr 844fr; gap: 10px; align-items: start; }
+  .pair img { min-width: 0; width: 100%; image-rendering: pixelated; border: 1px solid #3a3940; }
+  @media (max-width: 760px) { .pair { grid-template-columns: 1fr; } }
+  ul { margin: 6px 0 0; padding-left: 20px; }
+</style>
+<h1>A11: where the crowd goes</h1>
+<p class="note">A staged frame of the real game (Ronin near the back, the CPU mid-court). Left: 1280×720. Right: 844×390, a phone with the touch controls where the game really puts them. The spectators are code-drawn placeholders in the palette's colours, only there to show place, size and what they cover. They are not the art. No credits spent.</p>
+
+<h2>Now (no crowd)</h2>
+<div class="pair"><img src="a11-now-desktop.png" alt=""><img src="a11-now-phone.png" alt=""></div>
+
+<h2><b>A</b> Behind the back glass, along the bottom</h2>
+<div class="pair"><img src="a11-A-desktop.png" alt=""><img src="a11-A-phone.png" alt=""></div>
+<ul>
+  <li><b>Covers:</b> the back of the floor (the strip from y 326 down, about the last 0.2 m of the court). A player at the back wall has their feet, and the ball's shadow and landing marker there, behind heads. It also hides the help line along the bottom ("Esc pause … Controllers …"), which would have to move.</li>
+  <li><b>Phone:</b> the stick and HARD sit over its two ends.</li>
+  <li><b>The glass frame:</b> its top rail (2.13 m) falls exactly on the front wall's floor line on screen, so it hardly shows. The posts fall on the court's outer edges.</li>
+  <li><b>The people:</b> the biggest (heads 17–21 px), about 25, backs of heads only, so no faces. Reactions would be heads and arms. Seated heads behind real glass would sit below y 345 (15 px of hair), so it has to be pushed up to read at all.</li>
+</ul>
+
+<h2><b>B</b> In the side margins</h2>
+<div class="pair"><img src="a11-B-desktop.png" alt=""><img src="a11-B-phone.png" alt=""></div>
+<ul>
+  <li><b>Covers on a computer:</b> nothing. Left x 2–76, y 144–300 (under FIRST TO); right x 564–638, y 180–300 (under the logo); the key help stays clear.</li>
+  <li><b>Phone:</b> it sits right under the stick (left) and SOFT / HARD (right). The buttons are see-through, so a moving crowd would show under your thumbs.</li>
+  <li><b>The people:</b> heads 10 px, about 35, side-on facing the court. Narrow stacks, so it reads more like two boxes of fans than a stand.</li>
+</ul>
+
+<h2><b>C</b> A gallery above the front wall (y 0–45)</h2>
+<div class="pair"><img src="a11-C-desktop.png" alt=""><img src="a11-C-phone.png" alt=""></div>
+<ul>
+  <li><b>Covers:</b> nothing, on a computer or a phone. The panels start at y 16 but end at x 72, and the touch buttons are outside x 78–562.</li>
+  <li><b>The ball:</b> a high shot that goes out over the front wall would cross the crowd for a few frames instead of the dark margin. It's black-outlined, so it should still show.</li>
+  <li><b>The people:</b> small (heads 8 px, the size of a player at the front wall), about 90, facing the court and the camera. Faces barely read; reactions read as arms going up and colour moving.</li>
+</ul>
+
+<h2><b>D</b> The gallery plus wings above the side walls (a mix; not in the plan's list)</h2>
+<div class="pair"><img src="a11-D-desktop.png" alt=""><img src="a11-D-phone.png" alt=""></div>
+<ul>
+  <li><b>What it adds:</b> C, plus stands in the two empty dark triangles above the side walls (x 78–210 and 430–562, down to y 196 at the outer edge), so the court sits in an arena.</li>
+  <li><b>Covers:</b> nothing. The wings stop at the side walls' top edge and at x 78. On a phone the stick's top only just meets the tip of the left wing.</li>
+  <li><b>Costs:</b> busier, and the side walls' top edges lose their dark background, so the court's outline stands out less (darker or dimmer wings would help). About 150 people, still from a few pre-made looks.</li>
+</ul>
+
+<h2>For every option</h2>
+<ul>
+  <li>The plan's spectator art is the same either way: a few concepts, 6–10 looks by recolouring, and idle, clap and cheer loops. The placement sets the <b>size</b> (A big, about 45×40 px; B, C, D small, about 16–24 px) and the <b>view</b> (A from behind; B side-on; C front; D front in the gallery, three-quarter in the wings).</li>
+  <li>The sounds (murmur, applause, cheer, groan) don't depend on the placement.</li>
+</ul>

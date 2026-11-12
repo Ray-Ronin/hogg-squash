@@ -44,10 +44,10 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [x] **CP-H** Play-test 6 *(you)*: the characters (the recolours, Coach Zain and the select screen)
 
 **Crowd**
-- [ ] 💳 Approve SpriteCook and ElevenLabs spend for A11 *(you)* (after A11's placement mockups)
-- [ ] **A11** Art and sound: the crowd (where it sits, the spectators, crowd sounds)
-- [ ] **S16** The crowd in the game: drawing it, reactions and crowd sound
-- [ ] **CP-I** Play-test 7 *(you)*: the crowd; settle the tournament's rules
+- [-] 💳 Approve SpriteCook and ElevenLabs spend for A11 *(you)* (after A11's placement mockups) *(on hold)*
+- [-] **A11** Art and sound: the crowd (where it sits, the spectators, crowd sounds) *(on hold 2026-11-12, the owner's call, after the placement mockups)*
+- [-] **S16** The crowd in the game: drawing it, reactions and crowd sound *(on hold)*
+- [ ] **CP-I** Settle the tournament's rules *(you)* (the crowd's questions are on hold with it)
 
 **Tournament**
 - [ ] **S17** Tournament: rules, ladder and flow (headless, tested; plain screens)
@@ -726,6 +726,8 @@ Add the fixes as a small fix-up session (S15c, or an art re-run with its own �
 
 ---
 
+> **The crowd is on hold (2026-11-12, the owner's call):** A11 stopped after its placement mockups (no credits spent; `art/mockups/a11-placement.html` and `a11-*.png`, made by `art/tools/a11-placement.html`). The owner chose to skip the crowd for now ("not very necessary right now"), so A11, its 💳 line and S16 are skipped. They stay written; to bring the crowd back, untick them (`[ ]`), pick a placement from the mockups (A–D, D being the gallery plus wings above the side walls) and carry on from A11's spend gate. CP-J's "what comes next" is the latest point to decide.
+
 ## A11: Art and sound: the crowd
 
 **Goal:** a crowd that fits the court and the camera, and its sounds.
@@ -792,23 +794,25 @@ Build S16's "In scope" list only. Nothing in js/sim/.
 Go through "Done when", tick S16, add a Session log entry, and commit. Ask me before pushing.
 ```
 
-## CP-I: Play-test 7: the crowd; the tournament's rules *(you)*
+## CP-I: Settle the tournament's rules *(you)*
 
-Play a few matches with the crowd. Then settle the tournament (S17's defaults in brackets):
-1. Does the crowd help or distract? Too loud, too busy, in the way?
+*(Until 2026-11-12 this was "Play-test 7: the crowd; the tournament's rules". With the crowd on hold there is nothing new to play-test, so CP-I only settles the tournament. Questions 1 and 8 come back with the crowd.)*
+
+Settle the tournament (S17's defaults in brackets):
+1. *(On hold with the crowd.)* Does the crowd help or distract? Too loud, too busy, in the way?
 2. **Rounds:** how many? (The arcade's five: Qualify, Round of 16, Quarter-final, Semi-final, Final.)
 3. **Match length per round:** one length chosen at the start, or fixed? (Chosen, default first to 7.)
 4. **Difficulty:** how it rises. (A starting level picked at the start; +1 level each round, up to 9.)
 5. **Opponents:** the other characters in turn, repeating when there are more rounds than characters. (Yes; the final against a random one.)
 6. **Losing a round:** replay it as often as you like, or out of the tournament? (Replay, with a count of tries shown at the end.)
 7. **Saving:** remember the tournament in the browser so it can be finished later? (Yes.)
-8. **The crowd by round:** bigger and louder towards the final? (Yes, if the placement allows.)
+8. *(On hold with the crowd.)* **The crowd by round:** bigger and louder towards the final? (Yes, if the placement allows.)
 
 **Starter prompt** (planning-only session)
 ```text
 Planning only: change no files except docs/plan-v2.md and docs/decisions.md.
-Read docs/plan-v2.md and its Session log. My CP-I feedback: <notes>. My tournament answers: <answers>.
-Record the tournament rules in docs/decisions.md, update S17, A12 and S18 to match, add a crowd fix-up session (S16b) if needed, tick CP-I, and commit. Don't push.
+Read docs/plan-v2.md and its Session log (the crowd is on hold, so A11 and S16 don't count). My tournament answers (questions 2–7): <answers>.
+Record the tournament rules in docs/decisions.md, update S17, A12 and S18 to match, tick CP-I, and commit. Ask me before pushing.
 ```
 
 ---
@@ -821,7 +825,7 @@ Record the tournament rules in docs/decisions.md, update S17, A12 and S18 to mat
 - `js/sim/tournament.js` (pure, Node-tested): the ladder's state from CP-I's rules: the rounds, each round's opponent, level and match length, winning a round, losing (replay or out), the tournament won. The match itself is the existing one (`js/sim/match.js`, `world.js`), set up per round.
 - The flow: TOURNAMENT on the title (1P only; touch works) → character select (yours; the opponents come from the ladder) → the ladder screen (round names, your next opponent, the level) → match → back to the ladder (round won or lost) → … → a plain "Tournament won" screen.
 - **Saving** (if CP-I said yes): the ladder's state in `localStorage` (the keymap's blocked-storage handling); a "Continue tournament" item on the title when one is saved; quitting a match mid-round counts as… (CP-I's answer, default: replay the round).
-- The crowd's size by round, if CP-I said yes (a number S16's crowd reads).
+- *(On hold with the crowd.)* The crowd's size by round, if CP-I said yes (a number S16's crowd reads).
 - Tests: the ladder's rules (every round, win and loss, the final, a saved state loaded back, a broken save ignored); the screen transitions.
 
 **Not in scope:** tournament art (A12, S18), 2P tournaments, high scores, new courts, any change to the match rules.
@@ -879,9 +883,9 @@ No game code changes. Finish with "Done when", tick A12, add a Session log entry
 **Goal:** the tournament with its art, and the whole v2 ready to release. No new features.
 
 **In scope**
-- Use A12's ladder, round titles and ending in S17's screens; a round title card before each tournament match; the crowd bigger by round (if chosen); the jingles for a round won and the tournament won (from A6's set; a new sound needs an A6-style spend).
-- **Release prep** as S12 did: check in Chrome, Edge and Firefox, at 60 Hz and a high refresh rate if available, and a phone (touch, sound after the first tap); a cold load with an empty cache (note the total download size: the character sheets, the crowd, sounds); caching still fine after a deploy.
-- Update `README.md` (sound, characters, crowd, tournament) and the status line in `CLAUDE.md`.
+- Use A12's ladder, round titles and ending in S17's screens; a round title card before each tournament match; the crowd bigger by round (if chosen; on hold with the crowd); the jingles for a round won and the tournament won (from A6's set; a new sound needs an A6-style spend).
+- **Release prep** as S12 did: check in Chrome, Edge and Firefox, at 60 Hz and a high refresh rate if available, and a phone (touch, sound after the first tap); a cold load with an empty cache (note the total download size: the character sheets, the sounds, and the crowd if it is back); caching still fine after a deploy.
+- Update `README.md` (sound, characters, tournament; the crowd only if it is back) and the status line in `CLAUDE.md`.
 
 **Not in scope:** anything in "Not in this plan" above (music, voice, more courts, high scores, a 2P tournament).
 
@@ -891,7 +895,7 @@ No game code changes. Finish with "Done when", tick A12, add a Session log entry
 
 **Done when…**
 - `npm test` and `npm run typecheck` pass.
-- A whole tournament plays with its art, sounds and crowd; 1P and 2P single matches still work.
+- A whole tournament plays with its art and sounds (and the crowd, if it is back); 1P and 2P single matches still work.
 - The game works in all the browsers checked. No console errors from a cold load to the tournament's end. Version 1.18.0.
 
 **You check or decide at the end:** go to CP-J.
@@ -1045,3 +1049,12 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Left as they are, as a result:** Zain's overhead, so no re-run (its 20 credits are unspent; 96 left, as S15b recorded); with touch, the speaker button over the right score panel's name, and "Coach Zain" touching the SOFT button; the CPU's random pick on the select screen.
   - **Roster:** still Ronin, Adam, Ben and Coach Zain. No next finalized character was named, so no lines were added from the template, which stays ready for one. A7–A10 stay on hold.
   - **Next:** A11, starting with its placement mockups (no credits), then the 💳 approval line.
+- 2026-11-12, crowd on hold (A11 stopped after its placement mockups; no version change): CP-H was ticked. The baseline `npm test` passed (all 9 checks, 174 unit tests).
+  - **The mockups (no credits):** a staged frame of the real game (`?dev`; Ronin near the back, the CPU mid-court), with code-drawn placeholder spectators in the palette's colours, at 1280×720 and at 844×390 with the touch controls where the game puts them (read from the page). `art/mockups/a11-placement.html` shows them with notes; `a11-placement.png` is the overview. They were made by `art/tools/a11-placement.html`, served with `art/tools/a11-mock-server.mjs` (the launch config `a11-mock`). The options:
+    - **A, behind the back glass:** covers the floor from y 326 down (the feet of a player at the back wall, the shadow and landing marker there) and the bottom help line; on a phone the stick and HARD sit over its ends. The glass's top rail (2.13 m) falls on the front wall's floor line on screen, so it hardly shows. Seated heads behind real glass would show only about 15 px, so it has to be pushed up to read.
+    - **B, the side margins:** covers nothing on a computer (left x 2–76, y 144–300; right x 564–638, y 180–300). On a phone it sits under the stick and SOFT / HARD.
+    - **C, a gallery above the front wall (y 0–45):** covers nothing anywhere; a high ball out over the front wall would cross it for a few frames.
+    - **D, C plus wings** (not in the plan's list) in the dark triangles above the side walls (x 78–210 and 430–562, down to y 196 at the outer edges): covers nothing, but it's busier and the side walls' top edges lose their dark background.
+  - **The owner's call:** skip the crowd for now ("not very necessary right now"). No placement was picked, no balances were checked and nothing was generated: **no SpriteCook or ElevenLabs credits spent** (SpriteCook stays at 96).
+  - **Plan changes:** A11's 💳 line, A11 and S16 are marked `[-]` (on hold) but stay written, with a note above A11 on how to bring them back. CP-I is now "Settle the tournament's rules" only (its crowd questions 1 and 8 are on hold), and its starter prompt no longer mentions a crowd fix-up. S17's crowd-by-round item and S18's crowd mentions are marked as on hold. `decisions.md`, "Court look"; `CLAUDE.md`'s status.
+  - **Next:** CP-I (the owner: the tournament's rules), then S17.

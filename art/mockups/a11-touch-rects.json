@@ -1,0 +1,9 @@
+{
+  "note": "The touch controls' places at 844x390 (CSS px), read with getBoundingClientRect from the running game (A11). The canvas is 693x390 at x 75.5.",
+  "stick": { "x": 14, "y": 212.2, "w": 163.8 },
+  "hard": { "x": 728.6, "y": 274.6, "w": 101.4 },
+  "soft": { "x": 617.1, "y": 218.8, "w": 101.4 },
+  "pause": { "x": 8, "y": 8, "w": 44 },
+  "sound": { "x": 740, "y": 8, "w": 44 },
+  "full": { "x": 792, "y": 8, "w": 44 }
+}
