@@ -221,7 +221,7 @@ test('sfx.json: known names with files are taken; the rest are warnings, not err
 
 test('options: the Effects item, Off or 1–10; pause: Sound on/off; both report a sound change', () => {
   const ui = makeUi();
-  navigate(ui, 'down'); navigate(ui, 'down'); navigate(ui, 'ok');           // OPTIONS
+  navigate(ui, 'down'); navigate(ui, 'down'); navigate(ui, 'down'); navigate(ui, 'ok');           // OPTIONS
   ui.sel = EFFECTS_SEL;
   assert.equal(OPTION_ITEMS[EFFECTS_SEL - KEY_CELLS], 'EFFECTS');
   assert.equal(optionLabels(ui)[EFFECTS_SEL - KEY_CELLS], 'EFFECTS 5');

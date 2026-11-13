@@ -11,13 +11,42 @@
 // On the characters screen each player picks with their own controls (navigate's side): P1 on the left, P2 on the
 // right; in 1P the CPU's pick is random and up / down rolls another. With no roster (the sprites didn't load) it's
 // skipped. Characters are looks only: the picks go to the drawing and the names, never to the sim.
+// The tournament (S17; docs/decisions.md, "Tournament"; its rules are js/sim/tournament.js):
+//   title TOURNAMENT → (a tournament saved: Continue, or New, which asks first) → setup (players, humans, length,
+//   bot level) → characters (every slot: each human picks theirs in turn, the bots start random and can be changed) →
+//   the bracket → the next match: a human's goes to the controllers screen and is played; a bots' one is watched or
+//   skipped → the result → back to the bracket → … → the champion → the title.
+//   In a tournament match the pause menu quits to the title (the tournament stays saved; that match starts again) and,
+//   in a bots' match, has Skip match; the result screen only goes back to the bracket.
 // Each screen's drawing is in its own file in js/ui/; the menus' words are here, so the tests can check the font.
 import { MATCH_LENGTHS } from '../sim/match.js';
 import { LEVELS, DEFAULT_LEVEL } from '../sim/difficulty.js';
+import { SIZES, TOURNAMENT_DEFAULTS, makeTournament, nextMatch, recordResult, skipMatch, champion }
+  from '../sim/tournament.js';
 import { ACTIONS, defaultLayouts, refusal, duplicateNote, keyLabel, resetLayouts, laptopPreset } from '../input/keymap.js';
 import { defaultSound, SOUND_LEVELS } from '../audio/audio.js';
 
-/** @typedef {'title' | 'length' | 'level' | 'select' | 'assign' | 'match' | 'pause' | 'result' | 'options' | 'keytest'} ScreenName */
+/**
+ * @typedef {'title' | 'length' | 'level' | 'select' | 'assign' | 'match' | 'pause' | 'result' | 'options' | 'keytest' |
+ *   'tmenu' | 'tconfirm' | 'tsetup' | 'tselect' | 'bracket' | 'champion'} ScreenName
+ */
+/**
+ * The tournament setup screen's choices (kept between visits).
+ * @typedef {{ size: number, humans: number, mode: import('../sim/tournament.js').LengthMode, same: number, start: number,
+ *   level: number }} TourDraft
+ */
+/**
+ * @typedef {object} TourUi
+ * @property {TourDraft} draft
+ * @property {string[]} chars    the characters screen's picks, one per entrant
+ * @property {import('../sim/tournament.js').Tournament | null} t  the tournament under way (and saved), or null
+ * @property {number} view       the round the bracket shows
+ * @property {import('../sim/tournament.js').MatchInfo | null} match  the tournament match being played (null: a
+ *   single match)
+ * @property {boolean} skipping  the rest of the match is being played out (Skip match from the pause menu)
+ * @property {{ info: import('../sim/tournament.js').MatchInfo, outcome: 'replay' | 'decided' } | null} last  the last
+ *   tournament match's result (the result screen)
+ */
 /**
  * @typedef {{ players: 1 | 2, target: number, level: number, picks: string[] }} Settings  target: points to win; level:
  *   1P only; picks: P1's and P2's (or the CPU's) character ids, once picked (empty: the roster's first two)
@@ -36,7 +65,10 @@ import { defaultSound, SOUND_LEVELS } from '../audio/audio.js';
  *  restart: the same match again from 0–0; rematch: a new match with the same settings; quit: drop the match
  *  keys: the key layouts changed (save them, and tell the keyboard); site: leave for roninray.com (SITE_URL)
  *  sound: the Effects level or Sound on/off changed (save them, and tell the sound engine)
- * @typedef {null | 'prepare' | 'start' | 'resume' | 'restart' | 'rematch' | 'quit' | 'keys' | 'site' | 'sound'} Effect
+ *  tsave: the tournament changed (save it); tclear: it's over (forget the save)
+ *  skiprest: play the rest of the bots' match being watched out at once (sim/tournament.js, playOut)
+ * @typedef {null | 'prepare' | 'start' | 'resume' | 'restart' | 'rematch' | 'quit' | 'keys' | 'site' | 'sound' |
+ *   'tsave' | 'tclear' | 'skiprest'} Effect
  */
 
 /**
@@ -54,7 +86,9 @@ import { defaultSound, SOUND_LEVELS } from '../audio/audio.js';
  * @property {string[]} roster   the characters' ids, in the roster's order (empty until loaded, or if it failed)
  * @property {{ at: number[], locked: boolean[] }} pick  the characters screen: each side's character (an index into
  *   roster) and whether it's picked (in 1P the CPU's side is always picked)
- * @property {() => number} rand  random numbers in [0, 1) for the CPU's pick (Math.random; never the sim's)
+ * @property {() => number} rand  random numbers in [0, 1) for the CPU's pick, the bots' characters and a new
+ *   tournament's seed (Math.random; never the sim's)
+ * @property {TourUi} tour  the tournament's screens
  */
 
 /** The defaults: 1 player, first to 9, level 5 (the plan's suggestion; the owner decides at the end of S10), and no
@@ -65,13 +99,35 @@ export const DEFAULT_SETTINGS = Object.freeze({ players: /** @type {1 | 2} */ (1
 /** The tap target (hit selection) that rolls the CPU's character again on the characters screen. */
 export const SELECT_REROLL = 100;
 
-export const TITLE_ITEMS = ['1 PLAYER', '2 PLAYERS', 'OPTIONS', 'GO TO HOME'];
+export const TITLE_ITEMS = ['1 PLAYER', '2 PLAYERS', 'TOURNAMENT', 'OPTIONS', 'GO TO HOME'];
+/** The title's items' selections. */
+const [, TWO_PLAYERS, TOURNAMENT, OPTIONS, HOME] = TITLE_ITEMS.map((_, i) => i);
 /** Where the title's last item goes: the website's start page (the game, and how it was built). */
 export const SITE_URL = 'https://roninray.com/';
 export const PAUSE_ITEMS = ['RESUME', 'RESTART MATCH', 'SOUND ON', 'QUIT TO TITLE'];
-/** The pause menu's Sound on/off item. */
-const PAUSE_SOUND = 2;
+/** The pause menu's Skip match item, in a watched bots' match of a tournament (before Quit to title). */
+export const PAUSE_SKIP = 'SKIP MATCH';
 export const RESULT_ITEMS = ['REMATCH', 'MENU'];
+/** The result screen's one item in a tournament. */
+export const RESULT_TOUR_ITEMS = ['BACK TO THE BRACKET'];
+
+/** The tournament's screens' items (a tournament saved; starting a new one while one is saved; the setup's rows). */
+export const TMENU_ITEMS = ['CONTINUE', 'NEW TOURNAMENT'];
+export const TCONFIRM_ITEMS = ['KEEP IT', 'START A NEW ONE'];
+export const TSETUP_ROWS = ['PLAYERS', 'HUMANS', 'LENGTH', 'FIRST TO', 'BOT LEVEL', 'START'];
+const [T_SIZE, T_HUMANS, T_MODE, T_LENGTH, T_LEVEL, T_START] = TSETUP_ROWS.map((_, i) => i);
+/** The setup's length modes as shown. */
+export const MODE_LABELS = { same: 'SAME', rising: 'RISING' };
+/** The bracket's items: a human's match is played; a bots' one watched or skipped; then the champion. */
+export const BRACKET_ITEMS = { play: ['PLAY', 'QUIT TO TITLE'], bots: ['WATCH', 'SKIP', 'QUIT TO TITLE'],
+  done: ['SEE THE CHAMPION', 'QUIT TO TITLE'] };
+export const CHAMPION_ITEMS = ['MENU'];
+/** Taps on the tournament's characters screen beyond the slots (0 … size − 1): START, and the big figure (another). */
+export const TSELECT_START = 1000;
+export const TSELECT_NEXT = 1001;
+/** Taps on the bracket's round arrows (the earlier and the later round). */
+export const BRACKET_PREV = 2000;
+export const BRACKET_NEXT = 2001;
 /** The options screen's buttons, under its 6 rows × 2 players of keys (selections 0–11, P1 then P2 on each row). */
 export const OPTION_ITEMS = ['LAPTOP KEYS FOR P2', 'RESET TO DEFAULTS', 'KEY TEST', 'EFFECTS', 'BACK'];
 /** The first button's selection. */
@@ -84,10 +140,25 @@ export const EFFECTS_SEL = EFFECTS;
 export const effectsLabel = level => `EFFECTS ${level || 'OFF'}`;
 /** The options' buttons as drawn (the Effects item with its level). @param {Ui} ui */
 export const optionLabels = ui => OPTION_ITEMS.map((it, i) => (KEY_CELLS + i === EFFECTS ? effectsLabel(ui.sound.level) : it));
+/**
+ * The pause menu's items: PAUSE_ITEMS, with Skip match before Quit to title in a tournament's bots' match.
+ * @param {Ui} ui
+ */
+export const pauseItems = ui => (ui.tour.match && !ui.tour.match.mustPlay
+  ? [...PAUSE_ITEMS.slice(0, 3), PAUSE_SKIP, PAUSE_ITEMS[3]] : PAUSE_ITEMS);
 /** The pause menu's items as drawn (SOUND ON or SOUND OFF). @param {Ui} ui */
-export const pauseLabels = ui => PAUSE_ITEMS.map((it, i) => (i === PAUSE_SOUND ? `SOUND ${ui.sound.on ? 'ON' : 'OFF'}` : it));
-/** The title's 2P item. */
-const TWO_PLAYERS = 1;
+export const pauseLabels = ui => pauseItems(ui).map(it => (it === PAUSE_ITEMS[2] ? `SOUND ${ui.sound.on ? 'ON' : 'OFF'}` : it));
+/** The result screen's items: in a tournament, back to the bracket. @param {Ui} ui */
+export const resultItems = ui => (ui.tour.match ? RESULT_TOUR_ITEMS : RESULT_ITEMS);
+/** The bracket's items. @param {Ui} ui */
+export function bracketItems(ui) {
+  const t = ui.tour.t;
+  if (!t) return [];
+  const m = nextMatch(t);
+  return !m ? BRACKET_ITEMS.done : m.mustPlay ? BRACKET_ITEMS.play : BRACKET_ITEMS.bots;
+}
+/** The most humans the setup allows: the bracket's size, or one with the touch controls (touch is 1P only). @param {Ui} ui */
+export const maxHumans = ui => (ui.touch ? 1 : ui.tour.draft.size);
 
 /** The title's line while the touch controls show (in place of the keys). */
 export const TOUCH_2P_NOTE = '2 players needs a keyboard or gamepads';
@@ -100,6 +171,7 @@ export function titleOff(ui) {
 export function setTouch(ui, on) {
   ui.touch = on;
   if (on && ui.screen === 'title' && ui.sel === TWO_PLAYERS) ui.sel = 0;
+  if (on) ui.tour.draft.humans = 1;                  // touch is 1P only (the setup keeps it at one human)
 }
 
 /**
@@ -111,7 +183,22 @@ export function setTouch(ui, on) {
  */
 export function makeUi(settings = {}, screen = 'title', keys = defaultLayouts(), sound = defaultSound()) {
   return { screen, settings: { ...DEFAULT_SETTINGS, picks: [], ...settings }, sel: 0, inMatch: false, keys, listen: false,
-    note: '', touch: false, sound, roster: [], pick: { at: [0, 0], locked: [false, false] }, rand: Math.random };
+    note: '', touch: false, sound, roster: [], pick: { at: [0, 0], locked: [false, false] }, rand: Math.random,
+    tour: { draft: { ...TOURNAMENT_DEFAULTS }, chars: [], t: null, view: 0, match: null, skipping: false, last: null } };
+}
+
+/** A tournament was loaded from the browser (main.js, at the start): the title offers to continue it. @param {Ui} ui @param {import('../sim/tournament.js').Tournament | null} t */
+export function setTournament(ui, t) {
+  ui.tour.t = t;
+}
+
+/**
+ * The characters of the match being set up, P1's then P2's (or the CPU's): a tournament match's two entrants', else
+ * the settings' picks (empty: not picked yet). @param {Ui} ui @returns {string[]}
+ */
+export function matchPicks(ui) {
+  const tm = ui.tour.match, t = ui.tour.t;
+  return tm && t ? tm.sides.map(e => t.setup.chars[e]) : ui.settings.picks;
 }
 
 /** The roster has loaded: its characters' ids, in order (main.js). @param {Ui} ui @param {string[]} ids */
@@ -180,8 +267,11 @@ export function navigate(ui, nav, side = null) {
       upDown(ui, nav, TITLE_ITEMS.length);
       if (ui.touch && ui.sel === TWO_PLAYERS) upDown(ui, nav, TITLE_ITEMS.length);   // stepping over 2P
       if (isOk(nav) && ui.touch && ui.sel === TWO_PLAYERS) return null;
-      if (isOk(nav) && ui.sel === 3) return 'site';
-      if (isOk(nav) && ui.sel === 2) {
+      if (isOk(nav) && ui.sel === HOME) return 'site';
+      if (isOk(nav) && ui.sel === TOURNAMENT) {
+        if (ui.tour.t) go(ui, 'tmenu');                    // one is saved: continue it, or start a new one
+        else go(ui, 'tsetup');
+      } else if (isOk(nav) && ui.sel === OPTIONS) {
         go(ui, 'options');
         ui.listen = false;
         ui.note = duplicateNote(ui.keys);
@@ -222,7 +312,10 @@ export function navigate(ui, nav, side = null) {
         go(ui, 'match');
         return 'start';
       }
-      if (nav === 'back') {
+      if (nav === 'back' && ui.tour.match) {              // a tournament match: back to the bracket
+        ui.tour.match = null;
+        toBracket(ui);
+      } else if (nav === 'back') {
         if (ui.roster.length) {                           // back to the characters, both choosing again
           ui.pick.locked = [false, s.players === 1];
           go(ui, 'select');
@@ -234,23 +327,41 @@ export function navigate(ui, nav, side = null) {
     case 'match':
       if (nav === 'back' || nav === 'start') go(ui, 'pause');
       return null;
-    case 'pause':
-      upDown(ui, nav, PAUSE_ITEMS.length);
-      if (nav === 'back' || nav === 'start' || (nav === 'ok' && ui.sel === 0)) {
+    case 'pause': {
+      const items = pauseItems(ui);
+      upDown(ui, nav, items.length);
+      const item = items[ui.sel];
+      if (nav === 'back' || nav === 'start' || (nav === 'ok' && item === PAUSE_ITEMS[0])) {
         go(ui, 'match');
         return 'resume';
       }
-      if (nav === 'ok' && ui.sel === 1) {
+      if (nav === 'ok' && item === PAUSE_ITEMS[1]) {
         go(ui, 'match');
         return 'restart';
       }
-      if ((nav === 'ok' || nav === 'left' || nav === 'right') && ui.sel === PAUSE_SOUND) return toggleSound(ui);
+      if ((nav === 'ok' || nav === 'left' || nav === 'right') && item === PAUSE_ITEMS[2]) return toggleSound(ui);
+      if (nav === 'ok' && item === PAUSE_SKIP) {          // the rest is played out at once, then GAME and the result
+        ui.tour.skipping = true;
+        go(ui, 'match');
+        return 'skiprest';
+      }
       if (nav === 'ok') {
-        go(ui, 'title', s.players - 1);
+        if (ui.tour.match) {                              // the tournament stays saved; this match starts again
+          ui.tour.match = null;
+          go(ui, 'title', TOURNAMENT);
+        } else go(ui, 'title', s.players - 1);
         return 'quit';
       }
       return null;
+    }
     case 'result':
+      if (ui.tour.match) {
+        if (isOk(nav)) {
+          ui.tour.match = null;
+          toBracket(ui);
+        }
+        return null;
+      }
       upDown(ui, nav, RESULT_ITEMS.length);
       if (isOk(nav) && ui.sel === 0) {
         go(ui, 'match');
@@ -261,8 +372,168 @@ export function navigate(ui, nav, side = null) {
         return 'quit';
       }
       return null;
+    case 'tmenu':
+      upDown(ui, nav, TMENU_ITEMS.length);
+      if (isOk(nav) && ui.sel === 0) toBracket(ui);
+      else if (isOk(nav)) go(ui, 'tconfirm');
+      else if (nav === 'back') go(ui, 'title', TOURNAMENT);
+      return null;
+    case 'tconfirm':
+      upDown(ui, nav, TCONFIRM_ITEMS.length);
+      if (isOk(nav) && ui.sel === 1) go(ui, 'tsetup');   // the saved one is replaced when the new one starts
+      else if (isOk(nav) || nav === 'back') go(ui, 'tmenu', 1);
+      return null;
+    case 'tsetup':
+      return tourSetup(ui, nav);
+    case 'tselect':
+      return tourSelect(ui, nav);
+    case 'bracket':
+      return bracket(ui, nav);
+    case 'champion':
+      if (isOk(nav) || nav === 'back') {
+        ui.tour.t = null;
+        go(ui, 'title', TOURNAMENT);
+        return 'tclear';
+      }
+      return null;
   }
 }
+
+/** Every value a setup row can take, as numbers or modes. @param {Ui} ui @param {number} row @returns {(number | string)[]} */
+export function setupValues(ui, row) {
+  const d = ui.tour.draft;
+  if (row === T_SIZE) return SIZES;
+  if (row === T_HUMANS) return Array.from({ length: maxHumans(ui) }, (_, i) => i + 1);
+  if (row === T_MODE) return ['same', 'rising'];
+  if (row === T_LENGTH) return MATCH_LENGTHS;
+  if (row === T_LEVEL) return d.humans < d.size ? LEVELS : [];
+  return [];
+}
+
+/** A setup row's value. @param {TourDraft} d @param {number} row @returns {number | string} */
+export function setupValue(d, row) {
+  return [d.size, d.humans, d.mode, d.mode === 'same' ? d.same : d.start, d.level][row] ?? '';
+}
+
+/**
+ * Change a setup row's value by `step` (stopping at the ends, or wrapping for a tap). Fewer players can't have more
+ * humans than players.
+ * @param {Ui} ui @param {number} row @param {number} step @param {boolean} [wrap]
+ */
+export function changeSetup(ui, row, step, wrap = false) {
+  const d = ui.tour.draft, values = setupValues(ui, row);
+  if (!values.length) return;
+  const at = values.indexOf(setupValue(d, row)), n = values.length;
+  const i = wrap ? (at + step + n) % n : Math.min(n - 1, Math.max(0, at + step));
+  const v = values[i];
+  if (row === T_SIZE) d.size = Number(v);
+  else if (row === T_HUMANS) d.humans = Number(v);
+  else if (row === T_MODE) d.mode = v === 'rising' ? 'rising' : 'same';
+  else if (row === T_LENGTH && d.mode === 'same') d.same = Number(v);
+  else if (row === T_LENGTH) d.start = Number(v);
+  else if (row === T_LEVEL) d.level = Number(v);
+  d.humans = Math.min(d.humans, maxHumans(ui));
+}
+
+/** The setup screen: up / down through the rows, left / right change a value, OK goes down (on START: the characters). @param {Ui} ui @param {Nav} nav @returns {Effect} */
+function tourSetup(ui, nav) {
+  if (nav === 'up' || nav === 'down') upDown(ui, nav, TSETUP_ROWS.length);
+  else if (nav === 'left' || nav === 'right') changeSetup(ui, ui.sel, nav === 'left' ? -1 : 1);
+  else if (isOk(nav) && ui.sel === T_START) return toTourSelect(ui);
+  else if (isOk(nav)) upDown(ui, 'down', TSETUP_ROWS.length);
+  else if (nav === 'back') go(ui, 'title', TOURNAMENT);
+  return null;
+}
+
+/**
+ * On to the characters: each human starts on a character in the roster's order (P1 on their last single-match pick),
+ * each bot on a random one. Without a roster there's nothing to choose, so the tournament starts at once.
+ * @param {Ui} ui @returns {Effect}
+ */
+function toTourSelect(ui) {
+  const d = ui.tour.draft, n = ui.roster.length;
+  if (!n) {
+    ui.tour.chars = Array(d.size).fill('player');
+    return startTournament(ui);
+  }
+  const p1 = Math.max(0, ui.roster.indexOf(ui.settings.picks[0]));
+  ui.tour.chars = Array.from({ length: d.size }, (_, e) =>
+    ui.roster[e < d.humans ? (p1 + e) % n : Math.min(n - 1, Math.floor(ui.rand() * n))]);
+  go(ui, 'tselect');
+  return null;
+}
+
+/**
+ * The characters screen: up / down move through the slots (and START), left / right change the selected slot's
+ * character; OK on a human goes on to the next human (the last one to START), on a bot to START, on START begins.
+ * Any player's controls work it (each human picks in turn). @param {Ui} ui @param {Nav} nav @returns {Effect}
+ */
+function tourSelect(ui, nav) {
+  const d = ui.tour.draft, n = ui.roster.length, START = d.size;
+  if (nav === 'up' || nav === 'down') upDown(ui, nav, d.size + 1);
+  else if ((nav === 'left' || nav === 'right') && ui.sel < START) {
+    const c = ui.tour.chars, i = Math.max(0, ui.roster.indexOf(c[ui.sel]));
+    c[ui.sel] = ui.roster[(i + (nav === 'left' ? n - 1 : 1)) % n];
+  } else if (isOk(nav) && ui.sel === START) return startTournament(ui);
+  else if (isOk(nav)) ui.sel = ui.sel < d.humans - 1 ? ui.sel + 1 : START;
+  else if (nav === 'back') go(ui, 'tsetup', T_START);
+  return null;
+}
+
+/** The draw is made from a new seed and the bracket shown (the tournament is saved). @param {Ui} ui @returns {Effect} */
+function startTournament(ui) {
+  const d = ui.tour.draft;
+  ui.tour.t = makeTournament({ size: d.size, humans: Math.min(d.humans, d.size), mode: d.mode,
+    length: d.mode === 'same' ? d.same : d.start, level: d.level, chars: [...ui.tour.chars],
+    seed: Math.floor(ui.rand() * 2 ** 32) | 0 });
+  toBracket(ui);
+  return 'tsave';
+}
+
+/** The bracket, showing the round of the next match (or the final). @param {Ui} ui */
+function toBracket(ui) {
+  const t = ui.tour.t;
+  if (!t) {
+    go(ui, 'title', TOURNAMENT);
+    return;
+  }
+  ui.tour.view = nextMatch(t)?.round ?? t.rounds.length - 1;
+  go(ui, 'bracket');
+}
+
+/**
+ * The bracket: left / right show another round, up / down the items. PLAY: the controllers screen and the match;
+ * WATCH: the match at once; SKIP: played instantly (and saved); SEE THE CHAMPION; QUIT TO TITLE (it stays saved).
+ * @param {Ui} ui @param {Nav} nav @returns {Effect}
+ */
+function bracket(ui, nav) {
+  const t = ui.tour.t;
+  if (!t) return null;
+  const items = bracketItems(ui), item = items[ui.sel];
+  if (nav === 'left' || nav === 'right') {
+    ui.tour.view = Math.min(t.rounds.length - 1, Math.max(0, ui.tour.view + (nav === 'left' ? -1 : 1)));
+  } else if (nav === 'up' || nav === 'down') upDown(ui, nav, items.length);
+  else if (nav === 'back' || (isOk(nav) && item === 'QUIT TO TITLE')) go(ui, 'title', TOURNAMENT);
+  else if (isOk(nav) && item === 'SEE THE CHAMPION') go(ui, 'champion');
+  else if (isOk(nav) && item === 'SKIP') {
+    skipMatch(t);
+    toBracket(ui);
+    ui.sel = bracketItems(ui).indexOf('SKIP');            // stay on SKIP while bots' matches follow
+    return 'tsave';
+  } else if (isOk(nav)) {
+    ui.tour.match = nextMatch(t);
+    ui.tour.skipping = false;
+    if (item === 'WATCH') {
+      go(ui, 'match');
+      return 'prepare';
+    }
+    return toAssign(ui);
+  }
+  return null;
+}
+
+/** The tournament has a champion. @param {Ui} ui */
+export const tournamentWon = ui => ui.tour.t !== null && champion(ui.tour.t) !== null;
 
 /**
  * A move on the options screen: up / down through the rows of keys and the buttons (wrapping), left / right between
@@ -286,7 +557,7 @@ function options(ui, nav) {
     ui.sound.level = isOk(nav) ? (was + 1) % (max + 1) : Math.min(max, Math.max(0, was + (nav === 'left' ? -1 : 1)));
     return ui.sound.level === was ? null : 'sound';
   }
-  else if (nav === 'back' || (isOk(nav) && ui.sel === OPTIONS_BACK)) go(ui, 'title', 2);
+  else if (nav === 'back' || (isOk(nav) && ui.sel === OPTIONS_BACK)) go(ui, 'title', OPTIONS);
   else if (isOk(nav) && cell) {
     ui.listen = true;
     ui.note = `Press a key for ${cellName(cell)}     Esc: cancel`;
@@ -329,6 +600,25 @@ export function captureKey(ui, code) {
  */
 export function tap(ui, sel) {
   if (ui.listen) return navigate(ui, 'back');
+  if (ui.screen === 'tsetup') {                // a row: select it, and step its value on (wrapping); START: OK
+    if (sel === null) return null;
+    ui.sel = sel;
+    if (sel === T_START) return navigate(ui, 'ok');
+    changeSetup(ui, sel, 1, true);
+    return null;
+  }
+  if (ui.screen === 'tselect') {               // a slot: select it; the big figure: another character; START
+    if (sel === TSELECT_START) {
+      ui.sel = ui.tour.draft.size;
+      return navigate(ui, 'ok');
+    }
+    if (sel === TSELECT_NEXT) return navigate(ui, 'right');
+    if (sel !== null && sel < ui.tour.draft.size) ui.sel = sel;
+    return null;
+  }
+  if (ui.screen === 'bracket' && (sel === BRACKET_PREV || sel === BRACKET_NEXT)) {
+    return navigate(ui, sel === BRACKET_PREV ? 'left' : 'right');
+  }
   if (ui.screen === 'select') {                // touch is 1P: a character is P1's pick; the CPU's panel rolls again
     if (sel === SELECT_REROLL) return navigate(ui, 'down', 0);
     if (sel === null || sel >= ui.roster.length) return null;
@@ -406,9 +696,21 @@ function toAssign(ui) {
   return 'prepare';
 }
 
-/** The match has been won: show the result. @param {Ui} ui */
-export function matchOver(ui) {
-  if (ui.screen === 'match') go(ui, 'result');
+/**
+ * The match has been won: show the result. In a tournament the result is recorded too (a human's loss to a bot is
+ * kept to replay), and the tournament is to be saved.
+ * @param {Ui} ui
+ * @param {{ winner: 0 | 1, scores: [number, number] }} [end]  the winning slot and the scores by slot
+ * @returns {Effect}
+ */
+export function matchOver(ui, end) {
+  if (ui.screen !== 'match') return null;
+  go(ui, 'result');
+  const tm = ui.tour.match, t = ui.tour.t;
+  if (!tm || !t || !end) return null;
+  ui.tour.last = { info: tm, outcome: recordResult(t, end.winner, end.scores, ui.tour.skipping) };
+  ui.tour.skipping = false;
+  return 'tsave';
 }
 
 /**

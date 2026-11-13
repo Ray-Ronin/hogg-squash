@@ -54,16 +54,17 @@ export function drawHighlight(ctx, x, y, w, cursor = true) {
  * the bar, the others in `font` (large-red on the white wall, large-white on a dark panel), and those in `off`
  * (not available just now) faded. For tapping, item i is selection base + i.
  * @param {CanvasRenderingContext2D} ctx @param {string[]} items @param {number} sel @param {number} x @param {number} y
- * @param {{ font?: FontName, center?: boolean, base?: number, off?: number[] }} [o]
+ * `row` is the step between lines (BAR.ROW unless a menu is tighter).
+ * @param {{ font?: FontName, center?: boolean, base?: number, off?: number[], row?: number }} [o]
  */
-export function drawList(ctx, items, sel, x, y, { font = 'large-red', center = false, base = 0, off = [] } = {}) {
+export function drawList(ctx, items, sel, x, y, { font = 'large-red', center = false, base = 0, off = [], row = BAR.ROW } = {}) {
   items.forEach((item, i) => {
-    const w = textWidth('large-white', item), lx = center ? Math.round(x - w / 2) : x, ly = y + i * BAR.ROW;
+    const w = textWidth('large-white', item), lx = center ? Math.round(x - w / 2) : x, ly = y + i * row;
     if (i === sel) drawHighlight(ctx, lx, ly, w);
     if (off.includes(i)) ctx.globalAlpha = 0.35;
     drawText(ctx, i === sel ? 'large-white' : font, item, lx, ly);
     ctx.globalAlpha = 1;
-    hits.push({ x: lx - BAR.PAD, y: ly - 3, w: w + 2 * BAR.PAD, h: BAR.ROW, sel: base + i });
+    hits.push({ x: lx - BAR.PAD, y: ly - 3 + Math.floor((BAR.ROW - row) / 2), w: w + 2 * BAR.PAD, h: row, sel: base + i });
   });
 }
 

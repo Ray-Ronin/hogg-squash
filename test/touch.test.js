@@ -76,14 +76,14 @@ test('2P cannot be picked while the touch controls show; after a key it can', ()
 
 test('the options have no touch setting; GO TO HOME on the title goes to the website', () => {
   assert.deepEqual(OPTION_ITEMS, ['LAPTOP KEYS FOR P2', 'RESET TO DEFAULTS', 'KEY TEST', 'EFFECTS', 'BACK']);
-  assert.equal(TITLE_ITEMS[3], 'GO TO HOME');
+  assert.equal(TITLE_ITEMS[4], 'GO TO HOME');
   assert.equal(SITE_URL, 'https://roninray.com/');
   const ui = makeUi();
   assert.deepEqual(run(ui, ['up', 'ok']), [null, 'site'], 'up from 1 PLAYER wraps to it');
   assert.equal(ui.screen, 'title');
   const t = makeUi();
   setTouch(t, true);
-  assert.equal(tap(t, 3), 'site', 'by tapping, too');
+  assert.equal(tap(t, 4), 'site', 'by tapping, too');
 });
 
 test('taps: a menu item is picked; off the items, the controllers screen plays and the key test goes back', () => {
@@ -100,7 +100,7 @@ test('taps: a menu item is picked; off the items, the controllers screen plays a
   assert.equal(ui.screen, 'match');
 
   const o = makeUi();
-  tap(o, 2);
+  tap(o, 3);
   assert.equal(o.screen, 'options');
   tap(o, KEY_CELLS + 2);
   assert.equal(o.screen, 'keytest');
@@ -119,6 +119,6 @@ test('the touch words are in the font and fit', () => {
     for (const ch of line) if (ch !== ' ') assert.ok(glyphFor(fonts[font], ch), `${font} has ${ch} (${line})`);
     assert.ok(measureWith(fonts, font, line) <= max, `${font} "${line}" fits in ${max} px`);
   };
-  fits('large-red', TITLE_ITEMS[3], 306);
+  fits('large-red', TITLE_ITEMS[4], 306);
   fits('small', TOUCH_2P_NOTE, 600);
 });

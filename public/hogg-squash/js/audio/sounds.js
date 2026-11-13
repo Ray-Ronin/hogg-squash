@@ -192,13 +192,16 @@ export function squeakCues(events, tracks, random) {
 }
 
 /**
- * The part of the screens' state a menu sound depends on (pick: the characters screen's choices and picks, else '').
+ * The part of the screens' state a menu sound depends on (pick: the characters screen's choices and picks, the
+ * tournament's characters or setup, or the round the bracket shows; else '').
  * @typedef {{ screen: string, sel: number, listen: boolean, pick?: string }} MenuState
  */
 
 /** @param {import('../ui/screens.js').Ui} ui @returns {MenuState} */
 export const menuState = ui => ({ screen: ui.screen, sel: ui.sel, listen: ui.listen,
-  pick: ui.screen === 'select' ? `${ui.pick.at}|${ui.pick.locked}` : '' });
+  pick: ui.screen === 'select' ? `${ui.pick.at}|${ui.pick.locked}`
+    : ui.screen === 'tselect' ? ui.tour.chars.join() : ui.screen === 'tsetup' ? JSON.stringify(ui.tour.draft)
+    : ui.screen === 'bracket' ? String(ui.tour.view) : '' });
 
 /**
  * The sound a menu move makes: back for a step back, OK for a step on (or anything done), a tick for a new

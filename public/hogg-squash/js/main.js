@@ -14,6 +14,10 @@
 // menu items work by tapping. They show on the first touch and hide on a key press or pad use (no setting); 2P can't
 // be picked while they show. A portrait phone is told to turn sideways (and pauses).
 // The title's GO TO HOME goes back to the website's start page.
+// The tournament (S17, title → TOURNAMENT; rules in sim/tournament.js, screens in ui/screens.js and ui/tournament.js):
+// a knockout bracket of 2–32 with humans and bots, saved in localStorage after every match (and when it starts), so
+// the title can continue it. A tournament match is built from the bracket's next match (its sides, length, level and
+// seed), and its result goes back to the bracket; Skip match on the pause menu plays the rest out at once.
 // Sound (S13, js/audio/): silent until the first key, click or tap (the browser's rule; a gamepad-only player sees a
 // note on the title). The world's events and the menu moves play sounds by name; the Effects level is on the options
 // screen, Sound on/off in the pause menu and on the speaker button (both saved), and the sound stops while paused,
@@ -55,6 +59,7 @@ import { makeWorld, stepWorld } from './sim/world.js';
 import { makeCpu, cpuActions } from './sim/cpu.js';
 import { paramsFor, toLevel } from './sim/difficulty.js';
 import { MATCH_LENGTHS } from './sim/match.js';
+import { loadTournament, saveTournament, clearTournament, playOut, entrantLabel } from './sim/tournament.js';
 import { useCamera } from './render/projection.js';
 import { drawCourt, useCourt, COURT_VIEWS } from './render/court.js';
 import { drawActors, heights, shifts } from './render/actors.js';
@@ -68,7 +73,8 @@ import { useUi } from './render/ui.js';
 import { useFx } from './render/fx.js';
 import { drawDebug, createShotLog } from './render/debug.js';
 import { makeUi, navigate, captureKey, matchOver, autoPause, assignInMatch, showsMatch, setTouch, tap, toggleSound,
-  setRoster, pickIndices, DEFAULT_SETTINGS, SITE_URL } from './ui/screens.js';
+  setRoster, pickIndices, setTournament, matchPicks, DEFAULT_SETTINGS, SITE_URL } from './ui/screens.js';
+import { drawTourMenu, drawTourSetup, drawTourSelect, drawBracket, drawChampion } from './ui/tournament.js';
 import { createAudio, loadSound, saveSound } from './audio/audio.js';
 import { cuesFor, menuSound, menuState, squeakCues, SQUEAK } from './audio/sounds.js';
 import { FP } from './squash-physics.js';
@@ -129,6 +135,7 @@ const ui = makeUi({
   target: MATCH_LENGTHS.includes(to) ? to : DEFAULT_SETTINGS.target,
   level: toLevel(query.get('level') ?? undefined),
 }, SHORTCUT ? 'match' : 'title', loadLayouts(store), loadSound(store));
+setTournament(ui, loadTournament(store));                // a broken or old save is ignored
 if (query.get('sound') === 'off') ui.sound.on = false;    // for this visit only (saved if changed)
 const audio = createAudio({ log: query.get('sound') === 'log' });
 audio.setLevel(ui.sound.level);
@@ -167,13 +174,19 @@ let effects = createEffects();
 /** Which pad plays which human (null: the CPU's slot). @type {(import('./input/actions.js').Seat | null)[]} */
 let seats = makeSeats([false, true]);
 
-/** A match from 0–0 with the screens' settings. The pads that were playing keep playing (in the same order). @param {number} s  seed */
+/**
+ * A match from 0–0 with the screens' settings, or the tournament's next match (its own seed, so a bots' match plays
+ * as it would skipped). The pads that were playing keep playing (in the same order). @param {number} s  seed
+ */
 function newMatch(s) {
-  const set = ui.settings, two = set.players === 2;
-  matchSeed = s;
-  const params = paramsFor(set.level, two);
+  const set = ui.settings, tm = ui.tour.match;
+  /** @type {[boolean, boolean]} */
+  const cpu = tm ? tm.cpu : [false, set.players === 1];
+  const two = !cpu[0] && !cpu[1];
+  matchSeed = tm ? tm.seed : s;
+  const params = paramsFor(tm ? tm.level : set.level, two);
   if (REACH_TRY !== null) params.humanReach = REACH_TRY;
-  world = makeWorld({ target: set.target, seed: s, params, cpu: [false, !two] });
+  world = makeWorld({ target: tm ? tm.length : set.target, seed: matchSeed, params, cpu });
   cpus = world.cpu.map((on, i) => (on ? makeCpu(world, /** @type {0 | 1} */ (i)) : null));
   effects = createEffects();
   matchSprites();
@@ -188,7 +201,7 @@ newMatch(nextSeed++);
 
 /** P1's and P2's characters (the settings' picks, else the roster's first two); empty without a roster. */
 function matchCharacters() {
-  return roster.length ? pickIndices(ui.settings, ui.roster).map(i => roster[i]) : [];
+  return roster.length ? pickIndices({ ...ui.settings, picks: matchPicks(ui) }, ui.roster).map(i => roster[i]) : [];
 }
 
 /** The match's sprites: each player's character in their kit (P1 red, P2 / CPU white), built now if not kept. */
@@ -202,8 +215,10 @@ function matchSprites() {
 
 /** Each side's name for the HUD and the result (P1 / P2 / CPU without characters, or in a mirror match). */
 function names() {
-  const chars = matchCharacters();
-  return sideNames([0, 1].map(i => chars[i] ?? null), world.cpu, n => textWidth('large-white', n) <= NAME_SLOT);
+  const chars = matchCharacters(), tm = ui.tour.match, t = ui.tour.t;
+  const n = sideNames([0, 1].map(i => chars[i] ?? null), world.cpu, w => textWidth('large-white', w) <= NAME_SLOT);
+  // a tournament match the names can't tell apart (two bots as the same character): the bracket's labels, BOT 4 / BOT 6
+  return tm && t && n[0] === n[1] ? tm.sides.map(e => entrantLabel(t.setup, e)) : n;
 }
 
 /**
@@ -230,6 +245,9 @@ function doEffect(before, effect, n) {
   else if (effect === 'keys') keysChanged();
   else if (effect === 'sound') soundChanged();
   else if (effect === 'site') location.href = SITE_URL;
+  else if (effect === 'tsave' && ui.tour.t) saveTournament(store, ui.tour.t);
+  else if (effect === 'tclear') clearTournament(store);
+  else if (effect === 'skiprest') playOut(world, cpus);   // then GAME on the wall and the result, as usual
   const s = menuSound(n, before, menuState(ui), effect);
   if (s) audio.play(s);
 }
@@ -437,7 +455,11 @@ function simStep() {
   if (!wasMatch || !playing()) return;  // a press that closes a menu or opens one doesn't also play
 
   if (world.phase === 'over') {           // GAME on the wall, then the result screen
-    if (++overSteps >= RESULT_DELAY) matchOver(ui);
+    if (++overSteps >= RESULT_DELAY) {
+      const m = world.match;
+      const effect = matchOver(ui, { winner: /** @type {0 | 1} */ (m.winner), scores: [m.scores[0], m.scores[1]] });
+      if (effect === 'tsave' && ui.tour.t) saveTournament(store, ui.tour.t);
+    }
     return;
   }
   const [a1, a2] = [0, 1].map(i => {
@@ -500,6 +522,18 @@ function drawMatch() {
   });
 }
 
+/** What the tournament's screens draw of the characters: names by id, and their previews once loaded. @returns {import('./ui/tournament.js').TourView} */
+function tourView() {
+  const byId = (/** @type {string} */ id) => roster.find(c => c.id === id);
+  return {
+    name: id => byId(id)?.name ?? id, t: stepCount,
+    char: id => {
+      const c = byId(id);
+      return c && { name: c.name, sheet: c.sheetOf, preview: (/** @type {number} */ kit) => previewOf(c, kit) };
+    },
+  };
+}
+
 let stepsPerSec = 0, rateStart = performance.now(), rateSteps = 0;
 function render() {
   const now = performance.now();
@@ -516,6 +550,11 @@ function render() {
     drawSelect(ctx, ui, { t: stepCount, chars: roster.map(c => ({ name: c.name, sheet: c.sheetOf,
       preview: (/** @type {number} */ kit) => previewOf(c, kit) })) });
   } else if (ui.screen === 'options') drawOptions(ctx, ui);
+  else if (ui.screen === 'tmenu' || ui.screen === 'tconfirm') drawTourMenu(ctx, ui);
+  else if (ui.screen === 'tsetup') drawTourSetup(ctx, ui);
+  else if (ui.screen === 'tselect') drawTourSelect(ctx, ui, tourView());
+  else if (ui.screen === 'bracket') drawBracket(ctx, ui, tourView());
+  else if (ui.screen === 'champion') drawChampion(ctx, ui, tourView());
   else if (ui.screen === 'keytest') drawKeyTest(ctx, kb.heldKeys(), layouts, ui.touch);
   else {
     drawMatch();
@@ -539,7 +578,7 @@ function render() {
 // waiting for frames
 if (query.has('dev')) {
   Object.assign(window, { hogg: {
-    kb, render, shots: shotLog.shots, ui, buffer: ctx.canvas, audio,
+    kb, render, shots: shotLog.shots, ui, buffer: ctx.canvas, audio, store,
     get world() { return world; },
     get cpus() { return cpus; },
     get seats() { return seats; },

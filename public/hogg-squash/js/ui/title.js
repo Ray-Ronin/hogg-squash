@@ -14,19 +14,21 @@ import { TITLE_ITEMS, TOUCH_2P_NOTE, titleOff } from './screens.js';
 
 /** The title art's menu area (x 44–350, y 196–292). */
 export const MENU = { x: 44, y: 196, w: 306, h: 96 };
-/** The menu's first row, from the top of the menu area (four rows 24 px apart fill it). */
-export const TITLE_TOP = 2;
+/** The menu's first row, from the top of the menu area, and the rows' step: five rows 19 px apart fill it (S17: the
+ * fifth item, TOURNAMENT; only the selected one has a bar, so the 21 px bars may overlap their neighbours' rows). */
+export const TITLE_TOP = 1;
+export const TITLE_ROW = 19;
 /** The hint line's top, on the red band under the wall (y 296–322). */
 const HINT_Y = 305;
 
 export const TITLE_HINT = 'Up / down: choose     Enter or A: OK';
 
 /** The "How to play" card: its lines (the first is the heading) and its place, right of the menu's widest item
- * (GO TO HOME's bar ends at x 198) and clear of the shield. */
+ * (TOURNAMENT's bar ends at x 210 since S17) and clear of the shield. */
 export const HOW_TO_PLAY = {
   lines: ['HOW TO PLAY', 'Run to the landing marker', 'HARD: a fast, deep shot', 'SOFT: a short drop',
     'Hit early or late to angle it'],
-  x: 210, y: 214, w: 152, ROW: 11,
+  x: 215, y: 214, w: 151, ROW: 11,
 };
 
 /** The title image, once loaded. @type {CanvasImageSource | null} */
@@ -63,7 +65,7 @@ export const SOUND_NOTE = { text: 'Press a key or tap for sound', x: WIDTH / 2, 
  */
 export function drawTitle(ctx, ui, soundNote = false) {
   drawTitleBack(ctx);
-  drawList(ctx, TITLE_ITEMS, ui.sel, MENU.x + 40, MENU.y + TITLE_TOP, { off: titleOff(ui) });
+  drawList(ctx, TITLE_ITEMS, ui.sel, MENU.x + 40, MENU.y + TITLE_TOP, { off: titleOff(ui), row: TITLE_ROW });
   const c = HOW_TO_PLAY, h = c.lines.length * c.ROW + 12 - (c.ROW - lineHeight('small'));
   drawPanel(ctx, 'panel dark', c.x, c.y, c.w, h);
   c.lines.forEach((l, i) => drawText(ctx, i === 0 ? 'small-red' : 'small', l, c.x + c.w / 2, c.y + 6 + i * c.ROW, 'center'));
