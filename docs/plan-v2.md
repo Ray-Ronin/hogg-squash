@@ -47,12 +47,12 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [-] 💳 Approve SpriteCook and ElevenLabs spend for A11 *(you)* (after A11's placement mockups) *(on hold)*
 - [-] **A11** Art and sound: the crowd (where it sits, the spectators, crowd sounds) *(on hold 2026-11-12, the owner's call, after the placement mockups)*
 - [-] **S16** The crowd in the game: drawing it, reactions and crowd sound *(on hold)*
-- [ ] **CP-I** Settle the tournament's rules *(you)* (the crowd's questions are on hold with it)
+- [x] **CP-I** Settle the tournament's rules *(you)* (the crowd's questions are on hold with it) *(done 2026-11-13: `decisions.md`, "Tournament")*
 
 **Tournament**
-- [ ] **S17** Tournament: rules, ladder and flow (headless, tested; plain screens)
+- [ ] **S17** Tournament: rules, bracket and flow (headless, tested; plain screens)
 - [ ] 💳 Approve SpriteCook spend for A12 *(you)* (optional: only if a trophy is generated)
-- [ ] **A12** Art: tournament screens (ladder, round titles, trophy, ending)
+- [ ] **A12** Art: tournament screens (bracket, round titles, trophy, ending)
 - [ ] **S18** Tournament art in the game; v2 release prep
 - [ ] **CP-J** Release play-test and go-live, version 2.0.0 *(you)*
 
@@ -118,16 +118,16 @@ Settled by the plan (say so if you disagree):
 - **One roster file:** S15 makes the characters data (`assets/characters.json`: name, sheet, kit-swap table), so each art session can add a character with no game code change.
 - **Sound files:** short mono files in `public/hogg-squash/assets/sfx/`, MP3 by default (every browser plays it), under about 1 MB in all. Sources and the manifest go in `audio/` at the repo root, which isn't deployed.
 - **The crowd's place on screen is decided from mockups** (A11's first step, no credits), before any spend: behind the back glass along the bottom of the screen, in the side margins, or in a gallery above the front wall.
-- **The tournament's rules are settled at CP-I,** from the defaults in S17 (the arcade's five-round ladder, 1P only).
-- **Not in this plan:** music, voice callouts, more courts (the court is painted for the one frozen camera), high scores, a 2P tournament, online play (never). Any of them can be added at a checkpoint.
+- **The tournament's rules are settled at CP-I,** from the defaults in S17 (the arcade's five-round ladder, 1P only). *(Settled 2026-11-13 as a knockout bracket of 2–32 with any number of humans: `decisions.md`, "Tournament".)*
+- **Not in this plan:** music, voice callouts, more courts (the court is painted for the one frozen camera), high scores, ~~a 2P tournament~~ *(brought in at CP-I)*, online play (never). Any of them can be added at a checkpoint.
 
 ## Target file layout (additions)
 
 ```
 public/hogg-squash/
   js/audio/                  audio.js (the context, first-input unlock, levels, pause), sounds.js (events → sounds), synth.js (placeholder sounds made in code)
-  js/ui/                     + select.js (character select, S15), tournament.js (ladder screen, S17)
-  js/sim/                    + tournament.js (the ladder's rules, pure, S17)
+  js/ui/                     + select.js (character select, S15), tournament.js (setup and bracket screens, S17)
+  js/sim/                    + tournament.js (the bracket's rules, pure, S17)
   assets/sfx/                the game's sound files (A6, A11) + sfx.json (names, files, variants, levels)
   assets/characters.json     the roster (S15)
   assets/<character>-100.png + .json   one sheet per character (A8–A10)
@@ -815,46 +815,63 @@ Read docs/plan-v2.md and its Session log (the crowd is on hold, so A11 and S16 d
 Record the tournament rules in docs/decisions.md, update S17, A12 and S18 to match, tick CP-I, and commit. Ask me before pushing.
 ```
 
+**Outcome (2026-11-13):** a knockout **bracket** of 2, 4, 8, 16 or 32, with as many humans as you pick and bots in the rest; Same or Rising match length; one level for every bot; every slot's character picked before the start; a fixed random draw played match by match, a Watch or Skip choice before each bot-against-bot match. Questions 6 and 7 kept their defaults (replay a match lost to a bot; saved between matches). The rules are in `decisions.md`, "Tournament"; S17, A12 and S18 below follow them.
+
 ---
 
-## S17: Tournament: rules, ladder and flow
+## S17: Tournament: rules, bracket and flow
 
-**Goal:** a 1P tournament that plays from the first round to the final, with plain screens (art comes in A12 and S18).
+**Goal:** a knockout tournament of 2–32 players, any number of them human, that plays from the draw to the champion, with plain screens (art comes in A12 and S18). The rules are `decisions.md`, "Tournament" (settled at CP-I).
 
 **In scope**
-- `js/sim/tournament.js` (pure, Node-tested): the ladder's state from CP-I's rules: the rounds, each round's opponent, level and match length, winning a round, losing (replay or out), the tournament won. The match itself is the existing one (`js/sim/match.js`, `world.js`), set up per round.
-- The flow: TOURNAMENT on the title (1P only; touch works) → character select (yours; the opponents come from the ladder) → the ladder screen (round names, your next opponent, the level) → match → back to the ladder (round won or lost) → … → a plain "Tournament won" screen.
-- **Saving** (if CP-I said yes): the ladder's state in `localStorage` (the keymap's blocked-storage handling); a "Continue tournament" item on the title when one is saved; quitting a match mid-round counts as… (CP-I's answer, default: replay the round).
-- *(On hold with the crowd.)* The crowd's size by round, if CP-I said yes (a number S16's crowd reads).
-- Tests: the ladder's rules (every round, win and loss, the final, a saved state loaded back, a broken save ignored); the screen transitions.
+- **`js/sim/tournament.js`** (pure, Node-tested, no DOM): the tournament's state and rules.
+  - **Setup:** bracket size (2, 4, 8, 16, 32), number of humans (1 to the size), match length (Same 5/7/9/11, default 11; or Rising from a start, default 5, to 11 in the final, by the formula in `decisions.md`), one bot level 1–9 (default 5), every slot's character, a seed.
+  - **The draw:** slots shuffled from the seed, fixed for the tournament. Round names from the players left.
+  - **The next match**, in bracket order a round at a time: who plays, its length, its pace (the bot level; level 5 for two humans), who is P1 / red (the human against a bot; the upper slot otherwise), and whether it must be played (a human in it) or can be watched or skipped (two bots).
+  - **Results:** a win moves the winner on; a human's loss to a bot keeps the match to replay and adds a try; a human's loss to a human puts them out; the champion at the end.
+  - **Skip:** a bot-against-bot match is played instantly with the real sim (`js/sim/match.js`, `world.js`, both sides CPU at the bot level, seeded from the tournament's seed and the match's place in the bracket), so the same tournament always gives the same skipped results. Measure how long one takes in Node and in the browser (a 32-player bracket can skip up to 31); if a whole round's worth is slow, say so before going on.
+  - **Saving:** the state in `localStorage` after every match (the keymap's blocked-storage handling); loading it back, and a broken or old save ignored.
+- **The flow** (`js/ui/tournament.js`, plain screens in the bitmap font): TOURNAMENT on the title → **setup** (players, humans, length mode and length, bot level; touch allows one human) → **characters**: each human picks in turn (their own keys, pad or touch), each bot starts random and can be changed → **the bracket** (the draw, round names, each slot's label so repeats can be told apart, scores of finished matches) → **the next match:** a human's match goes to the controller step where needed, then the match; a bots' match asks **Watch or Skip** → the result back on the bracket → … → a plain **champion** screen with each human's tries.
+  - A watched bots' match: the pause menu gets **Skip match**, which plays the rest out instantly.
+  - The existing match, result and pause screens are reused; the result's rematch / menu choice becomes "back to the bracket" in a tournament.
+  - **"Continue tournament"** on the title when one is saved; quitting mid-match restarts that match on Continue; starting a new tournament while one is saved asks first.
+- *(On hold with the crowd.)* The crowd's size by round (a number S16's crowd reads).
+- Tests: the length formula for every size and start; the draw (fixed by the seed, every slot once); the match order; who must play and who can be skipped; win, loss and replay, two humans meeting, the champion; skipped results the same on a second run; a saved state loaded back, a broken save ignored; the screen transitions.
 
-**Not in scope:** tournament art (A12, S18), 2P tournaments, high scores, new courts, any change to the match rules.
+**Not in scope:** tournament art (A12, S18), bracket sizes other than 2–32, a rising bot level, high scores, new courts, any change to the match rules or the physics.
+
+**If it runs long:** stop after `js/sim/tournament.js`, its tests and the setup and bracket screens, commit, and say so; the rest becomes S17b (1.17.1).
 
 **Depends on:** CP-I (the rules).
 
-**Main files:** `js/sim/tournament.js`, `js/ui/tournament.js`, `js/ui/screens.js`, `js/ui/title.js`, `js/main.js`, `test/tournament.test.js`, `test/screens.test.js`, `docs/decisions.md` (Tournament, Screens).
+**Main files:** `js/sim/tournament.js`, `js/ui/tournament.js`, `js/ui/select.js`, `js/ui/screens.js`, `js/ui/title.js`, `js/ui/pause.js`, `js/main.js`, `test/tournament.test.js`, `test/screens.test.js`, `docs/decisions.md` (Tournament, Screens).
 
 **Done when…**
 - `npm test` and `npm run typecheck` pass.
-- In the browser: a whole tournament played to the end (with `?dev` shortcuts for the length, if needed), one round lost and replayed, the tab closed and the tournament continued.
+- In the browser: a whole 8-player tournament with one human played to the champion (with `?dev` shortcuts for the length, if needed), one match lost to a bot and replayed, one bots' match watched and one skipped (and one skipped partway); a 4-player tournament with two humans who meet; a 32-player bracket set up and its first round's bot matches skipped; the tab closed and the tournament continued.
+- With touch, the setup allows one human only.
 - No console errors. Version 1.17.0.
 
-**You check or decide at the end:** the ladder screen's wording and what it should look like (for A12).
+**You check or decide at the end:** the bracket screen's wording and what it should look like at 32 (for A12); whether a "Skip all bot matches" choice is wanted for big brackets (a 32-player bracket with one human asks Watch or Skip up to 30 times); which controls each human uses when three or more share a keyboard.
 
 **Starter prompt**
 ```text
-We're doing Session S17 of docs/plan-v2.md: "Tournament: rules, ladder and flow".
-Read CLAUDE.md, docs/decisions.md (Tournament, Screens, Match rules) and docs/plan-v2.md (rules, the CP-I notes in the Session log, S17). Check CP-I is ticked.
-Build S17's "In scope" list only. The tournament's rules live in js/sim/tournament.js and are tested in Node; no art yet.
+We're doing Session S17 of docs/plan-v2.md: "Tournament: rules, bracket and flow".
+Read CLAUDE.md, docs/decisions.md (Tournament, Screens, Match rules, Mobile and touch) and docs/plan-v2.md (rules, CP-I's outcome and Session log entry, S17). Check CP-I is ticked.
+Build S17's "In scope" list only. The tournament's rules live in js/sim/tournament.js and are tested in Node; skipped matches use the real sim; no art yet.
 Go through "Done when", tick S17, add a Session log entry, and commit. Ask me before pushing.
 ```
 
-## A12: Art: tournament screens (ladder, round titles, trophy, ending)
+## A12: Art: tournament screens (bracket, round titles, trophy, ending)
 
 **Goal:** the tournament's look.
 
 **In scope**
-- Drawn by script in Aseprite in the A5 style, with no credits: the ladder (the five rounds, each opponent's ready frame or face crop, your progress marked), round title cards (QUALIFY, ROUND OF 16 … FINAL) in the bitmap font, and the "Tournament won" screen.
+- Drawn by script in Aseprite in the A5 style, with no credits:
+  - **the bracket** for every size, 2 to 32 (at 640×360 a 32-player bracket gives each slot about 20 px with the two halves facing each other, or the screen shows the current part, zoomed or scrolled: mock both and let the owner pick), with a face crop per character in both kits, each slot's label (P1, P2 … for humans, a number for bots), the winners' lines and scores, and the next match marked;
+  - **round title cards** in the bitmap font: ROUND OF 32, ROUND OF 16, QUARTER-FINAL, SEMI-FINAL, FINAL;
+  - the setup screen's and the Watch / Skip choice's panels, if S17's plain ones need them;
+  - the **champion** screen (the winner, the trophy, each human's tries).
 - **Optional, after the spend gate:** a trophy in Hogg colours generated with SpriteCook (one concept round), cleaned to the palette. If the owner prefers, the trophy is drawn by hand instead and the 💳 line is ticked as "not needed".
 - Export to `assets/` (`tournament.png` + `.json`, slices as A5's `ui.json`).
 
@@ -872,7 +889,7 @@ Go through "Done when", tick S17, add a Session log entry, and commit. Ask me be
 
 **Starter prompt**
 ```text
-We're doing Session A12 of docs/plan-v2.md: "Art: tournament screens (ladder, round titles, trophy, ending)".
+We're doing Session A12 of docs/plan-v2.md: "Art: tournament screens (bracket, round titles, trophy, ending)".
 Read CLAUDE.md, docs/decisions.md (Tournament), docs/art-style-guide.md and docs/plan-v2.md ("Art sessions: shared rules", S17's Session log entry, A12). Check S17 is ticked.
 If a trophy is to be generated, first check my SpriteCook balance and list the generations with estimated credits, then STOP and wait for my OK.
 No game code changes. Finish with "Done when", tick A12, add a Session log entry, and commit. Ask me before pushing.
@@ -883,11 +900,11 @@ No game code changes. Finish with "Done when", tick A12, add a Session log entry
 **Goal:** the tournament with its art, and the whole v2 ready to release. No new features.
 
 **In scope**
-- Use A12's ladder, round titles and ending in S17's screens; a round title card before each tournament match; the crowd bigger by round (if chosen; on hold with the crowd); the jingles for a round won and the tournament won (from A6's set; a new sound needs an A6-style spend).
+- Use A12's bracket, round titles, panels and champion screen in S17's screens; a round title card before each played or watched match (not a skipped one); the crowd bigger by round (if chosen; on hold with the crowd); the jingles for a match won and the tournament won (from A6's set; a new sound needs an A6-style spend).
 - **Release prep** as S12 did: check in Chrome, Edge and Firefox, at 60 Hz and a high refresh rate if available, and a phone (touch, sound after the first tap); a cold load with an empty cache (note the total download size: the character sheets, the sounds, and the crowd if it is back); caching still fine after a deploy.
 - Update `README.md` (sound, characters, tournament; the crowd only if it is back) and the status line in `CLAUDE.md`.
 
-**Not in scope:** anything in "Not in this plan" above (music, voice, more courts, high scores, a 2P tournament).
+**Not in scope:** anything in "Not in this plan" above (music, voice, more courts, high scores), new tournament rules (S17's are CP-I's).
 
 **Depends on:** A12.
 
@@ -895,7 +912,7 @@ No game code changes. Finish with "Done when", tick A12, add a Session log entry
 
 **Done when…**
 - `npm test` and `npm run typecheck` pass.
-- A whole tournament plays with its art and sounds (and the crowd, if it is back); 1P and 2P single matches still work.
+- A whole tournament plays with its art and sounds (and the crowd, if it is back), at 8 players with one human and at 4 with two; a 32-player bracket reads clearly; 1P and 2P single matches still work.
 - The game works in all the browsers checked. No console errors from a cold load to the tournament's end. Version 1.18.0.
 
 **You check or decide at the end:** go to CP-J.
@@ -910,7 +927,7 @@ Go through "Done when", tick S18, add a Session log entry, and commit. Ask me be
 
 ## CP-J: Release play-test and go-live, version 2.0.0 *(you)*
 
-1. From the title screen, the way a new player would: a whole tournament, one 1P and one 2P match, with sound on, on a computer and on a phone.
+1. From the title screen, the way a new player would: a whole tournament (one alone, one with two players), one 1P and one 2P match, with sound on, on a computer and on a phone.
 2. Anything to fix becomes a small fix-up session (S18b …) and this checkpoint is replayed after it, as at CP-F.
 3. When nothing is left to fix: version **2.0.0**, approve the push, and check https://roninray.com/hogg-squash/ in a private window. List 2.0.0 on the build page (`../roninray-site/content/versions.json`) if wanted.
 4. Pick what comes next (music, voice callouts, more courts, more characters…) for another plan, or stop here.
@@ -1058,3 +1075,10 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **The owner's call:** skip the crowd for now ("not very necessary right now"). No placement was picked, no balances were checked and nothing was generated: **no SpriteCook or ElevenLabs credits spent** (SpriteCook stays at 96).
   - **Plan changes:** A11's 💳 line, A11 and S16 are marked `[-]` (on hold) but stay written, with a note above A11 on how to bring them back. CP-I is now "Settle the tournament's rules" only (its crowd questions 1 and 8 are on hold), and its starter prompt no longer mentions a crowd fix-up. S17's crowd-by-round item and S18's crowd mentions are marked as on hold. `decisions.md`, "Court look"; `CLAUDE.md`'s status.
   - **Next:** CP-I (the owner: the tournament's rules), then S17.
+- 2026-11-13, CP-I (the tournament's rules; planning only, no version change): settled by interview. The rules are in `decisions.md`, "Tournament".
+  - **The owner's answers:** a knockout bracket of 2, 4, 8, 16 or 32 players, picked at the start (more sizes later if needed); you pick how many are humans and the rest are bots; match length Same (default 11) or Rising (default start 5, rising evenly to 11 in the final; the owner picked "even steps to 11"); one bot level for the whole tournament, not rising; every slot's character picked before the start (bots random, changeable); a fixed bracket played match by match, humans' matches always played, a Watch or Skip button before each bots' match (skipping plays the real match instantly behind the scenes).
+  - **Kept as defaults, because questions 6 and 7 got no other answer:** a match lost to a bot is replayed, with each human's tries counted; the tournament is saved after every match, with "Continue tournament" on the title.
+  - **Settled by the plan (say if you disagree):** the draw is random and fixed at the start; against a bot the human is P1 in red and serves first; two humans play at level 5's pace with a random first server, the upper slot in red; when two humans meet, the loser is out (so a human always wins); with touch, one human only; a watched bots' match can be skipped partway from the pause menu; one saved tournament at a time.
+  - **Plan changes:** CP-I ticked; S17 is now "rules, bracket and flow" (setup, every slot's character, the draw, Watch / Skip, saving), with a fallback split into S17b if it runs long; A12 draws a bracket for 2–32 and the new round names (ROUND OF 32 … FINAL); S18 and CP-J test a tournament with two humans too. A tournament with several people is no longer under "Not in this plan".
+  - **Left for S17's end:** whether a "Skip all bot matches" choice is wanted for big brackets, and which controls each human uses when three or more share a keyboard.
+  - **Next:** S17.

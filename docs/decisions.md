@@ -222,6 +222,7 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 ## After v1 (2026-10-23, the owner's calls)
 - v1 is released (1.0.0). The next plan is **`docs/plan-v2.md`**: **audio first, then more characters, a crowd and a tournament**, in that order.
 - Of v1's "Not in v1" list, audio, character select, the crowd and a tournament are now planned. Still not planned: music, voice callouts, more courts, a high-score table, a 2P tournament. Online play: never.
+- **Changed at CP-I (2026-11-13):** the tournament can have several human players, so a tournament with two or more people is now planned ("Tournament").
 
 ## Audio (2026-10-23)
 - **Effects only:** racket hits, the ball on the walls, floor, tin and glass, the serve, shoes, short point and game jingles, menu sounds. No music and no voice callouts for now.
@@ -287,6 +288,22 @@ Settled decisions. Newest at the bottom of each section. If something here confl
     - **`front_ready`:** optional in `sheetProblems` (if it's there it must loop and have frames, or the character is left out with a warning). `previewTag` picks it, `previewOf` builds the select screen's atlas from it, and `js/ui/select.js` plays it; a sheet without it shows `ready`.
     - **The select screen's cards:** 60 px wide, 64 apart (they were 58 and 62), so "Coach Zain" (53 px) clears a picked card's 3 px frame. In a mirror match P2's inner frame stops above the name.
     - **Memory and download:** Zain's frames are 150 × 150, but his 81 frames make his full atlas 1232 × 1694, 8.3 MB of canvas (the others 7.6 MB); a Zain mirror match with all eight previews is about 23 MB. His sheet adds 67 KB (PNG) and 24 KB (JSON, 1.2 KB gzipped) to the download.
+
+## Tournament (2026-11-13, CP-I, the owner's calls)
+Replaces the plan's starting defaults (a five-round 1P ladder against the characters in turn). The crowd's questions are on hold with the crowd.
+- **A knockout bracket of 2, 4, 8, 16 or 32 players**, picked at the start (more sizes can be added later). Rounds are named by the players left: ROUND OF 32, ROUND OF 16, QUARTER-FINAL, SEMI-FINAL, FINAL. So a tournament is 1–5 rounds.
+- **You pick how many of them are people (humans); the rest are bots (CPUs).** From 1 up to the bracket's size. This replaces "no 2P tournament" (see "After v1"). With touch, one human only (touch is 1P only, "Mobile and touch").
+- **Match length: Same or Rising**, picked at the start.
+  - **Same:** one length for every match, 5, 7, 9 or 11 (**default 11**).
+  - **Rising:** you pick the first round's length (**default 5**) and it rises evenly so the **final is first to 11**: round r of R plays start + (11 − start) × r ÷ (R − 1), rounded to the nearest of 5, 7, 9, 11 (a tie goes up). From 5: 3 rounds 5, 9, 11; 4 rounds 5, 7, 9, 11; 5 rounds 5, 7, 9, 9, 11. A one-round tournament plays the starting length. Win by 2 as always.
+- **Difficulty: one level, 1–9, for every bot in the tournament** (default 5), picked at the start. It doesn't rise. A match with a bot in it plays that level's pace and CPU; two humans play level 5's pace, as 2P versus does.
+- **Characters before the start:** after the setup, every slot gets its character. Each human picks their own, in turn; each bot gets a random one, and any bot's can be changed (the roll / pick of the select screen). Repeats are allowed (four characters fill 32 slots), so the bracket labels each slot so repeats can be told apart (a human as P1, P2 …, a bot by number).
+- **A fixed bracket, drawn at random** when the tournament starts and shown before the first match. Then it goes **match by match** in bracket order, a round at a time.
+  - **A human's match has to be played.** A human against a bot is that human's 1P match (the human serves first, in red, with P1's controls); two humans play a 2P match (the first server random; the upper slot in red with P1's controls).
+  - **A bot against a bot: Watch or Skip**, a choice before each one. **Skip** plays the real match instantly behind the scenes (the same sim, at the bots' level, from a seed saved with the tournament, so the result is the same every time) and shows the score on the bracket. A watched match can be skipped partway from the pause menu; the rest is played out the same instant way.
+- **Losing (question 6, the default: the owner gave no other answer):** a human who loses to a bot **replays that match** as often as they like, and the end shows each human's number of tries. When two humans meet, the loser is out. So with any humans in the bracket, a human always wins it.
+- **Saving (question 7, the default):** the tournament is **saved in the browser after every match**, played or skipped (the keymap's blocked-storage handling). **"Continue tournament"** shows on the title when one is saved. Quitting mid-match means that match starts again on Continue. One saved tournament at a time; starting a new one while one is saved asks first. A broken save is ignored.
+- **The end:** a champion screen for the winner, with the tries counts.
 
 ## Still open
 Nothing blocking. Details for the plan to settle are in `open-questions.md`.
