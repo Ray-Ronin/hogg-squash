@@ -51,8 +51,8 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 
 **Tournament**
 - [x] **S17** Tournament: rules, bracket and flow (headless, tested; plain screens)
-- [ ] 💳 Approve SpriteCook spend for A12 *(you)* (optional: only if a trophy is generated)
-- [ ] **A12** Art: tournament screens (bracket, round titles, trophy, ending)
+- [x] 💳 Approve SpriteCook spend for A12 *(you)* (optional: only if a trophy is generated) *(not needed: the trophy is hand-drawn, the owner's call)*
+- [x] **A12** Art: tournament screens (bracket, round titles, trophy, ending)
 - [ ] **S18** Tournament art in the game; v2 release prep
 - [ ] **CP-J** Release play-test and go-live, version 2.0.0 *(you)*
 
@@ -557,6 +557,7 @@ A **finalized character** has its own body, its own sheet and, if wanted, its ow
 - **Their own shirt** is allowed. The shirt body and its print use **their own palette entries**, used nowhere else on the sprite (not the shorts, socks, skin or hair). That lets a per-character `kit` swap in `characters.json` make a P2 / CPU version that is clearly different from P1 (usually white) without touching the shorts. A character in the usual red kit needs no `kit` and gets the standard swap.
 - **Height and build may differ.** The character is drawn inside the 150×150 frame, about 94 to 108 px head to soles against the standard 100. `ART_HEIGHT` stays 100: the game scales every frame by the same factor, so a taller drawing plays taller. The overhead's racket must still fit the frame. Play is unchanged (the sim never sees characters).
 - **Front view:** an optional `front_ready` tag (8 frames, loops, the same `feet` pivot). The select screen shows it once S15b is in.
+- **Holding the trophy** *(A12, 2026-11-14, the owner's call)*: a pose holding A12's gold trophy (`assets/tournament.png`, `trophy`) for the champion screen, made in the animation session. Ronin, Adam and Ben don't get one (they stand beside the trophy). Coach Zain doesn't have one yet. The tag's name and frames are settled with the first one; the game uses it when a sheet has it.
 - **Palette:** 48 colours at most. Coach Zain brings it to about 47. Will's blond hair tones are free once Zain replaces him, but the next character may still need **the owner's call on the cap** (raise it, or share tones) before its concept.
 
 **Template for each later character**
@@ -900,7 +901,8 @@ No game code changes. Finish with "Done when", tick A12, add a Session log entry
 **Goal:** the tournament with its art, and the whole v2 ready to release. No new features.
 
 **In scope**
-- Use A12's bracket, round titles, panels and champion screen in S17's screens; a round title card before each played or watched match (not a skipped one); the crowd bigger by round (if chosen; on hold with the crowd); the jingles for a match won and the tournament won (from A6's set; a new sound needs an A6-style spend).
+- Use A12's look in S17's screens (`decisions.md`, "Tournament", "The look (A12)"; `art-style-guide.md`, "The tournament (A12)"; copy the drawing from `art/tools/a12-mock.js`): the whole bracket on one screen (no more left / right between rounds), A12's wording, the round title card before each played or watched match (not a skipped one), and the champion screen with the gold trophy (`assets/tournament.png`). The crowd bigger by round (if chosen; on hold with the crowd); the jingles for a match won and the tournament won (from A6's set; a new sound needs an A6-style spend).
+- *(A12, the owner's calls; S18 builds them although they are small features)* **No 32-player bracket:** the setup offers 2, 4, 8 or 16 (a 32 already saved still plays to its end). **SKIP BOT MATCHES** before a bots' match: skips every bots' match up to the next match with a human in it, with the real sim and each match's own seed (tested in Node: the same results as skipping them one by one).
 - **Release prep** as S12 did: check in Chrome, Edge and Firefox, at 60 Hz and a high refresh rate if available, and a phone (touch, sound after the first tap); a cold load with an empty cache (note the total download size: the character sheets, the sounds, and the crowd if it is back); caching still fine after a deploy.
 - Update `README.md` (sound, characters, tournament; the crowd only if it is back) and the status line in `CLAUDE.md`.
 
@@ -912,7 +914,7 @@ No game code changes. Finish with "Done when", tick A12, add a Session log entry
 
 **Done when…**
 - `npm test` and `npm run typecheck` pass.
-- A whole tournament plays with its art and sounds (and the crowd, if it is back), at 8 players with one human and at 4 with two; a 32-player bracket reads clearly; 1P and 2P single matches still work.
+- A whole tournament plays with its art and sounds (and the crowd, if it is back), at 8 players with one human and at 4 with two; a 16-player bracket reads clearly and the setup no longer offers 32; SKIP BOT MATCHES gives the same bracket as skipping one by one; 1P and 2P single matches still work.
 - The game works in all the browsers checked. No console errors from a cold load to the tournament's end. Version 1.18.0.
 
 **You check or decide at the end:** go to CP-J.
@@ -1092,3 +1094,12 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **By tests only:** a broken or old save ignored; the 2- and 16-player Rising lengths; taps on the bracket's arrows; tournament screens with no roster (the characters screen is skipped). **Not checked:** a real phone; a gamepad on the new screens; closing the tab itself (a reload stood in for it).
   - **For the owner (S17's questions, for A12):** the bracket's wording and how it reads at 32 (one round at a time, two columns of 8 for the round of 32, left / right between rounds); whether a "Skip all bot matches" choice is wanted (a 32-player bracket with one human asks Watch or Skip up to 30 times; SKIP stays selected after a skip, so it is one press each); and which controls each human uses when three or more share a keyboard (as built, every human's match uses P1's keys against a bot, and P1's and P2's when two humans meet, so humans take turns at those keys or pads).
   - **Next:** 💳 approve SpriteCook spend for A12 (optional: only if a trophy is generated), then A12.
+- 2026-11-14, A12 (art: tournament screens, no version change): S17 was ticked; the baseline `npm test` passed (all 9 checks, 194 unit tests). Mockups over the game, the owner's answers to S17's questions, and a hand-drawn gold trophy. No SpriteCook spend (the 💳 line is ticked "not needed"; balance 96 credits, unchanged). No game code changed.
+  - **New:** `art/ui/tournament.aseprite` → `public/hogg-squash/assets/tournament.png` + `.json` (slices `trophy` 64 × 84 and `trophy small` 21 × 25, with pivots), built by `art/tools/a12-tournament.lua` and exported by `art/tools/a12-export.sh` (the Aseprite program in batch mode: the Aseprite connection dropped during the session). `art/tools/a12-mock.js` draws the mockups with the game's own font, panels, court and sheets, and `art/tools/a12-mock-server.mjs` (launch config `a12-mock`, port 8094) serves the repo and saves them: `art/mockups/a12-bracket-16.png`, `-8`, `-4`, `-2`, `a12-round-card.png`, `a12-round-cards.png`, `a12-champion.png`, `a12-trophy.png`. `docs/art-style-guide.md`, "The tournament (A12)"; `docs/decisions.md`, "Tournament", "The look (A12)".
+  - **First round of mockups:** a 32-player bracket two ways (the whole bracket with the halves facing, or eight at a time with a map of the whole), with face crops from the sheets. Only Coach Zain has a front view, so Ronin's, Adam's and Ben's crops were the backs of their heads.
+  - **The owner's calls:** **no 32-player bracket** (2, 4, 8 or 16); **no face crops yet** (more characters later); **SKIP BOT MATCHES** wanted (first offered as SKIP TO MY MATCH); the bracket's wording "8 PEOPLE, 7 BOTS, BOT LEVEL: 5" and "NEXT: FIRST TO 9" (the owner's words); the **trophy hand-drawn and gold**, after seeing a silver one; **future characters hold the trophy** on the champion screen, Ronin, Adam and Ben don't. The screens approved as mocked: the whole bracket on one screen with the halves facing and the trophy in the middle, the round title card on the front wall, the champion screen.
+  - **Left as built in S17** (not raised again): which controls each human uses when three or more share a keyboard (they take turns at P1's and P2's keys or pads).
+  - **Plan changes:** S18 builds A12's look, the 2–16 sizes and SKIP BOT MATCHES (its "Done when" now checks a 16-player bracket and the skip); the finalized-character template gets a "holding the trophy" pose. The round cards are drawn at run time from the font and `panel dark`, so the sheet has only the trophies.
+  - **Checked:** `npm test` passes (all 9 checks, 194 unit tests); the page loads to the title with no console messages. The mockups were drawn in the page's own code, so their fonts and panels are the game's.
+  - **For the owner:** the wording line reads "16 PEOPLE, 14 BOTS" at 16 with two humans, which can sound like 30 in all; S18 can say "16 PLAYERS" or "2 PEOPLE, 14 BOTS" instead if you prefer. Coach Zain has no trophy pose yet: a SpriteCook animation session would make one.
+  - **Next:** S18.
