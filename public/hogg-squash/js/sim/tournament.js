@@ -1,5 +1,6 @@
 // @ts-check
-// The tournament (docs/decisions.md, "Tournament", settled at CP-I): a knockout bracket of 2, 4, 8, 16 or 32 players,
+// The tournament (docs/decisions.md, "Tournament", settled at CP-I): a knockout bracket of 2, 4, 8 or 16 players (32
+// too for one saved before S18),
 // some of them humans and the rest bots (CPUs), drawn at random from a seed when it starts and then played match by
 // match in bracket order, a round at a time.
 //  - Entrants are numbered 0 … size − 1: the humans first (P1, P2 …), then the bots (BOT 1, BOT 2 …). Each has a
@@ -17,8 +18,10 @@ import { makeCpu, cpuActions, cpuRandom } from './cpu.js';
 import { paramsFor, LEVELS, DEFAULT_LEVEL } from './difficulty.js';
 import { MATCH_LENGTHS } from './match.js';
 
-/** The bracket sizes. */
+/** The bracket sizes a tournament can have (a 32 saved before S18 still loads and plays to its end). */
 export const SIZES = [2, 4, 8, 16, 32];
+/** The sizes the setup offers (A12, the owner's call: no 32-player bracket). */
+export const SETUP_SIZES = [2, 4, 8, 16];
 /** Rising lengths always reach this in the final. */
 export const FINAL_LENGTH = 11;
 /** How a tournament's match lengths are set: one length for all, or rising to FINAL_LENGTH in the final. */
@@ -258,6 +261,19 @@ export function skipMatch(t) {
   const m = playOut(w, [makeCpu(w, 0), makeCpu(w, 1)]);
   recordResult(t, /** @type {0 | 1} */ (m.winner), [m.scores[0], m.scores[1]], true);
   return info;
+}
+
+/**
+ * SKIP BOT MATCHES (A12): skip every bots' match in bracket order up to the next match with a human in it (or the
+ * end), each exactly as skipMatch does it (the real sim, its own seed), so the bracket is the same as skipping them
+ * one by one.
+ * @param {Tournament} t @returns {MatchInfo[]} the matches skipped, in order
+ */
+export function skipBotMatches(t) {
+  /** @type {MatchInfo[]} */
+  const done = [];
+  for (let m = nextMatch(t); m && !m.mustPlay; m = nextMatch(t)) done.push(skipMatch(t));
+  return done;
 }
 
 /**

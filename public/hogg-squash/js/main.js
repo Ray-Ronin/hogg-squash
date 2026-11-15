@@ -15,9 +15,11 @@
 // be picked while they show. A portrait phone is told to turn sideways (and pauses).
 // The title's GO TO HOME goes back to the website's start page.
 // The tournament (S17, title → TOURNAMENT; rules in sim/tournament.js, screens in ui/screens.js and ui/tournament.js):
-// a knockout bracket of 2–32 with humans and bots, saved in localStorage after every match (and when it starts), so
+// a knockout bracket of 2–16 with humans and bots, saved in localStorage after every match (and when it starts), so
 // the title can continue it. A tournament match is built from the bracket's next match (its sides, length, level and
-// seed), and its result goes back to the bracket; Skip match on the pause menu plays the rest out at once.
+// seed), and its result goes back to the bracket; Skip match on the pause menu plays the rest out at once. S18 drew
+// it in A12's look (the trophy sheet, assets/tournament.png, loads with the art), with a round title card over the
+// court before each played or watched match (CARD_STEPS, or OK).
 // Sound (S13, js/audio/): silent until the first key, click or tap (the browser's rule; a gamepad-only player sees a
 // note on the title). The world's events and the menu moves play sounds by name; the Effects level is on the options
 // screen, Sound on/off in the pause menu and on the speaker button (both saved), and the sound stops while paused,
@@ -73,8 +75,9 @@ import { useUi } from './render/ui.js';
 import { useFx } from './render/fx.js';
 import { drawDebug, createShotLog } from './render/debug.js';
 import { makeUi, navigate, captureKey, matchOver, autoPause, assignInMatch, showsMatch, setTouch, tap, toggleSound,
-  setRoster, pickIndices, setTournament, matchPicks, DEFAULT_SETTINGS, SITE_URL } from './ui/screens.js';
-import { drawTourMenu, drawTourSetup, drawTourSelect, drawBracket, drawChampion } from './ui/tournament.js';
+  setRoster, pickIndices, setTournament, matchPicks, cardOver, DEFAULT_SETTINGS, SITE_URL } from './ui/screens.js';
+import { drawTourMenu, drawTourSetup, drawTourSelect, drawBracket, drawRoundCard, drawChampion, useTournamentArt }
+  from './ui/tournament.js';
 import { createAudio, loadSound, saveSound } from './audio/audio.js';
 import { cuesFor, menuSound, menuState, squeakCues, SQUEAK } from './audio/sounds.js';
 import { FP } from './squash-physics.js';
@@ -126,6 +129,8 @@ const REACH_TRY = (() => {
 const SHORTCUT = query.has('mode') || query.has('level') || query.has('to');
 /** Steps that GAME shows on the wall before the result screen comes up (0.7 s). */
 const RESULT_DELAY = 40;
+/** Steps the tournament's round title card shows before the match goes on by itself (2.5 s; OK goes on sooner). */
+const CARD_STEPS = Math.round(SIM_HZ * 2.5);
 
 // --- state ---
 /** Where the key layouts are kept (null if the browser blocks storage: then they last until the page closes). */
@@ -162,6 +167,8 @@ let courtView = PAINTED_FITS ? (COURT_VIEWS.find(v => v === query.get('court')) 
 const artOn = () => courtView !== 'code';
 /** Steps since the match was won (the result screen comes up after RESULT_DELAY). */
 let overSteps = 0;
+/** Steps the round title card has shown (it goes on after CARD_STEPS). */
+let cardSteps = 0;
 
 // The match: built from the settings when the controllers screen comes up, and again for a restart or rematch.
 /** The seed of the match being played (a restart replays it) and of the next new one. */
@@ -236,8 +243,9 @@ function nav(n, side = null) {
  * @param {import('./audio/sounds.js').MenuState} before  the screens before it
  * @param {import('./ui/screens.js').Effect} effect
  * @param {import('./ui/screens.js').Nav} n  the move (a tap is an OK)
+ * @param {boolean} [quiet]  no menu sound (the round title card going on by itself)
  */
-function doEffect(before, effect, n) {
+function doEffect(before, effect, n, quiet = false) {
   const from = before.screen;
   if (from === 'assign' && (effect === 'start' || effect === 'resume')) forgetLost(seats);  // carry on with the keys
   if (effect === 'prepare' || effect === 'rematch') newMatch(nextSeed++);
@@ -248,7 +256,7 @@ function doEffect(before, effect, n) {
   else if (effect === 'tsave' && ui.tour.t) saveTournament(store, ui.tour.t);
   else if (effect === 'tclear') clearTournament(store);
   else if (effect === 'skiprest') playOut(world, cpus);   // then GAME on the wall and the result, as usual
-  const s = menuSound(n, before, menuState(ui), effect);
+  const s = quiet ? null : menuSound(n, before, menuState(ui), effect);
   if (s) audio.play(s);
 }
 
@@ -450,6 +458,10 @@ function simStep() {
       doEffect(before, tap(ui, hitAt(x, y)), 'ok');
     }
   }
+  // the round title card goes on by itself after a while (OK sooner)
+  if (ui.screen === 'tcard') {
+    if (++cardSteps >= CARD_STEPS) doEffect(menuState(ui), cardOver(ui), 'ok', true);
+  } else cardSteps = 0;
   touch.show(ui.touch, ui.screen === 'match', showsMatch(ui));
   kb.grab(ui.screen === 'keytest' || ui.listen);
   if (!wasMatch || !playing()) return;  // a press that closes a menu or opens one doesn't also play
@@ -526,7 +538,7 @@ function drawMatch() {
 function tourView() {
   const byId = (/** @type {string} */ id) => roster.find(c => c.id === id);
   return {
-    name: id => byId(id)?.name ?? id, t: stepCount,
+    name: id => byId(id)?.name ?? id, short: id => byId(id)?.short ?? null, t: stepCount,
     char: id => {
       const c = byId(id);
       return c && { name: c.name, sheet: c.sheetOf, preview: (/** @type {number} */ kit) => previewOf(c, kit) };
@@ -554,7 +566,10 @@ function render() {
   else if (ui.screen === 'tsetup') drawTourSetup(ctx, ui);
   else if (ui.screen === 'tselect') drawTourSelect(ctx, ui, tourView());
   else if (ui.screen === 'bracket') drawBracket(ctx, ui, tourView());
-  else if (ui.screen === 'champion') drawChampion(ctx, ui, tourView());
+  else if (ui.screen === 'tcard') {
+    drawCourt(ctx, courtView);
+    drawRoundCard(ctx, ui, tourView());
+  } else if (ui.screen === 'champion') drawChampion(ctx, ui, tourView());
   else if (ui.screen === 'keytest') drawKeyTest(ctx, kb.heldKeys(), layouts, ui.touch);
   else {
     drawMatch();
@@ -569,7 +584,7 @@ function render() {
     }
   }
   // the version, small in the bottom-right corner: dark on the title's maple floor, grey on the match's margin
-  drawText(ctx, showsMatch(ui) ? 'small-grey' : 'small-dark', `v${VERSION}`, WIDTH - 4, HEIGHT - lineHeight('small') - 1,
+  drawText(ctx, showsMatch(ui) || ui.screen === 'tcard' ? 'small-grey' : 'small-dark', `v${VERSION}`, WIDTH - 4, HEIGHT - lineHeight('small') - 1,
     'right');
   screen.present();
 }
@@ -622,6 +637,8 @@ const art = loadAssets({
   ui: { kind: 'image', url: 'assets/ui.png' },
   uiJson: { kind: 'json', url: 'assets/ui.json' },
   title: { kind: 'image', url: 'assets/title.png' },
+  tour: { kind: 'image', url: 'assets/tournament.png' },
+  tourJson: { kind: 'json', url: 'assets/tournament.json' },
 });
 let loading = true;
 document.getElementById('loading')?.remove();           // index.html's text, until this module had loaded
@@ -647,6 +664,7 @@ try {
   useFont(a.font, a.fontJson);
   useUi(a.ui, a.uiJson);
   useTitle(a.title);
+  useTournamentArt(a.tour, a.tourJson);
 } catch (e) {
   console.warn('Hogg Squash: the court and HUD art did not load, so the code court and plain text are drawn.', e);
 }

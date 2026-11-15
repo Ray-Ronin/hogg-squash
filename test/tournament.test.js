@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SIZES, roundCount, roundName, roundLength, lengthsFor, entrantLabel, drawOrder, makeTournament, nextMatch,
   recordResult, skipMatch, champion, humanRecord, playOut, matchWorld, saveTournament, loadTournament, clearTournament,
-  tournamentProblem, setupProblem, TOURNAMENT_KEY } from '../public/hogg-squash/js/sim/tournament.js';
+  tournamentProblem, setupProblem, TOURNAMENT_KEY, SETUP_SIZES, skipBotMatches } from '../public/hogg-squash/js/sim/tournament.js';
 import { makeCpu, cpuActions } from '../public/hogg-squash/js/sim/cpu.js';
 import { stepWorld } from '../public/hogg-squash/js/sim/world.js';
 import { MATCH_LENGTHS } from '../public/hogg-squash/js/sim/match.js';
@@ -171,6 +171,40 @@ test('skipping: only bots\' matches, with the real sim, and the same results on 
   });
   assert.deepEqual(runs[0], runs[1]);
   assert.equal(runs[0].length, 15);
+});
+
+test('S18: SKIP BOT MATCHES gives the same bracket as skipping one by one, and stops at a human\'s match', () => {
+  for (const [size, humans, seed] of [[16, 1, 4242], [16, 2, 77], [8, 1, 9], [4, 1, 3], [2, 1, 5], [32, 1, 11]]) {
+    const s = setup({ size, humans, level: 6, mode: 'rising', length: 5, seed });
+    const one = makeTournament(s), all = makeTournament(s);
+    let presses = 0;
+    for (let guard = 0; nextMatch(all) && guard < 100; guard++) {
+      const m = /** @type {any} */ (nextMatch(all));
+      if (m.mustPlay) {                                        // the human wins, in both
+        win(all, 0);
+        win(one, 0);
+        continue;
+      }
+      const skipped = skipBotMatches(all);
+      presses++;
+      assert.ok(skipped.length >= 1);
+      assert.ok(!nextMatch(all) || nextMatch(all)?.mustPlay, 'it stops at the next human\'s match (or the end)');
+      for (const k of skipped) {                               // the same matches, one by one
+        const n = /** @type {any} */ (nextMatch(one));
+        assert.deepEqual([n.round, n.index], [k.round, k.index]);
+        skipMatch(one);
+      }
+      assert.deepEqual(one.rounds, all.rounds, `${size} players: the same bracket`);
+    }
+    assert.ok(champion(all) !== null && champion(all) === champion(one));
+    assert.ok(presses <= roundCount(size), `${size}: one press a round at most (${presses})`);
+  }
+  // nothing to skip before a human's match
+  const t = makeTournament(setup({ size: 2, humans: 2 }));
+  assert.deepEqual(skipBotMatches(t), []);
+  assert.equal(SETUP_SIZES.includes(32), false, 'the setup no longer offers 32');
+  assert.deepEqual(SETUP_SIZES, [2, 4, 8, 16]);
+  assert.ok(SIZES.includes(32), 'a 32 saved before S18 still loads');
 });
 
 test('a watched bots\' match ends as a skipped one does, and can be played out partway', () => {

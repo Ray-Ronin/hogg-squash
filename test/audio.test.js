@@ -161,6 +161,8 @@ test('menu sounds: a tick for a move, OK on, back back, nothing if nothing chang
   assert.equal(menuSound('right', st('options', EFFECTS_SEL), st('options', EFFECTS_SEL), 'sound'), 'menu-move');
   assert.equal(menuSound('back', st('match'), st('pause'), null), null);
   assert.equal(menuSound('ok', st('assign'), st('match'), 'start'), 'menu-ok');
+  assert.equal(menuSound('ok', st('bracket'), st('champion'), null), 'game', 'S18: the tournament won, GAME\'s jingle');
+  assert.equal(menuSound('down', st('champion'), st('champion'), null), null);
   const ui = makeUi();
   assert.deepEqual(menuState(ui), { screen: 'title', sel: 0, listen: false, pick: '' });
 });

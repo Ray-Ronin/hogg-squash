@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 8787
+    },
+    {
+      "name": "hogg-squash-static",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "http-server", "public", "-p", "8080", "-c-1"],
+      "port": 8080
     }
   ]
 }

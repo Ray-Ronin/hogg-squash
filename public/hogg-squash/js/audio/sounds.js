@@ -12,6 +12,8 @@
 //    (the tin's clang instead of the front wall, a buzz for out)
 //  rally: the callout's jingle ('point'); match: GAME's jingle ('game'). Nothing else happens in the point freeze.
 //  newRally, rematch: silent
+//  the tournament (S18): a match won is GAME's jingle like any match; the tournament won plays it again as the
+//    champion screen comes up (menuSound; no new sound file)
 // cuesFor (S14) adds how each sound is shaped by what happened: a bounce's volume by the ball's speed and depth, a
 // small pan by the ball's x; audio.js varies the pitch of VARIED and picks the variant (pickVariant).
 // squeakCues (S14b) adds a shoe squeak to some hits that come off a sharp stop, from the players' recent positions
@@ -200,8 +202,7 @@ export function squeakCues(events, tracks, random) {
 /** @param {import('../ui/screens.js').Ui} ui @returns {MenuState} */
 export const menuState = ui => ({ screen: ui.screen, sel: ui.sel, listen: ui.listen,
   pick: ui.screen === 'select' ? `${ui.pick.at}|${ui.pick.locked}`
-    : ui.screen === 'tselect' ? ui.tour.chars.join() : ui.screen === 'tsetup' ? JSON.stringify(ui.tour.draft)
-    : ui.screen === 'bracket' ? String(ui.tour.view) : '' });
+    : ui.screen === 'tselect' ? ui.tour.chars.join() : ui.screen === 'tsetup' ? JSON.stringify(ui.tour.draft) : '' });
 
 /**
  * The sound a menu move makes: back for a step back, OK for a step on (or anything done), a tick for a new
@@ -214,6 +215,7 @@ export const menuState = ui => ({ screen: ui.screen, sel: ui.sel, listen: ui.lis
  */
 export function menuSound(nav, before, after, effect) {
   if (before.screen === 'match') return null;
+  if (after.screen === 'champion' && before.screen !== 'champion') return 'game';   // the tournament won (S18)
   if (effect === 'sound' && (nav === 'left' || nav === 'right')) return 'menu-move';   // heard at the new level
   if (effect || before.screen !== after.screen || before.listen !== after.listen) {
     return nav === 'back' ? 'menu-back' : 'menu-ok';

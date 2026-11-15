@@ -471,9 +471,10 @@ test('S15: the characters screen\'s words are in the font and fit its panel', ()
 
 // --- S17: the tournament's screens ---
 import { TMENU_ITEMS, TCONFIRM_ITEMS, TSETUP_ROWS, BRACKET_ITEMS, RESULT_TOUR_ITEMS, CHAMPION_ITEMS, PAUSE_SKIP,
-  TSELECT_START, TSELECT_NEXT, BRACKET_PREV, BRACKET_NEXT, pauseItems, pauseLabels, resultItems, bracketItems,
+  TSELECT_START, TSELECT_NEXT, SKIP_BOTS, cardOver, pauseItems, pauseLabels, resultItems, bracketItems,
   matchPicks, setTouch, setTournament, setupValues } from '../public/hogg-squash/js/ui/screens.js';
-import { TOUR_TEXT, whoLine, roundsLine, lengthsLine, nextLine, entrantLine, triesLine, setupLabel, SETUP_LAYOUT,
+import { TOUR_TEXT, whoLine, roundsLine, lengthsLine, nextLine, entrantLine, triesLine, recordLine, peopleLine, cardRules,
+  bracketGeometry, cardPlayer, CARD_LAYOUT, setupLabel, SETUP_LAYOUT,
   TSELECT_LAYOUT, BRACKET_LAYOUT, CHAMPION_LAYOUT } from '../public/hogg-squash/js/ui/tournament.js';
 import { tourLine } from '../public/hogg-squash/js/ui/result.js';
 import { nextMatch, champion, makeTournament, roundName } from '../public/hogg-squash/js/sim/tournament.js';
@@ -510,7 +511,7 @@ function toBotsMatch(ui) {
   const t = ui.tour.t;
   while (nextMatch(t)?.mustPlay) {
     ui.sel = 0;
-    run(ui, ['ok', 'ok']);
+    run(ui, ['ok', 'ok', 'ok']);                           // PLAY, the round card, the controllers
     matchOver(ui, { winner: 0, scores: [5, 0] });
     run(ui, ['ok']);
   }
@@ -525,15 +526,18 @@ test('S17: TOURNAMENT on the title; the setup\'s rows and their limits', () => {
   assert.deepEqual(setupValues(ui, 4), []);
   setRow(ui, 0, 4);
   assert.equal(ui.tour.draft.humans, 4, 'fewer players: no more humans than players');
-  setRow(ui, 0, 32);
-  setRow(ui, 1, 32);
+  setRow(ui, 0, 16);
+  assert.deepEqual(setupValues(ui, 0), [2, 4, 8, 16], 'S18: no 32');
   run(ui, ['right']);
-  assert.equal(ui.tour.draft.humans, 32, 'stops at the size');
+  assert.equal(ui.tour.draft.size, 16, 'stops at 16');
+  setRow(ui, 1, 16);
+  run(ui, ['right']);
+  assert.equal(ui.tour.draft.humans, 16, 'stops at the size');
   setRow(ui, 2, 'rising');
   assert.equal(setupLabel(ui, 3), '5', 'Rising starts from 5');
   setRow(ui, 3, 7);
   assert.equal(ui.tour.draft.same, 11, 'Same keeps its own length');
-  assert.equal(lengthsLine(ui.tour.draft), 'First to 7, 9, 9, 11, 11, round by round, win by 2');
+  assert.equal(lengthsLine(ui.tour.draft), 'First to 7, 9, 9, 11, round by round, win by 2');
   ui.sel = 0;
   assert.deepEqual(run(ui, ['ok']), [null]);
   assert.equal(ui.sel, 1, 'OK moves down a row');
@@ -555,7 +559,6 @@ test('S17: with touch the setup allows one human only', () => {
   assert.equal(ui.tour.draft.humans, 1, 'a tap can\'t add one either');
   assert.equal(tap(ui, 0), null);
   assert.equal(ui.tour.draft.size, 16, 'a tap on a row steps its value on');
-  setRow(ui, 0, 32);
   tap(ui, 0);
   assert.equal(ui.tour.draft.size, 2, '…wrapping');
 });
@@ -607,7 +610,10 @@ test('S17: the bracket: PLAY a human\'s match, lose it to a bot and replay it; w
   while (!nextMatch(t)?.mustPlay) { ui.sel = 1; run(ui, ['ok']); }     // SKIP until it's the human's turn
   assert.deepEqual(bracketItems(ui), BRACKET_ITEMS.play);
   ui.sel = 0;
-  assert.deepEqual(run(ui, ['ok']), ['prepare'], 'PLAY: the controllers screen, with the match built');
+  assert.deepEqual(run(ui, ['ok']), [null], 'PLAY: the round title card first');
+  assert.equal(ui.screen, 'tcard');
+  assert.equal(ui.tour.watch, false);
+  assert.deepEqual(run(ui, ['ok']), ['prepare'], 'then the controllers screen, with the match built');
   assert.equal(ui.screen, 'assign');
   const m = /** @type {any} */ (ui.tour.match);
   assert.deepEqual(m.cpu, [false, true], 'the human is P1 against the bot');
@@ -623,6 +629,9 @@ test('S17: the bracket: PLAY a human\'s match, lose it to a bot and replay it; w
   assert.equal(ui.tour.match, null);
   assert.equal(nextMatch(t)?.attempt, 2, 'the same match, a second try');
   ui.sel = 0;
+  run(ui, ['ok']);
+  assert.equal(ui.screen, 'tcard', 'a replay has its card too');
+  assert.match(cardRules(/** @type {any} */ (ui.tour.match)), /, TRY 2$/);
   run(ui, ['ok', 'ok']);
   assert.equal(matchOver(ui, { winner: 0, scores: [5, 1] }), 'tsave');
   assert.equal(ui.tour.last?.outcome, 'decided');
@@ -633,9 +642,21 @@ test('S17: the bracket: PLAY a human\'s match, lose it to a bot and replay it; w
   while (nextMatch(t) && !nextMatch(t)?.mustPlay) { ui.sel = 1; run(ui, ['ok']); }
   assert.ok(nextMatch(t)?.mustPlay, 'the final has the human in it');
   ui.sel = 0;
+  run(ui, ['ok', 'ok', 'back']);
+  assert.equal(ui.screen, 'bracket');
+  assert.equal(ui.tour.match, null);
+  // back from the round card goes to the bracket too; a tap on it goes on; so does its time running out (main.js)
   run(ui, ['ok', 'back']);
   assert.equal(ui.screen, 'bracket');
   assert.equal(ui.tour.match, null);
+  run(ui, ['ok']);
+  assert.equal(tap(ui, null), 'prepare');
+  assert.equal(ui.screen, 'assign');
+  run(ui, ['back', 'ok']);
+  assert.equal(ui.screen, 'tcard');
+  assert.equal(cardOver(ui), 'prepare');
+  assert.equal(ui.screen, 'assign');
+  assert.equal(cardOver(ui), null, 'only on the card');
 });
 
 test('S17: a bots\' match watched, skipped from the bracket, or skipped partway from the pause menu', () => {
@@ -653,7 +674,10 @@ test('S17: a bots\' match watched, skipped from the bracket, or skipped partway 
   // WATCH, then Skip match from the pause menu
   toBotsMatch(ui);
   ui.sel = 0;
-  assert.deepEqual(run(ui, ['ok']), ['prepare'], 'WATCH: straight into the match');
+  assert.deepEqual(run(ui, ['ok']), [null], 'WATCH: the round title card');
+  assert.equal(ui.screen, 'tcard');
+  assert.equal(ui.tour.watch, true);
+  assert.deepEqual(run(ui, ['ok']), ['prepare'], 'then straight into the match');
   assert.equal(ui.screen, 'match');
   assert.deepEqual(ui.tour.match?.cpu, [true, true]);
   run(ui, ['back']);
@@ -671,7 +695,7 @@ test('S17: a bots\' match watched, skipped from the bracket, or skipped partway 
   // a watched one played to the end isn't marked skipped
   toBotsMatch(ui);
   ui.sel = 0;
-  run(ui, ['ok']);
+  run(ui, ['ok', 'ok']);
   const w2 = /** @type {any} */ (nextMatch(t));
   matchOver(ui, { winner: 0, scores: [5, 3] });
   assert.equal(t.rounds[w2.round][w2.index].skipped, false);
@@ -682,7 +706,7 @@ test('S17: quitting mid-match keeps the tournament; Continue, and New asks first
   setRow(ui, 0, 2);
   startIt(ui);
   ui.sel = 0;
-  run(ui, ['ok', 'ok', 'back']);                                  // PLAY, play, pause
+  run(ui, ['ok', 'ok', 'ok', 'back']);                            // PLAY, the card, play, pause
   ui.sel = pauseItems(ui).indexOf('QUIT TO TITLE');
   assert.deepEqual(run(ui, ['ok']), ['quit']);
   assert.equal(ui.screen, 'title');
@@ -725,14 +749,6 @@ test('S17: to the champion, and then the save is forgotten', () => {
   assert.equal(nextMatch(t), null);
   assert.ok(/** @type {number} */ (champion(t)) < 2, 'a human');
   assert.deepEqual(bracketItems(ui), BRACKET_ITEMS.done);
-  assert.equal(ui.tour.view, 1, 'the bracket shows the final');
-  run(ui, ['left']);
-  assert.equal(ui.tour.view, 0, 'left: the round before');
-  tap(ui, BRACKET_NEXT);
-  assert.equal(ui.tour.view, 1, 'and the arrows, by tapping');
-  tap(ui, BRACKET_PREV);
-  run(ui, ['right', 'right']);
-  assert.equal(ui.tour.view, 1, 'stops at the final');
   ui.sel = 0;
   run(ui, ['ok']);
   assert.equal(ui.screen, 'champion');
@@ -751,7 +767,7 @@ test('S17: the tournament screens\' words are in the font and fit', () => {
   };
   const W = (/** @type {any} */ f, /** @type {string} */ s) => measureWith(fonts, f, s);
   for (const l of [TOUR_TEXT.menuHint, TOUR_TEXT.setupHint, TOUR_TEXT.setupTouch, TOUR_TEXT.selectHint, TOUR_TEXT.selectTouch,
-    TOUR_TEXT.bracketHint, TOUR_TEXT.bracketTouch, TOUR_TEXT.menuTouch]) fits('small', l, 600);
+    TOUR_TEXT.menuTouch]) fits('small', l, 600);
   for (const l of [TOUR_TEXT.saved, TOUR_TEXT.confirmNote]) fits('small-dark', l, 320);
   for (const l of [TOUR_TEXT.heading, TOUR_TEXT.confirm, ...TMENU_ITEMS, ...TCONFIRM_ITEMS]) fits('large-red', l, 306);
   for (const l of [TOUR_TEXT.charsNote, TOUR_TEXT.touchOne, roundsLine(32),
@@ -768,34 +784,74 @@ test('S17: the tournament screens\' words are in the font and fit', () => {
   fits('small', 'Coach Zain', TSELECT_LAYOUT.COL_W - TSELECT_LAYOUT.LABEL_W - 6);
   assert.ok(TSELECT_LAYOUT.COLS[1] + TSELECT_LAYOUT.COL_W < TSELECT_LAYOUT.FIG_X - 60, 'the list clear of the figure');
   assert.ok(TSELECT_LAYOUT.TOP + 16 * TSELECT_LAYOUT.ROW <= 330 - 20);
-  // the bracket: two columns of the longest names each side of the score, clear of each other and the panel
-  const name = W('small', longest), B = BRACKET_LAYOUT;
-  assert.ok(B.COLS[0] - B.GAP - name >= 16 + 4 && B.COLS[0] + B.GAP + name <= 320 - 4, 'left column');
-  assert.ok(B.COLS[1] - B.GAP - name >= 320 + 4 && B.COLS[1] + B.GAP + name <= 624 - 4, 'right column');
-  assert.ok(320 + B.GAP + name < 320 + 170 - 4, 'one column: the next-match marks clear of the names');
-  assert.ok(B.COLS[0] + B.GAP + name < B.COLS[0] + 140 - 4, 'two columns: the marks clear of the names');
-  assert.ok(B.TOP + 8 * B.ROW <= B.NEXT_Y - 4);
+  // the bracket (S18, A12's look): the wording; every size's slots clear of each other, the middle and the panel
+  assert.equal(peopleLine({ size: 16, humans: 2, level: 5 }), '2 PEOPLE, 14 BOTS, BOT LEVEL: 5', 'the owner\'s call (S18)');
+  assert.equal(peopleLine({ size: 8, humans: 1, level: 7 }), '1 PERSON, 7 BOTS, BOT LEVEL: 7');
+  assert.equal(peopleLine({ size: 2, humans: 1, level: 5 }), '1 PERSON, 1 BOT, BOT LEVEL: 5');
+  assert.equal(peopleLine({ size: 4, humans: 4, level: 5 }), '4 PEOPLE, NO BOTS');
+  fits('small-grey', peopleLine({ size: 32, humans: 31, level: 9 }), 590);
+  const B = BRACKET_LAYOUT;
+  for (const size of [2, 4, 8, 16, 32]) {
+    const G = bracketGeometry(size);
+    for (let r = 0; r < G.R; r++) {
+      const h = B.SLOT_H[G.style(r)], n = (size >> r) / 2;
+      // A12's 16 (and a saved 32) stack the first round's slots edge to edge, as mocked; everything else stands apart
+      if (n > 1) assert.ok(G.yOf(r, 1) - G.yOf(r, 0) >= (r === 0 && size >= 16 ? h - 2 : h + 3),
+        `${size}: round ${r}'s slots clear of each other (or, stacked, no more than touching)`);
+      assert.ok(G.yOf(r, 0) - h / 2 >= B.WHO_Y + 12, `${size}: below the heading`);
+      assert.ok(G.yOf(r, n - 1) + h / 2 <= G.bottom + 2, `${size}: above the next match`);
+    }
+    const last = G.colX[G.R - 1] + G.width(G.R - 1);
+    assert.ok(last + 8 <= 320 - 30, `${size}: the last column clear of the champion's slot (${last})`);
+    assert.ok(G.gap >= 5, `${size}: room for the lines (${G.gap})`);
+    if (size <= 16) assert.ok(G.gap >= 9, `${size}: room for the points on the lines (A12's 16: 9 px)`);
+  }
+  // the first round's cards: the longest name inside (else the short one)
+  fits('small', 'Coach Zain', B.W0 - 8);
+  fits('small', 'BOT 14', B.WT - 6);
+  fits('small', 'BOT 31', B.WT - 6);
+  // the next match, its players, the choices: above the panel's bottom, at 16 (the lowest)
+  const big = bracketGeometry(16), itemsTop = big.bottom + 14 + 34;
+  assert.ok(itemsTop + 3 * B.ITEM_ROW + 14 <= 354 - 2, 'four choices inside the panel');
   for (const r of [32, 16, 8, 4, 2]) fits('large-red', roundName(r), 300);
-  fits('small-grey', 'ROUND 1 OF 5: 32 PLAYERS, 1 HUMAN AND 31 BOTS AT LEVEL 9', 590);
-  fits('small-grey', nextLine(/** @type {any} */ ({ name: 'QUARTER-FINAL', length: 11, level: 9, mustPlay: false, attempt: 1 })), 590);
-  fits('small-grey', nextLine(/** @type {any} */ ({ name: 'QUARTER-FINAL', length: 11, level: 9, mustPlay: true, attempt: 99 })), 590);
+  fits('large-red', 'THE CHAMPION', 300);
+  assert.equal(nextLine(/** @type {any} */ ({ length: 9, attempt: 1 })), 'NEXT: FIRST TO 9');
+  fits('small-grey', nextLine(/** @type {any} */ ({ length: 11, attempt: 99 })), 590);
   fits('large-white', `${longest}  v  ${entrantLine({ humans: 30 }, 29, 'Coach Zain')}`, 590);
   for (const l of [...BRACKET_ITEMS.bots, ...BRACKET_ITEMS.done, ...RESULT_TOUR_ITEMS, ...CHAMPION_ITEMS, PAUSE_SKIP, 'START'])
     fits('large-white', l, 400);
-  fits('large-white', 'BOT 1 v - ?', 400);
-  fits('small', '11–13 v ? < > -', 100);
-  // the result line and the champion's list (the longest, one column; and the short form in two columns)
+  assert.ok(BRACKET_ITEMS.bots.includes(SKIP_BOTS));
+  fits('small', '? 0123456789 FINAL', 200);
+  // the round title card: every round's name in the 28 px lettering on its band; the rules and the players on it
+  const K = CARD_LAYOUT;
+  for (const r of [32, 16, 8, 4, 2]) fits('huge-red', roundName(r), K.W - 16);
+  const rules = cardRules(/** @type {any} */ ({ length: 11, cpu: [false, true], level: 9, attempt: 99 }));
+  assert.equal(rules, 'FIRST TO 11, WIN BY 2, LEVEL 9, TRY 99');
+  assert.equal(cardRules(/** @type {any} */ ({ length: 9, cpu: [false, false], level: 5, attempt: 1 })), 'FIRST TO 9, WIN BY 2',
+    'no level for two humans');
+  fits('small-grey', rules, K.W - 16);
+  const zainView = { name: () => 'Coach Zain', short: () => 'Zain', t: 0 }, s16 = { humans: 2, chars: Array(16).fill('zain') };
+  assert.equal(cardPlayer(/** @type {any} */ (s16), 15, zainView), 'BOT 14 Zain', 'too wide: the short name');
+  assert.equal(cardPlayer(/** @type {any} */ (s16), 0, zainView), 'P1 Coach Zain');
+  fits('large-white', cardPlayer(/** @type {any} */ (s16), 15, zainView), K.W / 2 - K.V_GAP - 8);
+  fits('large-white', 'BOT 1 Coach Zain', K.W / 2 - K.V_GAP - 8);
+  // the result line and the champion's list (big rows; small rows in one column; the short form in two columns)
   fits('small-grey', tourLine(/** @type {any} */ ({ info: { name: 'QUARTER-FINAL', length: 11 }, outcome: 'replay' })), 560);
+  const L = CHAMPION_LAYOUT;
+  fits('small-grey', recordLine({ wins: 9, tries: 99, out: 'QUARTER-FINAL' }), 624 - L.LIST_X - 4);
+  fits('large-white', 'P6 Coach Zain', 624 - L.LIST_X - 4);
+  assert.ok(L.LIST_Y + 16 + (L.BIG_MAX - 1) * L.BIG_ROW + 18 + 9 <= L.MENU_Y - 4, 'the big rows above BACK TO THE TITLE');
   const t = makeTournament({ size: 32, humans: 32, mode: 'same', length: 5, level: 5, chars: Array(32).fill('zain'), seed: 1 });
   t.rounds[0].forEach((m, i) => { m.winner = t.order[2 * i]; m.scores = [5, 0]; });
   const loser = t.order[1];
   const long = triesLine(t, loser, 'Coach Zain').replace(/\d+ tr\w+/, '99 tries').replace(/\d+ wins?/, '9 wins');
-  fits('small', long, 624 - CHAMPION_LAYOUT.LIST_X[0] - 4);
-  fits('small', triesLine(t, loser, 'Coach Zain', true).replace(/\d+ tr\w+/, '99 tries'), CHAMPION_LAYOUT.LIST_X[1] - CHAMPION_LAYOUT.LIST_X[0] - 6);
-  fits('small', triesLine(t, 31, 'Coach Zain', true).replace(/\d+ tr\w+/, '99 tries'), 624 - CHAMPION_LAYOUT.LIST_X[1] - 4);
-  assert.ok(CHAMPION_LAYOUT.TOP + 16 * CHAMPION_LAYOUT.ROW <= CHAMPION_LAYOUT.MENU_Y - 4);
+  fits('small', long.replace(/P\d+/, 'P16'), 624 - L.LIST_X - 4);
+  fits('small', triesLine(t, loser, 'Coach Zain', true).replace(/\d+ tr\w+/, '99 tries'), L.LIST_X2 - L.LIST_X - 6);
+  fits('small', triesLine(t, 31, 'Coach Zain', true).replace(/\d+ tr\w+/, '99 tries'), 624 - L.LIST_X2 - 4);
+  assert.ok(L.LIST_Y + 16 + 16 * L.ROW <= L.MENU_Y - 4);
   fits('small-red', TOUR_TEXT.tries, 200);
-  fits('large-red', TOUR_TEXT.champion, 300);
+  fits('huge-red', TOUR_TEXT.champion, 590);
+  fits('small-grey', 'WON THE 16-PLAYER TOURNAMENT', 2 * (L.NAME_X - 16 - 4));
   fits('large-red', TOUR_TEXT.chars, 300);
   fits('small-grey', TOUR_TEXT.change, 120);
 });
