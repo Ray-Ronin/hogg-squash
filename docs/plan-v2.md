@@ -54,6 +54,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [x] 💳 Approve SpriteCook spend for A12 *(you)* (optional: only if a trophy is generated) *(not needed: the trophy is hand-drawn, the owner's call)*
 - [x] **A12** Art: tournament screens (bracket, round titles, trophy, ending)
 - [x] **S18** Tournament art in the game; v2 release prep
+- [ ] **S18b** Tournament fix-up: a human who loses to a bot is out, and the tournament keeps going *(added at CP-J)*
 - [ ] **CP-J** Release play-test and go-live, version 2.0.0 *(you)*
 
 ---
@@ -927,18 +928,52 @@ Build S18's "In scope" list only. No new features.
 Go through "Done when", tick S18, add a Session log entry, and commit. Ask me before pushing.
 ```
 
+## S18b: Tournament fix-up: out on a loss *(added at CP-J)*
+
+**Goal:** CP-J's one fix. **A human who loses to a bot is out**, as one who loses to a human already is, and **the tournament keeps going**: no rematch. The owner's words: "When a player loses to a bot don't make it rematch, just keep going with the tournament." `decisions.md`, "Tournament", "Losing".
+
+**In scope**
+- **`js/sim/tournament.js`:** a human's loss to a bot is a result like any other: the bot moves on and the human is out (no `losses++`, no replay). Every match is played once.
+- **When every human is out,** the tournament plays on to its champion, a bot: the bots' matches still offer WATCH, SKIP, SKIP BOT MATCHES and QUIT TO TITLE, and **SKIP BOT MATCHES skips to the end** (it stops at the next human's match, and there isn't one). The bracket's heading and wording still work with no humans left; the champion screen shows a bot as the champion ("BOT 3 Adam", the same trophy and figure).
+- **Tries go:** no ", TRY 2" on the bracket or the round card. The champion screen's human rows become each human's record without tries, using what `humanRecord` already works out: **"3 wins, champion"**, **"1 win, out in the SEMI-FINAL"**, **"0 wins, out in the QUARTER-FINAL"** (fit the rows and the short two-column rows; the heading THE HUMANS stays).
+- **Seeds stay as they are:** a match's seed already hashes `losses`, which is now always 0, so new tournaments' bots' matches give the same results as before.
+- **Old saves still load** (as a saved 32 does): a saved tournament whose next match is a human's, already lost to a bot (`losses` over 0, no winner), is **played once more** and the new rule applies from then; the lost attempts' scores were never saved, so it can't be decided for the bot. Don't bump the save version unless there's no other way, and say so if so.
+- Tests: a loss to a bot puts the human out and the bot on; the tournament carries on to a champion with every human out (one human, and two humans both losing to bots); SKIP BOT MATCHES skips to the champion once every human is out, and gives the same bracket as skipping one by one; the record lines; an old save with a pending lost match loads and plays it once more. Update S17's replay tests to the new rule.
+
+**Not in scope:** any other tournament rule, the bracket's look (A12), new screens or sounds, single matches, `js/sim/` outside `tournament.js`, more characters (the next plan).
+
+**Depends on:** CP-J's first play-test (2026-11-16).
+
+**Main files:** `js/sim/tournament.js`, `js/ui/tournament.js`, `js/ui/screens.js`, `test/tournament.test.js`, `test/screens.test.js`, `docs/decisions.md` ("Tournament": the "as built" lines for S18b).
+
+**Done when…**
+- `npm test` and `npm run typecheck` pass.
+- In the browser (`?dev`, the human's match played by a CPU in their slot as in S17 and S18, or thrown on purpose): an 8-player tournament with one human who loses to a bot in the first round, then plays on through watched and skipped bots' matches (and SKIP BOT MATCHES) to a bot champion; a 4-player tournament with two humans where one loses to a bot and the other goes on (to the champion, or out too); a 1P and a 2P single match still work.
+- No ", TRY" anywhere; the champion screen's rows read right with a human champion and with a bot champion.
+- No console errors from a cold load to the champion. Version 1.18.1.
+
+**You check or decide at the end:** replay CP-J (the whole checklist, quickly where it's unchanged).
+
+**Starter prompt**
+```text
+We're doing Session S18b of docs/plan-v2.md: "Tournament fix-up: out on a loss".
+Read CLAUDE.md, docs/decisions.md ("Tournament", especially "Losing") and docs/plan-v2.md (rules, the S17, S18 and CP-J Session log entries, S18b). Check S18 is ticked.
+Build S18b's "In scope" list only: a human who loses to a bot is out, the tournament keeps going to its champion (a bot if every human is out), tries go, old saves still load.
+Go through "Done when", tick S18b, add a Session log entry, and commit. Ask me before pushing.
+```
+
 ## CP-J: Release play-test and go-live, version 2.0.0 *(you)*
 
 1. From the title screen, the way a new player would: a whole tournament (one alone, one with two players), one 1P and one 2P match, with sound on, on a computer and on a phone.
 2. Anything to fix becomes a small fix-up session (S18b …) and this checkpoint is replayed after it, as at CP-F.
 3. When nothing is left to fix: version **2.0.0**, approve the push, and check https://roninray.com/hogg-squash/ in a private window. List 2.0.0 on the build page (`../roninray-site/content/versions.json`) if wanted.
-4. Pick what comes next (music, voice callouts, more courts, more characters…) for another plan, or stop here.
+4. Pick what comes next (music, voice callouts, more courts, more characters…) for another plan, or stop here. *(Picked at CP-J's first play-test, 2026-11-16: **more characters next**, in a new plan once CP-J is ticked; music and the crowd stay on hold. `decisions.md`, "After v2".)*
 
 **Starter prompt** (planning-only session)
 ```text
 Planning only: change no files except docs/plan-v2.md, docs/decisions.md, the version (js/version.js, package.json) and CLAUDE.md's status line.
 Read docs/plan-v2.md and its Session log. My CP-J feedback: <notes>.
-If there's something to fix, add a fix-up session and don't tick CP-J. If not, tick CP-J, set version 2.0.0, and commit. Don't push.
+If there's something to fix, add a fix-up session and don't tick CP-J. If not, tick CP-J, set version 2.0.0, and commit. Ask me before pushing.
 ```
 
 ---
@@ -1112,3 +1147,10 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **By tests only:** SKIP BOT MATCHES at every size against skipping one by one (Node); the round card's back and tap; the words and layouts fitting at every size. **Not checked:** Edge, Firefox, a high refresh rate, a real phone (touch and sound after the first tap), a cold load from the live site, and caching after a deploy: they are for CP-J. Sound was checked only by what the code played (the champion's jingle by name), not heard.
   - **Dev server:** `npm run dev` (Wrangler 4.162) failed on this machine ("spawn UNKNOWN"), so `.claude/launch.json` has the plan's fallback as `hogg-squash-static` (http-server on port 8080, the owner's OK).
   - **Next:** CP-J, the release play-test and go-live (2.0.0).
+- 2026-11-16, CP-J (release play-test, first round; planning only, no version change, still 1.18.0): the owner played and had one thing to fix. CP-J stays unticked and is replayed after the fix, as at CP-F.
+  - **To fix (S18b):** "When a player loses to a bot don't make it rematch, just keep going with the tournament." A human who loses to a bot is now out, as one who loses to a human already was, and the tournament plays on, to a bot champion if every human is out. This replaces CP-I's default (question 6: replay as often as you like, with tries counted), which the owner hadn't answered at CP-I.
+  - **Settled by the plan (say if you disagree):** with every human out, the bots' matches keep their WATCH / SKIP / SKIP BOT MATCHES choices and SKIP BOT MATCHES runs to the champion; tries and ", TRY 2" go, and the champion screen lists each human's wins and the round they went out in; an old save with a lost match waiting for its replay plays that match once more; the matches' seeds are unchanged.
+  - **What comes next (CP-J's step 4):** **more characters**, in a new plan written once CP-J is ticked, built on the finalized-character template (as Coach Zain was made), with the trophy pose for every character in one SpriteCook session. Music (P2, A6c, S14c) and the crowd (A11, S16) **stay on hold**; v2 ships without them. A7–A10 stay `[-]`. `decisions.md`, "After v2".
+  - **Plan changes:** S18b added before CP-J; `decisions.md`, "Tournament" ("Losing", "The end", SKIP BOT MATCHES and the TRY wording) and a new "After v2"; CP-J's starter prompt now ends "Ask me before pushing."
+  - **Not reported on:** the rest of CP-J's checklist (the phone, sound, other browsers, the live site) gave no other notes; the replay after S18b covers it again.
+  - **Next:** S18b (tournament fix-up, 1.18.1), then CP-J again.
