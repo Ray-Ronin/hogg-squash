@@ -10,8 +10,10 @@
 //  - A human's match has to be played; a bots' match can be watched or skipped. Skipping plays the real match
 //    instantly (world.js and cpu.js, both sides CPU at the bots' level, from a seed made from the tournament's seed and
 //    the match's place), so a tournament always skips to the same results, and a watched one ends the same way.
-//  - A human who loses to a bot replays the match (a try is counted); a human who loses to a human is out. So a human
-//    always wins a tournament with humans in it, and the final always has one.
+//  - Every match is played once: a human who loses is out, to a bot or to a human (CP-J, S18b), and the tournament
+//    goes on without them; once every human is out it plays on to its champion, a bot. (Before S18b a human who lost to
+//    a bot replayed the match; a save from then with such a replay waiting plays that match once more.)
+//  - Until the first result, the draw can be made again from a new seed (NEW DRAW, S18b).
 // Pure sim code: no DOM. Saving goes through a Store (localStorage, or null when the browser blocks it), as the keymap's.
 import { makeWorld, stepWorld } from './world.js';
 import { makeCpu, cpuActions, cpuRandom } from './cpu.js';
@@ -49,7 +51,8 @@ const SALT = { DRAW: 101, MATCH: 102 };
  * @property {number} seed      the draw's and the skipped matches' seed (a 32-bit integer)
  */
 /**
- * One match's outcome so far. scores are [upper's, lower's]; losses: times a human lost it to a bot (replayed).
+ * One match's outcome so far. scores are [upper's, lower's]; losses: always 0 since S18b (before it, the times a human
+ * lost it to a bot and replayed it; kept so old saves load and the matches' seeds stay the same).
  * @typedef {{ winner: number | null, scores: [number, number] | null, skipped: boolean, losses: number }} Played
  */
 /**
@@ -72,7 +75,6 @@ const SALT = { DRAW: 101, MATCH: 102 };
  * @property {number} level        the pace and the bots' level (level 5 for two humans)
  * @property {boolean} mustPlay    a human is in it (else it can be watched or skipped)
  * @property {number} seed         the match's seed (a skipped or watched bots' match is the same every time)
- * @property {number} attempt      1, or more after a human lost it to a bot
  */
 /** @typedef {{ getItem(k: string): string | null, setItem(k: string, v: string): void, removeItem?(k: string): void }} Store */
 
@@ -164,7 +166,7 @@ export function playersOf(t, r, i) {
   return [t.rounds[r - 1][2 * i].winner, t.rounds[r - 1][2 * i + 1].winner];
 }
 
-/** The match's seed: the tournament's, its place and the attempt, hashed. @param {Tournament} t @param {number} r @param {number} i */
+/** The match's seed: the tournament's, its place and `losses` (0 since S18b; an old save's waiting replay keeps its own), hashed. @param {Tournament} t @param {number} r @param {number} i */
 function matchSeed(t, r, i) {
   return Math.floor(cpuRandom(t.setup.seed, SALT.MATCH, r, i, t.rounds[r][i].losses) * 2 ** 32) | 0;
 }
@@ -185,7 +187,7 @@ export function matchInfo(t, r, i) {
     round: r, index: i, name: roundNameOf(s.size, r), players: [a, b], sides, cpu,
     length: roundLength(s.mode, s.length, r, t.rounds.length),
     level: cpu[0] || cpu[1] ? s.level : DEFAULT_LEVEL,
-    mustPlay: ha || hb, seed: matchSeed(t, r, i), attempt: t.rounds[r][i].losses + 1,
+    mustPlay: ha || hb, seed: matchSeed(t, r, i),
   };
 }
 
@@ -202,29 +204,21 @@ export function nextMatch(t) {
 export const champion = t => t.rounds[t.rounds.length - 1][0].winner;
 
 /**
- * The next match's result. A human's loss to a bot keeps the match to be replayed (a try more); anything else decides
- * it: the winner goes on, and the loser is out (a human beaten by a human too).
+ * The next match's result: the winner goes on and the loser is out, human or bot (S18b: no replays).
  * @param {Tournament} t
  * @param {0 | 1} winnerSide  the world slot that won
  * @param {[number, number]} scores  by world slot
  * @param {boolean} [skipped]  it was skipped (all of it, or the rest of it)
- * @returns {'replay' | 'decided'}
  */
 export function recordResult(t, winnerSide, scores, skipped = false) {
   const info = nextMatch(t);
   if (!info) throw new RangeError('the tournament is over');
   if (!(scores[winnerSide] > scores[1 - winnerSide])) throw new RangeError(`the winner must have more points: ${scores}`);
-  const m = t.rounds[info.round][info.index], s = t.setup;
-  const winner = info.sides[winnerSide], loser = info.sides[1 - winnerSide];
-  if (isHuman(s, loser) && !isHuman(s, winner)) {
-    m.losses++;
-    return 'replay';
-  }
+  const m = t.rounds[info.round][info.index];
   const upperSide = info.sides[0] === info.players[0] ? 0 : 1;
-  m.winner = winner;
+  m.winner = info.sides[winnerSide];
   m.scores = [scores[upperSide], scores[1 - upperSide]];
   m.skipped = skipped;
-  return 'decided';
 }
 
 /**
@@ -265,7 +259,7 @@ export function skipMatch(t) {
 
 /**
  * SKIP BOT MATCHES (A12): skip every bots' match in bracket order up to the next match with a human in it (or the
- * end), each exactly as skipMatch does it (the real sim, its own seed), so the bracket is the same as skipping them
+ * end: with every human out, S18b, that is the champion), each exactly as skipMatch does it (the real sim, its own seed), so the bracket is the same as skipping them
  * one by one.
  * @param {Tournament} t @returns {MatchInfo[]} the matches skipped, in order
  */
@@ -277,23 +271,37 @@ export function skipBotMatches(t) {
 }
 
 /**
- * A human's tournament so far: matches won, tries (matches played to the end, the lost ones replayed included), and
- * the round a human knocked them out in (null if not out).
+ * An entrant's tournament so far (S18b: no tries): matches won, the round they went out in (null if not out), and
+ * whether they won it.
  * @param {Tournament} t @param {number} h
- * @returns {{ wins: number, tries: number, out: string | null }}
+ * @returns {{ wins: number, out: string | null, champion: boolean }}
  */
 export function humanRecord(t, h) {
-  let wins = 0, tries = 0, out = null;
+  let wins = 0, out = null;
   t.rounds.forEach((round, r) => round.forEach((m, i) => {
     const [a, b] = playersOf(t, r, i);
-    if (a !== h && b !== h) return;
-    tries += m.losses;
-    if (m.winner === null) return;
-    tries++;
+    if ((a !== h && b !== h) || m.winner === null) return;
     if (m.winner === h) wins++;
     else out = roundNameOf(t.setup.size, r);
   }));
-  return { wins, tries, out };
+  return { wins, out, champion: champion(t) === h };
+}
+
+/**
+ * The draw is fixed once a match has a result (or, in a save from before S18b, a human has lost one to a bot).
+ * @param {Tournament} t
+ */
+export const drawFixed = t => t.rounds.some(round => round.some(m => m.winner !== null || m.losses > 0));
+
+/**
+ * NEW DRAW (S18b): a new seed, so a new draw and new match seeds, keeping the setup and every entrant's character.
+ * Only before the first result.
+ * @param {Tournament} t @param {number} seed  a new 32-bit seed
+ */
+export function newDraw(t, seed) {
+  if (drawFixed(t)) throw new RangeError('the draw is fixed once a match has a result');
+  t.setup.seed = seed | 0;
+  t.order = drawOrder(t.setup.size, t.setup.seed);
 }
 
 /** What's wrong with a saved tournament ('' if nothing). @param {any} t @returns {string} */

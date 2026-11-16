@@ -1,11 +1,13 @@
 // The tournament's rules (js/sim/tournament.js; docs/decisions.md, "Tournament"): the rising lengths, the draw, the
-// match order, who must play, results and replays, skipped matches with the real sim, saving and loading.
+// match order, who must play, results (out on a loss since S18b), skipped matches with the real sim, saving and
+// loading, old saves, NEW DRAW.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SIZES, roundCount, roundName, roundLength, lengthsFor, entrantLabel, drawOrder, makeTournament, nextMatch,
   recordResult, skipMatch, champion, humanRecord, playOut, matchWorld, saveTournament, loadTournament, clearTournament,
-  tournamentProblem, setupProblem, TOURNAMENT_KEY, SETUP_SIZES, skipBotMatches } from '../public/hogg-squash/js/sim/tournament.js';
-import { makeCpu, cpuActions } from '../public/hogg-squash/js/sim/cpu.js';
+  tournamentProblem, setupProblem, TOURNAMENT_KEY, SETUP_SIZES, skipBotMatches, drawFixed, newDraw }
+  from '../public/hogg-squash/js/sim/tournament.js';
+import { makeCpu, cpuActions, cpuRandom } from '../public/hogg-squash/js/sim/cpu.js';
 import { stepWorld } from '../public/hogg-squash/js/sim/world.js';
 import { MATCH_LENGTHS } from '../public/hogg-squash/js/sim/match.js';
 
@@ -106,41 +108,142 @@ test('the match order: bracket order, a round at a time; sides, pace and who mus
   }
   assert.deepEqual(seen, [[0, 0], [0, 1], [0, 2], [0, 3], [1, 0], [1, 1], [2, 0]]);
   assert.equal(nextMatch(t), null);
-  assert.ok(/** @type {number} */ (champion(t)) < 2, 'a human always wins');
+  assert.ok(/** @type {number} */ (champion(t)) < 2, 'the humans won every match, so a human is champion');
 });
 
-test('results: a human\'s loss to a bot is replayed (a try more); a win moves on; two humans: the loser is out', () => {
-  // 4 players, 2 humans: find a draw where the humans are in different halves, so they meet in the final
+/** A seed whose 4-player draw puts the two humans in different halves (so they can meet in the final). */
+function splitSeed() {
   let seed = 0;
-  while (true) {
+  for (;;) {
     const o = drawOrder(4, seed);
-    if (Math.floor(o.indexOf(0) / 2) !== Math.floor(o.indexOf(1) / 2)) break;
+    if (Math.floor(o.indexOf(0) / 2) !== Math.floor(o.indexOf(1) / 2)) return seed;
     seed++;
   }
-  const t = makeTournament(setup({ size: 4, humans: 2, seed }));
+}
+
+test('S18b: results: every match once; a win moves on; two humans: the loser is out', () => {
+  const t = makeTournament(setup({ size: 4, humans: 2, seed: splitSeed() }));
   let m = /** @type {any} */ (nextMatch(t));
   assert.equal(m.sides[0], m.players.find((/** @type {number} */ e) => e < 2));
-  const firstSeed = m.seed;
-  assert.equal(win(t, 1), 'replay', 'the bot won');
-  m = nextMatch(t);
-  assert.deepEqual([m.round, m.index, m.attempt], [0, 0, 2], 'the same match again');
-  assert.notEqual(m.seed, firstSeed, 'a replay gets a new seed');
-  assert.equal(win(t, 1), 'replay');
-  assert.equal(win(t, 0), 'decided');
+  assert.equal('attempt' in m, false, 'no tries any more');
+  win(t, 0);
   const h0 = t.rounds[0][0].winner;
-  assert.equal(win(t, 0), 'decided');                         // the other human beats their bot first time
+  win(t, 0);                                                   // the other human beats their bot too
   m = nextMatch(t);
   assert.equal(m.name, 'FINAL');
   assert.equal(m.mustPlay, true);
   assert.deepEqual(m.cpu, [false, false]);
   assert.equal(m.sides[0], h0, 'the upper slot is P1');
-  assert.equal(win(t, 1), 'decided', 'a human beaten by a human is out, not replayed');
+  win(t, 1);
   const champ = /** @type {number} */ (champion(t));
   assert.equal(champ, m.sides[1]);
-  assert.deepEqual(humanRecord(t, h0), { wins: 1, tries: 4, out: 'FINAL' });
-  assert.deepEqual(humanRecord(t, champ), { wins: 2, tries: 2, out: null });
+  assert.deepEqual(humanRecord(t, h0), { wins: 1, out: 'FINAL', champion: false });
+  assert.deepEqual(humanRecord(t, champ), { wins: 2, out: null, champion: true });
   assert.deepEqual(t.rounds[1][0].scores, [3, 5], 'scores kept as upper, lower');
   assert.throws(() => win(t, 0), /over/);
+});
+
+test('S18b: a human who loses to a bot is out, the bot goes on, and the tournament plays on to a bot champion', () => {
+  // one human, 8 players: out in the first round, then every bots' match is skipped to the end
+  const t = makeTournament(setup({ size: 8, humans: 1, seed: 31 }));
+  for (let m = nextMatch(t); m && !m.mustPlay; m = nextMatch(t)) skipMatch(t);
+  const m = /** @type {any} */ (nextMatch(t)), bot = m.sides[1];
+  assert.equal(m.sides[0], 0);
+  win(t, 1);                                                   // the bot wins
+  const played = t.rounds[m.round][m.index];
+  assert.equal(played.winner, bot, 'the bot goes on');
+  assert.equal(played.losses, 0, 'no replay counted');
+  assert.notDeepEqual([nextMatch(t)?.round, nextMatch(t)?.index], [m.round, m.index], 'not the same match again');
+  const left = t.rounds.flat().filter(r => r.winner === null).length;
+  const skipped = skipBotMatches(t);
+  assert.equal(skipped.length, left, 'SKIP BOT MATCHES runs to the end');
+  assert.ok(skipped.every(n => !n.mustPlay && !n.players.includes(0)), 'every match left is a bots\' one; the human is out');
+  assert.equal(nextMatch(t), null);
+  const champ = /** @type {number} */ (champion(t));
+  assert.ok(champ >= 1, 'a bot is champion');
+  assert.deepEqual(humanRecord(t, 0), { wins: m.round, out: roundName(8 >> m.round), champion: false });
+  assert.equal(humanRecord(t, champ).champion, true);
+
+  // two humans, 4 players, both lose to bots in the first round
+  const two = makeTournament(setup({ size: 4, humans: 2, seed: splitSeed() }));
+  win(two, 1);
+  win(two, 1);
+  assert.deepEqual(two.rounds[0].map(r => r.winner).every(w => w !== null && w >= 2), true, 'both bots go on');
+  const fin = /** @type {any} */ (nextMatch(two));
+  assert.equal(fin.mustPlay, false);
+  assert.equal(skipBotMatches(two).length, 1, 'the final, skipped');
+  assert.ok(/** @type {number} */ (champion(two)) >= 2);
+  for (const h of [0, 1]) assert.deepEqual(humanRecord(two, h), { wins: 0, out: 'SEMI-FINAL', champion: false });
+});
+
+test('S18b: with every human out, SKIP BOT MATCHES gives the same bracket as skipping one by one', () => {
+  for (const [size, seed] of [[16, 4242], [8, 9], [4, 3], [16, 77]]) {
+    const s = setup({ size, humans: 2, level: 6, seed });
+    const one = makeTournament(s), all = makeTournament(s);
+    for (let guard = 0; nextMatch(all) && guard < 100; guard++) {
+      const m = /** @type {any} */ (nextMatch(all));
+      if (m.mustPlay) {                                        // every human loses (to a bot, or to the other human)
+        const loseSide = m.cpu[1] ? 1 : 0;
+        win(all, loseSide);
+        win(one, loseSide);
+        continue;
+      }
+      const skipped = skipBotMatches(all);
+      for (const k of skipped) {
+        const n = /** @type {any} */ (nextMatch(one));
+        assert.deepEqual([n.round, n.index], [k.round, k.index]);
+        skipMatch(one);
+      }
+      assert.deepEqual(one.rounds, all.rounds, `${size}: the same bracket`);
+    }
+    assert.equal(nextMatch(all), null, `${size}: played to the end`);
+    assert.ok(/** @type {number} */ (champion(all)) >= 2, `${size}: a bot is champion`);
+  }
+});
+
+test('S18b: the matches\' seeds are as before (losses still 0)', () => {
+  const t = makeTournament(setup({ size: 8, humans: 1, seed: 555 }));
+  for (let m = nextMatch(t); m; m = nextMatch(t)) {
+    assert.equal(m.seed, Math.floor(cpuRandom(555, 102, m.round, m.index, 0) * 2 ** 32) | 0);
+    if (m.mustPlay) win(t, 1); else skipMatch(t);
+  }
+});
+
+test('S18b: an old save with a lost match waiting for its replay loads and plays it once more', () => {
+  const store = memStore();
+  const t = makeTournament(setup({ size: 8, humans: 1, seed: 21 }));
+  for (let m = nextMatch(t); m && !m.mustPlay; m = nextMatch(t)) skipMatch(t);
+  const m = /** @type {any} */ (nextMatch(t));
+  t.rounds[m.round][m.index].losses = 2;                       // as S17 saved it: lost twice to the bot, to replay
+  saveTournament(store, t);
+  const back = /** @type {any} */ (loadTournament(store));
+  assert.ok(back, 'it loads');
+  const again = /** @type {any} */ (nextMatch(back));
+  assert.deepEqual([again.round, again.index], [m.round, m.index], 'the same match, once more');
+  assert.equal(again.seed, Math.floor(cpuRandom(21, 102, m.round, m.index, 2) * 2 ** 32) | 0, 'with the seed it had');
+  assert.equal(drawFixed(back), true, 'its draw is fixed');
+  win(back, 1);                                                // lost again: now the human is out
+  assert.equal(back.rounds[m.round][m.index].winner, m.sides[1]);
+  assert.notDeepEqual([nextMatch(back)?.round, nextMatch(back)?.index], [m.round, m.index]);
+});
+
+test('S18b: NEW DRAW keeps the setup and characters, changes the order and seeds, only before the first result', () => {
+  const t = makeTournament(setup({ size: 16, humans: 2, seed: 1 }));
+  const before = structuredClone(t);
+  assert.equal(drawFixed(t), false);
+  newDraw(t, 2);
+  assert.deepEqual({ ...t.setup, seed: 0 }, { ...before.setup, seed: 0 }, 'the setup and characters kept');
+  assert.equal(t.setup.seed, 2);
+  assert.deepEqual(t.order, drawOrder(16, 2));
+  assert.notDeepEqual(t.order, before.order, 'a different draw');
+  assert.deepEqual(t.rounds, before.rounds, 'nothing played');
+  assert.notEqual(nextMatch(t)?.seed, nextMatch(before)?.seed, 'new match seeds');
+  const store = memStore();
+  saveTournament(store, t);
+  assert.deepEqual(loadTournament(store)?.order, t.order, 'saved');
+  if (nextMatch(t)?.mustPlay) win(t, 0); else skipMatch(t);
+  assert.equal(drawFixed(t), true);
+  assert.throws(() => newDraw(t, 3), /fixed/);
 });
 
 test('a result must have a winner with more points', () => {

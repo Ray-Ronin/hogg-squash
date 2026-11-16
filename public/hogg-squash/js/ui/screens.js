@@ -17,13 +17,18 @@
 //   the bracket → the next match: a human's goes to the controllers screen and is played; a bots' one is watched or
 //   skipped (or SKIP BOT MATCHES skips them all up to the next human's, S18) → the result → back to the bracket → … →
 //   the champion → the title. A played or watched match starts with its round's title card (S18, A12's look).
+//   Every match is played once: a human who loses is out, and the rest goes on (to a bot champion if every human is
+//   out; S18b). Until the first result the bracket offers NEW DRAW (a new seed, the same setup and characters).
+// Random buttons (S18b): the characters screen's row ends with a "?" card (picking it picks a random character, shown
+// at once; undo goes back to "?"); the tournament's slots cycle through "?" too (rolled on that human's OK, or at
+// START), and RANDOM BOTS gives every bot a new random character.
 //   In a tournament match the pause menu quits to the title (the tournament stays saved; that match starts again) and,
 //   in a bots' match, has Skip match; the result screen only goes back to the bracket.
 // Each screen's drawing is in its own file in js/ui/; the menus' words are here, so the tests can check the font.
 import { MATCH_LENGTHS } from '../sim/match.js';
 import { LEVELS, DEFAULT_LEVEL } from '../sim/difficulty.js';
-import { SETUP_SIZES, TOURNAMENT_DEFAULTS, makeTournament, nextMatch, recordResult, skipMatch, skipBotMatches, champion }
-  from '../sim/tournament.js';
+import { SETUP_SIZES, TOURNAMENT_DEFAULTS, makeTournament, nextMatch, recordResult, skipMatch, skipBotMatches, champion,
+  drawFixed, newDraw } from '../sim/tournament.js';
 import { ACTIONS, defaultLayouts, refusal, duplicateNote, keyLabel, resetLayouts, laptopPreset } from '../input/keymap.js';
 import { defaultSound, SOUND_LEVELS } from '../audio/audio.js';
 
@@ -39,14 +44,14 @@ import { defaultSound, SOUND_LEVELS } from '../audio/audio.js';
 /**
  * @typedef {object} TourUi
  * @property {TourDraft} draft
- * @property {string[]} chars    the characters screen's picks, one per entrant
+ * @property {string[]} chars    the characters screen's picks, one per entrant (RANDOM_CHAR: "?", rolled on OK or START)
  * @property {import('../sim/tournament.js').Tournament | null} t  the tournament under way (and saved), or null
  * @property {import('../sim/tournament.js').MatchInfo | null} match  the tournament match being played, or about to
  *   be on the round title card (null: a single match)
  * @property {boolean} watch     the round title card is before a watched bots' match (else a human's, to play)
  * @property {boolean} skipping  the rest of the match is being played out (Skip match from the pause menu)
- * @property {{ info: import('../sim/tournament.js').MatchInfo, outcome: 'replay' | 'decided' } | null} last  the last
- *   tournament match's result (the result screen)
+ * @property {{ info: import('../sim/tournament.js').MatchInfo } | null} last  the last tournament match played (the
+ *   result screen)
  */
 /**
  * @typedef {{ players: 1 | 2, target: number, level: number, picks: string[] }} Settings  target: points to win; level:
@@ -85,10 +90,11 @@ import { defaultSound, SOUND_LEVELS } from '../audio/audio.js';
  * @property {import('../audio/audio.js').SoundSettings} sound  the Effects level (the options) and Sound on/off (the
  *   pause menu; the speaker button changes it too)
  * @property {string[]} roster   the characters' ids, in the roster's order (empty until loaded, or if it failed)
- * @property {{ at: number[], locked: boolean[] }} pick  the characters screen: each side's character (an index into
- *   roster) and whether it's picked (in 1P the CPU's side is always picked)
- * @property {() => number} rand  random numbers in [0, 1) for the CPU's pick, the bots' characters and a new
- *   tournament's seed (Math.random; never the sim's)
+ * @property {{ at: number[], locked: boolean[], rolled: boolean[] }} pick  the characters screen: each side's
+ *   character (an index into roster; roster.length is the "?" card), whether it's picked (in 1P the CPU's side is
+ *   always picked), and whether the pick was rolled from "?" (undo goes back to it)
+ * @property {() => number} rand  random numbers in [0, 1) for the CPU's pick, the random picks, the bots' characters
+ *   and a new tournament's seed or draw (Math.random; never the sim's)
  * @property {TourUi} tour  the tournament's screens
  */
 
@@ -124,10 +130,20 @@ export const MODE_LABELS = { same: 'SAME', rising: 'RISING' };
 export const SKIP_BOTS = 'SKIP BOT MATCHES';
 export const BRACKET_ITEMS = { play: ['PLAY', 'QUIT TO TITLE'], bots: ['WATCH', 'SKIP', SKIP_BOTS, 'QUIT TO TITLE'],
   done: ['SEE THE CHAMPION', 'QUIT TO TITLE'] };
+/** NEW DRAW (S18b): on the bracket before QUIT TO TITLE, only until the first result. */
+export const NEW_DRAW = 'NEW DRAW';
+/** With five items the bracket shows them in two columns, this many in the first (left / right move between them). */
+export const BRACKET_COL = 3;
 export const CHAMPION_ITEMS = ['BACK TO THE TITLE'];
-/** Taps on the tournament's characters screen beyond the slots (0 … size − 1): START, and the big figure (another). */
+/** Taps on the tournament's characters screen beyond the slots (0 … size − 1): START, the big figure (another), and
+ * RANDOM BOTS. */
 export const TSELECT_START = 1000;
 export const TSELECT_NEXT = 1001;
+export const TSELECT_BOTS = 1002;
+/** The tournament characters screen's item that gives every bot a new random character (only when there are bots). */
+export const RANDOM_BOTS = 'RANDOM BOTS';
+/** A tournament slot left on "?": it gets a random character on that human's OK, or at START (S18b). */
+export const RANDOM_CHAR = '?';
 /** The options screen's buttons, under its 6 rows × 2 players of keys (selections 0–11, P1 then P2 on each row). */
 export const OPTION_ITEMS = ['LAPTOP KEYS FOR P2', 'RESET TO DEFAULTS', 'KEY TEST', 'EFFECTS', 'BACK'];
 /** The first button's selection. */
@@ -155,8 +171,13 @@ export function bracketItems(ui) {
   const t = ui.tour.t;
   if (!t) return [];
   const m = nextMatch(t);
-  return !m ? BRACKET_ITEMS.done : m.mustPlay ? BRACKET_ITEMS.play : BRACKET_ITEMS.bots;
+  const items = !m ? BRACKET_ITEMS.done : m.mustPlay ? BRACKET_ITEMS.play : BRACKET_ITEMS.bots;
+  return m && !drawFixed(t) ? [...items.slice(0, -1), NEW_DRAW, items[items.length - 1]] : items;
 }
+/** The tournament characters screen's items after the slots: RANDOM BOTS (when there are bots), START. @param {Ui} ui */
+export const tselectItems = ui => (ui.tour.draft.humans < ui.tour.draft.size ? [RANDOM_BOTS, 'START'] : ['START']);
+/** The selection of the tournament characters screen's START. @param {Ui} ui */
+export const tselectStart = ui => ui.tour.draft.size + tselectItems(ui).length - 1;
 /** The most humans the setup allows: the bracket's size, or one with the touch controls (touch is 1P only). @param {Ui} ui */
 export const maxHumans = ui => (ui.touch ? 1 : ui.tour.draft.size);
 
@@ -183,7 +204,8 @@ export function setTouch(ui, on) {
  */
 export function makeUi(settings = {}, screen = 'title', keys = defaultLayouts(), sound = defaultSound()) {
   return { screen, settings: { ...DEFAULT_SETTINGS, picks: [], ...settings }, sel: 0, inMatch: false, keys, listen: false,
-    note: '', touch: false, sound, roster: [], pick: { at: [0, 0], locked: [false, false] }, rand: Math.random,
+    note: '', touch: false, sound, roster: [], pick: { at: [0, 0], locked: [false, false], rolled: [false, false] },
+    rand: Math.random,
     tour: { draft: { ...TOURNAMENT_DEFAULTS }, chars: [], t: null, match: null, watch: false, skipping: false, last: null } };
 }
 
@@ -317,7 +339,7 @@ export function navigate(ui, nav, side = null) {
         toBracket(ui);
       } else if (nav === 'back') {
         if (ui.roster.length) {                           // back to the characters, both choosing again
-          ui.pick.locked = [false, s.players === 1];
+          [0, 1].forEach(side => { if (!(s.players === 1 && side === 1)) unpick(ui, side); });
           go(ui, 'select');
         } else backFromSelect(ui);
       }
@@ -465,26 +487,42 @@ function toTourSelect(ui) {
   return null;
 }
 
+/** A random character from the roster (a mirror allowed). @param {Ui} ui */
+const randomChar = ui => ui.roster[Math.min(ui.roster.length - 1, Math.floor(ui.rand() * ui.roster.length))];
+
+/** A tournament slot on "?" gets its random character. @param {Ui} ui @param {number} e */
+function rollSlot(ui, e) {
+  if (ui.tour.chars[e] === RANDOM_CHAR) ui.tour.chars[e] = randomChar(ui);
+}
+
 /**
- * The characters screen: up / down move through the slots (and START), left / right change the selected slot's
- * character; OK on a human goes on to the next human (the last one to START), on a bot to START, on START begins.
- * Any player's controls work it (each human picks in turn). @param {Ui} ui @param {Nav} nav @returns {Effect}
+ * The characters screen: up / down move through the slots, RANDOM BOTS (if there are bots) and START; left / right
+ * change the selected slot's character, through the roster and then "?"; OK on a human rolls a "?" and goes on to the
+ * next human (the last one to START), on a bot to START; RANDOM BOTS gives every bot a new random character; START
+ * rolls any "?" left and begins. Any player's controls work it (each human picks in turn).
+ * @param {Ui} ui @param {Nav} nav @returns {Effect}
  */
 function tourSelect(ui, nav) {
-  const d = ui.tour.draft, n = ui.roster.length, START = d.size;
-  if (nav === 'up' || nav === 'down') upDown(ui, nav, d.size + 1);
-  else if ((nav === 'left' || nav === 'right') && ui.sel < START) {
-    const c = ui.tour.chars, i = Math.max(0, ui.roster.indexOf(c[ui.sel]));
-    c[ui.sel] = ui.roster[(i + (nav === 'left' ? n - 1 : 1)) % n];
+  const d = ui.tour.draft, n = ui.roster.length, START = tselectStart(ui), items = tselectItems(ui);
+  if (nav === 'up' || nav === 'down') upDown(ui, nav, d.size + items.length);
+  else if ((nav === 'left' || nav === 'right') && ui.sel < d.size) {
+    const c = ui.tour.chars, at = c[ui.sel] === RANDOM_CHAR ? n : Math.max(0, ui.roster.indexOf(c[ui.sel]));
+    const i = (at + (nav === 'left' ? n : 1)) % (n + 1);           // the roster, then "?"
+    c[ui.sel] = i === n ? RANDOM_CHAR : ui.roster[i];
   } else if (isOk(nav) && ui.sel === START) return startTournament(ui);
-  else if (isOk(nav)) ui.sel = ui.sel < d.humans - 1 ? ui.sel + 1 : START;
-  else if (nav === 'back') go(ui, 'tsetup', T_START);
+  else if (isOk(nav) && ui.sel >= d.size) {                        // RANDOM BOTS (the humans keep theirs)
+    for (let e = d.humans; e < d.size; e++) ui.tour.chars[e] = randomChar(ui);
+  } else if (isOk(nav)) {
+    if (ui.sel < d.humans) rollSlot(ui, ui.sel);
+    ui.sel = ui.sel < d.humans - 1 ? ui.sel + 1 : START;
+  } else if (nav === 'back') go(ui, 'tsetup', T_START);
   return null;
 }
 
-/** The draw is made from a new seed and the bracket shown (the tournament is saved). @param {Ui} ui @returns {Effect} */
+/** Any "?" left is rolled, the draw is made from a new seed and the bracket shown (it is saved). @param {Ui} ui @returns {Effect} */
 function startTournament(ui) {
   const d = ui.tour.draft;
+  ui.tour.chars.forEach((_, e) => rollSlot(ui, e));
   ui.tour.t = makeTournament({ size: d.size, humans: Math.min(d.humans, d.size), mode: d.mode,
     length: d.mode === 'same' ? d.same : d.start, level: d.level, chars: [...ui.tour.chars],
     seed: Math.floor(ui.rand() * 2 ** 32) | 0 });
@@ -504,7 +542,9 @@ function toBracket(ui) {
 /**
  * The bracket: up / down the items. PLAY or WATCH: the round title card, then (PLAY) the controllers screen and the
  * match or (WATCH) the match at once; SKIP: played instantly (and saved); SKIP BOT MATCHES: every bots' match up to
- * the next human's, the same way; SEE THE CHAMPION; QUIT TO TITLE (it stays saved).
+ * the next human's (or the champion, with every human out), the same way; NEW DRAW (before the first result): a new
+ * seed (saved); SEE THE CHAMPION; QUIT TO TITLE (it stays saved). With five items (two columns) left / right move
+ * between the columns.
  * @param {Ui} ui @param {Nav} nav @returns {Effect}
  */
 function bracket(ui, nav) {
@@ -512,7 +552,12 @@ function bracket(ui, nav) {
   if (!t) return null;
   const items = bracketItems(ui), item = items[ui.sel];
   if (nav === 'up' || nav === 'down') upDown(ui, nav, items.length);
-  else if (nav === 'back' || (isOk(nav) && item === 'QUIT TO TITLE')) go(ui, 'title', TOURNAMENT);
+  else if ((nav === 'left' || nav === 'right') && items.length > 4)
+    ui.sel = nav === 'left' ? Math.max(0, ui.sel - BRACKET_COL) : Math.min(items.length - 1, ui.sel + BRACKET_COL);
+  else if (isOk(nav) && item === NEW_DRAW) {
+    newDraw(t, Math.floor(ui.rand() * 2 ** 32) | 0);
+    return 'tsave';                                        // still on NEW DRAW, for another
+  } else if (nav === 'back' || (isOk(nav) && item === 'QUIT TO TITLE')) go(ui, 'title', TOURNAMENT);
   else if (isOk(nav) && item === 'SEE THE CHAMPION') go(ui, 'champion');
   else if (isOk(nav) && item === 'SKIP') {
     skipMatch(t);
@@ -629,18 +674,18 @@ export function tap(ui, sel) {
     changeSetup(ui, sel, 1, true);
     return null;
   }
-  if (ui.screen === 'tselect') {               // a slot: select it; the big figure: another character; START
-    if (sel === TSELECT_START) {
-      ui.sel = ui.tour.draft.size;
+  if (ui.screen === 'tselect') {               // a slot: select it; the big figure: another character; START; RANDOM BOTS
+    if (sel === TSELECT_START || sel === TSELECT_BOTS) {
+      ui.sel = sel === TSELECT_START ? tselectStart(ui) : ui.tour.draft.size;
       return navigate(ui, 'ok');
     }
     if (sel === TSELECT_NEXT) return navigate(ui, 'right');
     if (sel !== null && sel < ui.tour.draft.size) ui.sel = sel;
     return null;
   }
-  if (ui.screen === 'select') {                // touch is 1P: a character is P1's pick; the CPU's panel rolls again
+  if (ui.screen === 'select') {                // touch is 1P: a character (or "?") is P1's pick; the CPU's panel rolls again
     if (sel === SELECT_REROLL) return navigate(ui, 'down', 0);
-    if (sel === null || sel >= ui.roster.length) return null;
+    if (sel === null || sel > ui.roster.length || ui.pick.locked[0]) return null;
     ui.pick.at[0] = sel;
     return navigate(ui, 'ok', 0);
   }
@@ -670,9 +715,17 @@ function toSelect(ui) {
   if (!n) return toAssign(ui);
   const at = pickIndices(s, ui.roster);
   if (s.players === 1) at[1] = Math.min(n - 1, Math.floor(ui.rand() * n));
-  ui.pick = { at, locked: [false, s.players === 1] };
+  ui.pick = { at, locked: [false, s.players === 1], rolled: [false, false] };
   go(ui, 'select');
   return null;
+}
+
+/** Undo a side's pick; one rolled from "?" goes back to the "?" card. @param {Ui} ui @param {number} side */
+function unpick(ui, side) {
+  const p = ui.pick;
+  p.locked[side] = false;
+  if (p.rolled[side]) p.at[side] = ui.roster.length;
+  p.rolled[side] = false;
 }
 
 /** The CPU picks another character, never the one it had (1P). @param {Ui} ui */
@@ -682,9 +735,11 @@ export function reroll(ui) {
 }
 
 /**
- * A move on the characters screen. Left / right move that side's choice (wrapping), OK picks it, back undoes the pick
- * (or, with nothing picked, goes back a screen); when every side has picked, the picks are kept and the controllers
- * screen comes up. In 1P every control is P1's, and up / down rolls the CPU's pick again. A mirror match is allowed.
+ * A move on the characters screen. Left / right move that side's choice through the roster and the "?" card
+ * (wrapping), OK picks it ("?" picks a random character, S18b), back undoes the pick (a rolled one goes back to "?";
+ * with nothing picked, back a screen); when every side has picked, the picks are kept (a rolled character stays for a
+ * rematch) and the controllers screen comes up. In 1P every control is P1's, and up / down rolls the CPU's pick
+ * again. A mirror match is allowed.
  * @param {Ui} ui @param {Nav} nav @param {0 | 1 | null} side @returns {Effect}
  */
 function select(ui, nav, side) {
@@ -692,17 +747,22 @@ function select(ui, nav, side) {
   /** @type {0 | 1} */
   const who = one ? 0 : side ?? (nav === 'back' ? (p.locked[1] ? 1 : 0) : (p.locked[0] ? 1 : 0));
   if (nav === 'left' || nav === 'right') {
-    if (!p.locked[who]) p.at[who] = (p.at[who] + (nav === 'left' ? n - 1 : 1)) % n;
+    if (!p.locked[who]) p.at[who] = (p.at[who] + (nav === 'left' ? n : 1)) % (n + 1);
   } else if (nav === 'up' || nav === 'down') {
     if (one) reroll(ui);
   } else if (isOk(nav)) {
+    if (p.locked[who]) return null;
+    if (p.at[who] >= n) {                                    // the "?" card: a random character, shown as PICKED
+      p.at[who] = Math.min(n - 1, Math.floor(ui.rand() * n));
+      p.rolled[who] = true;
+    }
     p.locked[who] = true;
     if (p.locked.every(Boolean)) {
       s.picks = p.at.map(i => ui.roster[i]);
       return toAssign(ui);
     }
   } else if (nav === 'back') {
-    if (p.locked[who] && !(one && who === 1)) p.locked[who] = false;
+    if (p.locked[who] && !(one && who === 1)) unpick(ui, who);
     else backFromSelect(ui);
   }
   return null;
@@ -716,8 +776,8 @@ function toAssign(ui) {
 }
 
 /**
- * The match has been won: show the result. In a tournament the result is recorded too (a human's loss to a bot is
- * kept to replay), and the tournament is to be saved.
+ * The match has been won: show the result. In a tournament the result is recorded too (the loser is out, S18b), and
+ * the tournament is to be saved.
  * @param {Ui} ui
  * @param {{ winner: 0 | 1, scores: [number, number] }} [end]  the winning slot and the scores by slot
  * @returns {Effect}
@@ -727,7 +787,8 @@ export function matchOver(ui, end) {
   go(ui, 'result');
   const tm = ui.tour.match, t = ui.tour.t;
   if (!tm || !t || !end) return null;
-  ui.tour.last = { info: tm, outcome: recordResult(t, end.winner, end.scores, ui.tour.skipping) };
+  recordResult(t, end.winner, end.scores, ui.tour.skipping);
+  ui.tour.last = { info: tm };
   ui.tour.skipping = false;
   return 'tsave';
 }

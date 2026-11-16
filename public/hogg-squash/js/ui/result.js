@@ -29,11 +29,10 @@ export function resultLine(w, names) {
 export const matchLine = s => (s.players === 1 ? `1 PLAYER, LEVEL ${s.level}, FIRST TO ${s.target}` : `2 PLAYERS, FIRST TO ${s.target}`);
 
 /**
- * …in a tournament: the round and length, and, after a human's loss to a bot, that it's to be played again.
+ * …in a tournament: the round and length.
  * @param {NonNullable<import('./screens.js').TourUi['last']>} last
  */
-export const tourLine = last => `TOURNAMENT, ${last.info.name}, FIRST TO ${last.info.length}${
-  last.outcome === 'replay' ? ': PLAY IT AGAIN FROM THE BRACKET' : ''}`;
+export const tourLine = last => `TOURNAMENT, ${last.info.name}, FIRST TO ${last.info.length}`;
 
 /**
  * @param {CanvasRenderingContext2D} ctx @param {import('./screens.js').Ui} ui

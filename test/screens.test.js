@@ -371,7 +371,7 @@ test('S15, 1P: level → characters → controllers; P1 starts on Ronin, the CPU
   run(ui, ['ok', 'ok']);                                    // 1P, first to 9
   assert.deepEqual(run(ui, ['ok']), [null], 'no match built yet');
   assert.equal(ui.screen, 'select');
-  assert.deepEqual(ui.pick, { at: [0, 2], locked: [false, true] }, 'P1 on Ronin; the CPU on Ben (0.6 of 4)');
+  assert.deepEqual(ui.pick, { at: [0, 2], locked: [false, true], rolled: [false, false] }, 'P1 on Ronin; the CPU on Ben (0.6 of 4)');
   run(ui, ['down']);                                        // another: never the same one
   assert.notEqual(ui.pick.at[1], 2);
   const cpu = ui.pick.at[1];
@@ -379,7 +379,9 @@ test('S15, 1P: level → characters → controllers; P1 starts on Ronin, the CPU
   assert.equal(ui.pick.at[0], 1, 'P1 on Adam');
   assert.equal(ui.pick.at[1], cpu, 'the CPU keeps its pick');
   run(ui, ['left', 'left']);
-  assert.equal(ui.pick.at[0], 3, 'left from Ronin wraps to Will');
+  assert.equal(ui.pick.at[0], 4, 'left from Ronin wraps to the "?" card (S18b)');
+  run(ui, ['left']);
+  assert.equal(ui.pick.at[0], 3, '…then Will');
   assert.deepEqual(navigate(ui, 'ok', 1), 'prepare', 'in 1P every control is P1\'s, and the CPU has picked');
   assert.equal(ui.screen, 'assign');
   assert.deepEqual(ui.settings.picks, ['will', ['ronin', 'adam', 'ben', 'will'][cpu]]);
@@ -389,7 +391,7 @@ test('S15, 2P: each player picks with their own controls; Enter picks for the fi
   const ui = withRoster();
   run(ui, ['down', 'ok', 'ok']);                            // 2P, first to 9 (no level)
   assert.equal(ui.screen, 'select');
-  assert.deepEqual(ui.pick, { at: [0, 1], locked: [false, false] }, 'P1 on Ronin, P2 on Adam');
+  assert.deepEqual(ui.pick, { at: [0, 1], locked: [false, false], rolled: [false, false] }, 'P1 on Ronin, P2 on Adam');
   navigate(ui, 'right', 1);
   navigate(ui, 'right', 1);
   assert.deepEqual(ui.pick.at, [0, 3], 'P2 moved, P1 didn\'t');
@@ -405,7 +407,7 @@ test('S15, 2P: each player picks with their own controls; Enter picks for the fi
   assert.deepEqual(ui.settings.picks, ['ronin', 'will']);
   run(ui, ['back']);
   assert.equal(ui.screen, 'select', 'back from the controllers goes to the characters');
-  assert.deepEqual(ui.pick, { at: [0, 3], locked: [false, false] }, 'both choosing again, from their picks');
+  assert.deepEqual(ui.pick, { at: [0, 3], locked: [false, false], rolled: [false, false] }, 'both choosing again, from their picks');
   run(ui, ['back']);
   assert.equal(ui.screen, 'length', 'back with nothing picked: the match length (2P)');
 });
@@ -471,13 +473,16 @@ test('S15: the characters screen\'s words are in the font and fit its panel', ()
 
 // --- S17: the tournament's screens ---
 import { TMENU_ITEMS, TCONFIRM_ITEMS, TSETUP_ROWS, BRACKET_ITEMS, RESULT_TOUR_ITEMS, CHAMPION_ITEMS, PAUSE_SKIP,
-  TSELECT_START, TSELECT_NEXT, SKIP_BOTS, cardOver, pauseItems, pauseLabels, resultItems, bracketItems,
+  TSELECT_START, TSELECT_NEXT, TSELECT_BOTS, SKIP_BOTS, NEW_DRAW, RANDOM_BOTS, RANDOM_CHAR, tselectStart, tselectItems, cardOver, pauseItems, pauseLabels, resultItems, bracketItems,
   matchPicks, setTouch, setTournament, setupValues } from '../public/hogg-squash/js/ui/screens.js';
-import { TOUR_TEXT, whoLine, roundsLine, lengthsLine, nextLine, entrantLine, triesLine, recordLine, peopleLine, cardRules,
+import { TOUR_TEXT, whoLine, roundsLine, lengthsLine, nextLine, entrantLine, humanLine, recordLine, peopleLine, cardRules,
   bracketGeometry, cardPlayer, CARD_LAYOUT, setupLabel, SETUP_LAYOUT,
   TSELECT_LAYOUT, BRACKET_LAYOUT, CHAMPION_LAYOUT } from '../public/hogg-squash/js/ui/tournament.js';
 import { tourLine } from '../public/hogg-squash/js/ui/result.js';
-import { nextMatch, champion, makeTournament, roundName } from '../public/hogg-squash/js/sim/tournament.js';
+import { nextMatch, champion, makeTournament, roundName, drawFixed, drawOrder } from '../public/hogg-squash/js/sim/tournament.js';
+
+/** The bracket's items with NEW DRAW before the last while the draw isn't fixed (S18b). @param {any} t @param {string[]} items */
+const drawFixedItems = (t, items) => (drawFixed(t) ? items : [...items.slice(0, -1), NEW_DRAW, items[items.length - 1]]);
 
 /** A ui on the tournament setup, with a roster and listed random numbers. @param {number[]} [rolls] */
 function toSetup(rolls) {
@@ -501,7 +506,7 @@ function startIt(ui) {
   ui.sel = TSETUP_ROWS.length - 1;
   assert.deepEqual(run(ui, ['ok']), [null]);
   assert.equal(ui.screen, 'tselect');
-  ui.sel = ui.tour.draft.size;
+  ui.sel = tselectStart(ui);
   assert.deepEqual(run(ui, ['ok']), ['tsave'], 'the new tournament is saved');
   assert.equal(ui.screen, 'bracket');
 }
@@ -579,8 +584,8 @@ test('S17: the characters: humans in turn, bots random and changeable; START dra
   assert.equal(ui.sel, 1, 'then P2');
   run(ui, ['left', 'ok']);
   assert.equal(c[1], 'ronin');
-  assert.equal(ui.sel, 8, 'then START');
-  run(ui, ['up', 'up', 'up']);
+  assert.equal(ui.sel, 9, 'then START (RANDOM BOTS is 8)');
+  run(ui, ['up', 'up', 'up', 'up']);
   assert.equal(ui.sel, 5);
   const bot = c[5];
   run(ui, ['right']);
@@ -602,13 +607,45 @@ test('S17: the characters: humans in turn, bots random and changeable; START dra
   assert.equal(t.setup.chars.length, 8);
 });
 
-test('S17: the bracket: PLAY a human\'s match, lose it to a bot and replay it; win it; back to the bracket', () => {
+test('S18b: the bracket: PLAY a human\'s match and lose it to a bot: out, and on through the bots\' matches to a bot champion', () => {
+  const ui = toSetup();
+  setRow(ui, 0, 8);
+  startIt(ui);
+  const t = /** @type {any} */ (ui.tour.t);
+  while (!nextMatch(t)?.mustPlay) { ui.sel = 1; run(ui, ['ok']); }     // SKIP until it's the human's turn
+  const m = /** @type {any} */ (nextMatch(t));
+  ui.sel = 0;
+  run(ui, ['ok', 'ok', 'ok']);                                   // PLAY, the card, the controllers
+  assert.equal(matchOver(ui, { winner: 1, scores: [2, 5] }), 'tsave');
+  assert.doesNotMatch(tourLine(/** @type {any} */ (ui.tour.last)), /AGAIN/, 'no replay');
+  run(ui, ['ok']);
+  assert.equal(ui.screen, 'bracket');
+  assert.equal(t.rounds[m.round][m.index].winner, m.sides[1], 'the bot went on');
+  assert.deepEqual(bracketItems(ui), BRACKET_ITEMS.bots, 'every match left is the bots\'');
+  // a watched one, then SKIP BOT MATCHES to the end
+  ui.sel = 0;
+  assert.deepEqual(run(ui, ['ok', 'ok']), [null, 'prepare'], 'WATCH: the card, the match');
+  matchOver(ui, { winner: 0, scores: [5, 3] });
+  run(ui, ['ok']);
+  if (nextMatch(t)) {
+    ui.sel = bracketItems(ui).indexOf(SKIP_BOTS);
+    assert.deepEqual(run(ui, ['ok']), ['tsave']);
+  }
+  assert.equal(nextMatch(t), null, 'SKIP BOT MATCHES ran to the end');
+  assert.ok(/** @type {number} */ (champion(t)) >= 1, 'a bot is champion');
+  assert.deepEqual(bracketItems(ui), BRACKET_ITEMS.done);
+  ui.sel = 0;
+  run(ui, ['ok']);
+  assert.equal(ui.screen, 'champion');
+});
+
+test('S17: the bracket: PLAY a human\'s match and win it; back to the bracket; back from the controllers and the card', () => {
   const ui = toSetup();
   setRow(ui, 0, 4);
   startIt(ui);
   const t = /** @type {any} */ (ui.tour.t);
   while (!nextMatch(t)?.mustPlay) { ui.sel = 1; run(ui, ['ok']); }     // SKIP until it's the human's turn
-  assert.deepEqual(bracketItems(ui), BRACKET_ITEMS.play);
+  assert.deepEqual(bracketItems(ui), drawFixedItems(t, BRACKET_ITEMS.play));
   ui.sel = 0;
   assert.deepEqual(run(ui, ['ok']), [null], 'PLAY: the round title card first');
   assert.equal(ui.screen, 'tcard');
@@ -620,24 +657,14 @@ test('S17: the bracket: PLAY a human\'s match, lose it to a bot and replay it; w
   assert.deepEqual(matchPicks(ui), m.sides.map((/** @type {number} */ e) => t.setup.chars[e]));
   assert.deepEqual(run(ui, ['ok']), ['start']);
   assert.deepEqual(pauseItems(ui), PAUSE_ITEMS, 'no Skip match in a human\'s match');
-  assert.equal(matchOver(ui, { winner: 1, scores: [2, 5] }), 'tsave');
+  assert.equal(matchOver(ui, { winner: 0, scores: [5, 1] }), 'tsave');
   assert.equal(ui.screen, 'result');
   assert.deepEqual(resultItems(ui), RESULT_TOUR_ITEMS);
-  assert.match(tourLine(/** @type {any} */ (ui.tour.last)), /PLAY IT AGAIN/);
+  assert.doesNotMatch(tourLine(/** @type {any} */ (ui.tour.last)), /AGAIN/);
+  assert.doesNotMatch(cardRules(/** @type {any} */ (ui.tour.match)), /TRY/);
   run(ui, ['ok']);
   assert.equal(ui.screen, 'bracket');
   assert.equal(ui.tour.match, null);
-  assert.equal(nextMatch(t)?.attempt, 2, 'the same match, a second try');
-  ui.sel = 0;
-  run(ui, ['ok']);
-  assert.equal(ui.screen, 'tcard', 'a replay has its card too');
-  assert.match(cardRules(/** @type {any} */ (ui.tour.match)), /, TRY 2$/);
-  run(ui, ['ok', 'ok']);
-  assert.equal(matchOver(ui, { winner: 0, scores: [5, 1] }), 'tsave');
-  assert.equal(ui.tour.last?.outcome, 'decided');
-  assert.doesNotMatch(tourLine(/** @type {any} */ (ui.tour.last)), /AGAIN/);
-  run(ui, ['ok']);
-  assert.equal(ui.screen, 'bracket');
   // back from the controllers screen goes to the bracket, not the characters
   while (nextMatch(t) && !nextMatch(t)?.mustPlay) { ui.sel = 1; run(ui, ['ok']); }
   assert.ok(nextMatch(t)?.mustPlay, 'the final has the human in it');
@@ -665,7 +692,7 @@ test('S17: a bots\' match watched, skipped from the bracket, or skipped partway 
   startIt(ui);
   const t = /** @type {any} */ (ui.tour.t);
   toBotsMatch(ui);
-  assert.deepEqual(bracketItems(ui), BRACKET_ITEMS.bots);
+  assert.deepEqual(bracketItems(ui), drawFixedItems(t, BRACKET_ITEMS.bots));
   // SKIP
   const before = /** @type {any} */ (nextMatch(t));
   ui.sel = 1;
@@ -717,7 +744,7 @@ test('S17: quitting mid-match keeps the tournament; Continue, and New asks first
   assert.equal(ui.screen, 'tmenu', 'a tournament is saved: Continue or New');
   run(ui, ['ok']);
   assert.equal(ui.screen, 'bracket');
-  assert.equal(nextMatch(/** @type {any} */ (ui.tour.t))?.attempt, 1, 'the quit match starts again (no try counted)');
+  assert.equal(/** @type {any} */ (ui.tour.t).rounds[0][0].winner, null, 'the quit match starts again');
   run(ui, ['back', 'ok', 'down', 'ok']);
   assert.equal(ui.screen, 'tconfirm');
   assert.equal(ui.sel, 0, 'starts on KEEP IT');
@@ -815,8 +842,8 @@ test('S17: the tournament screens\' words are in the font and fit', () => {
   assert.ok(itemsTop + 3 * B.ITEM_ROW + 14 <= 354 - 2, 'four choices inside the panel');
   for (const r of [32, 16, 8, 4, 2]) fits('large-red', roundName(r), 300);
   fits('large-red', 'THE CHAMPION', 300);
-  assert.equal(nextLine(/** @type {any} */ ({ length: 9, attempt: 1 })), 'NEXT: FIRST TO 9');
-  fits('small-grey', nextLine(/** @type {any} */ ({ length: 11, attempt: 99 })), 590);
+  assert.equal(nextLine(/** @type {any} */ ({ length: 9 })), 'NEXT: FIRST TO 9');
+  fits('small-grey', nextLine(/** @type {any} */ ({ length: 11 })), 590);
   fits('large-white', `${longest}  v  ${entrantLine({ humans: 30 }, 29, 'Coach Zain')}`, 590);
   for (const l of [...BRACKET_ITEMS.bots, ...BRACKET_ITEMS.done, ...RESULT_TOUR_ITEMS, ...CHAMPION_ITEMS, PAUSE_SKIP, 'START'])
     fits('large-white', l, 400);
@@ -825,9 +852,9 @@ test('S17: the tournament screens\' words are in the font and fit', () => {
   // the round title card: every round's name in the 28 px lettering on its band; the rules and the players on it
   const K = CARD_LAYOUT;
   for (const r of [32, 16, 8, 4, 2]) fits('huge-red', roundName(r), K.W - 16);
-  const rules = cardRules(/** @type {any} */ ({ length: 11, cpu: [false, true], level: 9, attempt: 99 }));
-  assert.equal(rules, 'FIRST TO 11, WIN BY 2, LEVEL 9, TRY 99');
-  assert.equal(cardRules(/** @type {any} */ ({ length: 9, cpu: [false, false], level: 5, attempt: 1 })), 'FIRST TO 9, WIN BY 2',
+  const rules = cardRules(/** @type {any} */ ({ length: 11, cpu: [false, true], level: 9 }));
+  assert.equal(rules, 'FIRST TO 11, WIN BY 2, LEVEL 9', 'S18b: no TRY');
+  assert.equal(cardRules(/** @type {any} */ ({ length: 9, cpu: [false, false], level: 5 })), 'FIRST TO 9, WIN BY 2',
     'no level for two humans');
   fits('small-grey', rules, K.W - 16);
   const zainView = { name: () => 'Coach Zain', short: () => 'Zain', t: 0 }, s16 = { humans: 2, chars: Array(16).fill('zain') };
@@ -836,22 +863,206 @@ test('S17: the tournament screens\' words are in the font and fit', () => {
   fits('large-white', cardPlayer(/** @type {any} */ (s16), 15, zainView), K.W / 2 - K.V_GAP - 8);
   fits('large-white', 'BOT 1 Coach Zain', K.W / 2 - K.V_GAP - 8);
   // the result line and the champion's list (big rows; small rows in one column; the short form in two columns)
-  fits('small-grey', tourLine(/** @type {any} */ ({ info: { name: 'QUARTER-FINAL', length: 11 }, outcome: 'replay' })), 560);
+  fits('small-grey', tourLine(/** @type {any} */ ({ info: { name: 'QUARTER-FINAL', length: 11 } })), 560);
   const L = CHAMPION_LAYOUT;
-  fits('small-grey', recordLine({ wins: 9, tries: 99, out: 'QUARTER-FINAL' }), 624 - L.LIST_X - 4);
+  assert.equal(recordLine({ wins: 3, out: null, champion: true }), '3 wins, champion', 'S18b: the records');
+  assert.equal(recordLine({ wins: 1, out: 'SEMI-FINAL', champion: false }), '1 win, out in the SEMI-FINAL');
+  assert.equal(recordLine({ wins: 0, out: 'QUARTER-FINAL', champion: false }), '0 wins, out in the QUARTER-FINAL');
+  fits('small-grey', recordLine({ wins: 9, out: 'QUARTER-FINAL', champion: false }), 624 - L.LIST_X - 4);
+  fits('small-grey', recordLine({ wins: 9, out: 'ROUND OF 16', champion: false }), 624 - L.LIST_X - 4);
   fits('large-white', 'P6 Coach Zain', 624 - L.LIST_X - 4);
   assert.ok(L.LIST_Y + 16 + (L.BIG_MAX - 1) * L.BIG_ROW + 18 + 9 <= L.MENU_Y - 4, 'the big rows above BACK TO THE TITLE');
   const t = makeTournament({ size: 32, humans: 32, mode: 'same', length: 5, level: 5, chars: Array(32).fill('zain'), seed: 1 });
   t.rounds[0].forEach((m, i) => { m.winner = t.order[2 * i]; m.scores = [5, 0]; });
   const loser = t.order[1];
-  const long = triesLine(t, loser, 'Coach Zain').replace(/\d+ tr\w+/, '99 tries').replace(/\d+ wins?/, '9 wins');
+  const long = humanLine(t, loser, 'Coach Zain').replace(/\d+ wins?/, '9 wins').replace('ROUND OF 32', 'QUARTER-FINAL');
+  assert.match(long, /: 9 wins, out in the QUARTER-FINAL$/);
+  assert.doesNotMatch(humanLine(t, loser, 'Coach Zain'), /tr(y|ies)/, 'S18b: no tries');
   fits('small', long.replace(/P\d+/, 'P16'), 624 - L.LIST_X - 4);
-  fits('small', triesLine(t, loser, 'Coach Zain', true).replace(/\d+ tr\w+/, '99 tries'), L.LIST_X2 - L.LIST_X - 6);
-  fits('small', triesLine(t, 31, 'Coach Zain', true).replace(/\d+ tr\w+/, '99 tries'), 624 - L.LIST_X2 - 4);
+  fits('small', humanLine(t, loser, 'Coach Zain', true).replace(/\d+ wins?/, '9 wins'), L.LIST_X2 - L.LIST_X - 6);
+  fits('small', humanLine(t, 31, 'Coach Zain', true).replace(/\d+ wins?/, '9 wins'), 624 - L.LIST_X2 - 4);
   assert.ok(L.LIST_Y + 16 + 16 * L.ROW <= L.MENU_Y - 4);
-  fits('small-red', TOUR_TEXT.tries, 200);
+  fits('small-red', TOUR_TEXT.humans, 200);
   fits('huge-red', TOUR_TEXT.champion, 590);
   fits('small-grey', 'WON THE 16-PLAYER TOURNAMENT', 2 * (L.NAME_X - 16 - 4));
   fits('large-red', TOUR_TEXT.chars, 300);
   fits('small-grey', TOUR_TEXT.change, 120);
+});
+
+// --- S18b: random buttons ---
+import { cardX, SELECT_LAYOUT } from '../public/hogg-squash/js/ui/select.js';
+
+test('S18b, 1P: the "?" card picks a random character; undo goes back to "?"; a rematch keeps the rolled one', () => {
+  const ui = withRoster([0.6, 0.3]);                       // the CPU on Ben (0.6), then P1's roll: Adam (0.3)
+  run(ui, ['ok', 'ok', 'ok']);
+  assert.equal(ui.screen, 'select');
+  run(ui, ['left']);
+  assert.equal(ui.pick.at[0], 4, 'left from Ronin: the "?" card, after the four');
+  assert.equal(navigate(ui, 'ok'), 'prepare', 'picking "?" picks (the CPU has its pick)');
+  assert.equal(ui.pick.at[0], 1, 'a random character: Adam (0.3 of 4)');
+  assert.deepEqual(ui.pick.rolled, [true, false]);
+  assert.deepEqual(ui.settings.picks, ['adam', 'ben']);
+  run(ui, ['back']);                                         // back from the controllers: choosing again
+  assert.equal(ui.screen, 'select');
+  assert.equal(ui.pick.at[0], 4, 'a rolled pick goes back to "?"');
+  ui.rand = () => 0.99;
+  assert.equal(navigate(ui, 'ok'), 'prepare');
+  assert.equal(ui.settings.picks[0], 'will', 'rolled again: Will (0.99 of 4)');
+  run(ui, ['ok']);
+  matchOver(ui);
+  assert.deepEqual(run(ui, ['ok']), ['rematch']);
+  assert.equal(ui.settings.picks[0], 'will', 'the rematch keeps the rolled character, not "random"');
+  // touch: a tap on the "?" card
+  const t = withRoster([0.6, 0.0]);
+  run(t, ['ok', 'ok', 'ok']);
+  assert.equal(tap(t, 5), null, 'past the "?" card: nothing');
+  assert.equal(tap(t, 4), 'prepare', 'a tap on "?" picks a random one');
+  assert.equal(t.settings.picks[0], 'ronin');
+  // the CPU's own roll is unchanged: up / down never lands on "?"
+  const c = withRoster([0.99, 0.99, 0.99]);
+  run(c, ['ok', 'ok', 'ok', 'down', 'down', 'up']);
+  assert.ok(c.pick.at[1] < 4);
+});
+
+test('S18b, 2P: each side has the "?" card; undo returns to it', () => {
+  const ui = withRoster([0.5, 0.0]);
+  run(ui, ['down', 'ok', 'ok']);
+  navigate(ui, 'left', 1);
+  navigate(ui, 'left', 1);
+  assert.equal(ui.pick.at[1], 4, 'P2 on "?" (left from Adam, past Ronin)');
+  navigate(ui, 'left', 0);
+  assert.equal(ui.pick.at[0], 4, 'P1 on "?" too');
+  assert.equal(navigate(ui, 'ok', 1), null);
+  assert.equal(ui.pick.at[1], 2, 'P2 rolled Ben (0.5 of 4)');
+  navigate(ui, 'back', 1);
+  assert.deepEqual([ui.pick.at[1], ui.pick.locked[1]], [4, false], 'undo: back on "?"');
+  navigate(ui, 'ok', 1);
+  assert.equal(navigate(ui, 'ok', 0), 'prepare');
+  assert.equal(ui.settings.picks.length, 2);
+  assert.ok(ui.settings.picks.every(p => ui.roster.includes(p)), 'both roster characters (a mirror allowed)');
+});
+
+test('S18b: the "?" card fits the row beside both figures', () => {
+  const L = SELECT_LAYOUT, n = 5;
+  assert.equal(cardX(0, 4), 224, 'four cards stay where S15 put them');
+  assert.ok(cardX(0, n) - L.CARD_W / 2 >= L.SIDES[0] + 50, 'clear of P1\'s figure');
+  assert.ok(cardX(n - 1, n) + L.CARD_W / 2 <= L.SIDES[1] - 50, 'clear of P2\'s figure');
+});
+
+test('S18b: the tournament\'s "?" (rolled on OK or START) and RANDOM BOTS (the humans keep theirs)', () => {
+  const ui = toSetup([0.0, 0.3, 0.6, 0.99, 0.0, 0.3, 0.6, 0.99]);
+  setRow(ui, 1, 2);
+  ui.sel = 5;
+  run(ui, ['ok']);
+  assert.equal(ui.screen, 'tselect');
+  assert.deepEqual(tselectItems(ui), [RANDOM_BOTS, 'START']);
+  const c = ui.tour.chars;
+  run(ui, ['left']);
+  assert.equal(c[0], RANDOM_CHAR, 'left from Ronin: "?" after the roster');
+  run(ui, ['right']);
+  assert.equal(c[0], 'ronin', 'right from "?" wraps to the first');
+  ui.rand = () => 0.6;
+  run(ui, ['left', 'ok']);
+  assert.equal(c[0], 'ben', 'P1\'s "?" rolled on their OK (0.6 of 4)');
+  assert.equal(ui.sel, 1);
+  run(ui, ['left', 'left']);
+  assert.equal(c[1], RANDOM_CHAR, 'P2 on "?" (left from Adam, past Ronin)');
+  // RANDOM BOTS: every bot new, the humans kept (P2 still on "?")
+  let k = 0;
+  const rolls = [0.0, 0.3, 0.6, 0.99, 0.0, 0.3];
+  ui.rand = () => rolls[k++ % rolls.length];
+  ui.sel = 8;
+  assert.equal(run(ui, ['ok'])[0], null);
+  assert.deepEqual(c.slice(0, 2), ['ben', RANDOM_CHAR], 'the humans keep theirs');
+  assert.deepEqual(c.slice(2), ['ronin', 'adam', 'ben', 'will', 'ronin', 'adam'], 'each bot rolled');
+  assert.equal(ui.sel, 8, 'still on RANDOM BOTS');
+  ui.sel = 3;
+  run(ui, ['left']);
+  assert.equal(c[3], 'ronin');
+  run(ui, ['left']);
+  assert.equal(c[3], RANDOM_CHAR, 'a bot on "?"');
+  // a tap on RANDOM BOTS works too
+  ui.rand = () => 0.99;
+  assert.equal(tap(ui, TSELECT_BOTS), null);
+  assert.deepEqual(c.slice(2), Array(6).fill('will'));
+  c[4] = RANDOM_CHAR;
+  ui.rand = () => 0.3;
+  ui.sel = tselectStart(ui);
+  assert.deepEqual(run(ui, ['ok']), ['tsave'], 'START');
+  const t = /** @type {any} */ (ui.tour.t);
+  assert.deepEqual(t.setup.chars, ['ben', 'adam', 'will', 'will', 'adam', 'will', 'will', 'will'],
+    'the "?" left (P2\'s and a bot\'s) rolled at START');
+  // no bots: no RANDOM BOTS
+  const all = toSetup();
+  setRow(all, 1, 8);
+  all.sel = 5;
+  run(all, ['ok']);
+  assert.deepEqual(tselectItems(all), ['START']);
+  assert.equal(tselectStart(all), 8);
+});
+
+test('S18b: NEW DRAW on the bracket until the first result: a new draw, the same setup and characters, saved', () => {
+  const ui = toSetup([0.25, 0.5, 0.75, 0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9]);
+  setRow(ui, 0, 16);
+  startIt(ui);
+  const t = /** @type {any} */ (ui.tour.t), setup = structuredClone(t.setup), orders = [t.order.join()];
+  const items = bracketItems(ui);
+  assert.equal(items[items.length - 1], 'QUIT TO TITLE');
+  assert.equal(items[items.length - 2], NEW_DRAW, 'offered before the first match, before QUIT TO TITLE');
+  for (let n = 0; n < 2; n++) {
+    ui.sel = bracketItems(ui).indexOf(NEW_DRAW);
+    assert.deepEqual(run(ui, ['ok']), ['tsave'], 'saved');
+    assert.equal(ui.screen, 'bracket');
+    assert.equal(bracketItems(ui)[ui.sel], NEW_DRAW, 'still on NEW DRAW');
+    assert.deepEqual(t.order, drawOrder(16, t.setup.seed));
+    orders.push(t.order.join());
+    assert.deepEqual({ ...t.setup, seed: 0 }, { ...setup, seed: 0 }, 'the setup and characters kept');
+  }
+  assert.equal(new Set(orders).size, 3, 'a different bracket each time');
+  // five items in two columns: left / right move between them
+  if (!nextMatch(t)?.mustPlay) {
+    assert.equal(bracketItems(ui).length, 5);
+    ui.sel = 1;
+    run(ui, ['right']);
+    assert.equal(ui.sel, 4);
+    run(ui, ['left']);
+    assert.equal(ui.sel, 1);
+  }
+  // after the first result it's gone
+  if (nextMatch(t)?.mustPlay) {
+    ui.sel = 0;
+    run(ui, ['ok', 'ok', 'ok']);
+    matchOver(ui, { winner: 0, scores: [5, 0] });
+    run(ui, ['ok']);
+  } else {
+    ui.sel = 1;
+    run(ui, ['ok']);
+  }
+  assert.ok(!bracketItems(ui).includes(NEW_DRAW), 'the draw is fixed');
+});
+
+test('S18b: the new words are in the font and fit', () => {
+  const fonts = parseFonts(JSON.parse(fs.readFileSync('public/hogg-squash/assets/font.json', 'utf8')));
+  const fits = (/** @type {any} */ font, /** @type {string} */ line, /** @type {number} */ max) => {
+    for (const ch of line) if (ch !== ' ') assert.ok(glyphFor(fonts[font], ch), `${font} has ${ch} (${line})`);
+    assert.ok(measureWith(fonts, font, line) <= max, `${font} "${line}" fits in ${max} px`);
+  };
+  fits('small', SELECT_TEXT.random, SELECT_LAYOUT.CARD_W - 4);
+  fits('large-white', SELECT_TEXT.random, 180);
+  fits('huge-red', '?', SELECT_LAYOUT.RANDOM_W - 8);
+  fits('large-red', '?', 36);
+  fits('small', SELECT_TEXT.random, TSELECT_LAYOUT.COL_W - TSELECT_LAYOUT.LABEL_W - 6);
+  fits('large-red', RANDOM_BOTS, 2 * (608 + 16 - TSELECT_LAYOUT.FIG_X - 8));
+  fits('large-white', NEW_DRAW, 400);
+  // the bracket's two columns (WATCH, SKIP, SKIP BOT MATCHES | NEW DRAW, QUIT TO TITLE): apart, inside the panel
+  const B = BRACKET_LAYOUT, W = (/** @type {string} */ s) => measureWith(fonts, 'large-white', s) + 12;
+  const left = Math.max(...['WATCH', 'SKIP', SKIP_BOTS].map(W)), right = Math.max(...[NEW_DRAW, 'QUIT TO TITLE'].map(W));
+  assert.ok(320 - B.COL_DX - left / 2 >= 16 + 8, 'the left column inside the panel');
+  assert.ok(320 - B.COL_DX + left / 2 + 12 <= 320 + B.COL_DX - right / 2, 'the columns apart');
+  assert.ok(320 + B.COL_DX + right / 2 <= 624 - 8, 'the right column inside the panel');
+  // RANDOM BOTS over START, above the hint, below the figure's lines
+  assert.ok(TSELECT_LAYOUT.START_Y + 21 <= 330 - 2, 'START above the hint');
+  assert.ok(TSELECT_LAYOUT.START_Y - TSELECT_LAYOUT.ITEM_ROW >= TSELECT_LAYOUT.FIG_FEET + 26 + 9 + 4, 'RANDOM BOTS below "< change >"');
+  // the champion screen with a bot champion: its line fits as a human's does
+  fits('large-white', 'BOT 15 Coach Zain', 2 * (CHAMPION_LAYOUT.NAME_X - 16 - 4));
 });

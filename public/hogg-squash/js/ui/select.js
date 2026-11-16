@@ -4,7 +4,9 @@
 // will wear), playing the `ready` loop. A red frame marks P1's choice on the cards and a white one P2's; a pick shows
 // as PICKED. In 1P the CPU's choice is random, and up / down (or a tap on it) rolls another. Characters are looks only.
 // A character whose sheet has a front view plays it here (S15b, roster.js's previewTag); the others show `ready` from
-// the back. The moves are screens.js's; this file only draws (and records the cards and the CPU's panel for taps).
+// the back. The row ends with a "?" card (S18b): picking it picks a random character; while it's chosen, the side's big
+// figure is a "?" panel. The moves are screens.js's; this file only draws (and records the cards and the CPU's panel
+// for taps).
 import { WIDTH } from '../engine/screen.js';
 import { drawText } from '../render/text.js';
 import { drawPanel } from '../render/ui.js';
@@ -25,6 +27,7 @@ export const SELECT_TEXT = {
   title: ['CHOOSE YOUR PLAYER', 'CHOOSE YOUR PLAYERS'],
   same: 'Everyone plays the same: you only choose how you look',
   picked: 'PICKED',
+  random: 'Random',
   choose: '< choose >',
   cpu: ['random', 'Up / down: another'],
   cpuTouch: ['random', 'Tap for another'],
@@ -33,12 +36,30 @@ export const SELECT_TEXT = {
   touchHint: 'Tap a player to pick them     SOFT: back',
 };
 
-/** The panel, each side's big figure (centre x, feet y), and the row of cards (first centre, spacing, feet y, size). */
+/**
+ * The panel, each side's big figure (centre x, feet y) and its "?" panel's size, and the row of cards (spacing, feet
+ * y, size; the row is centred, the "?" card last).
+ */
 export const SELECT_LAYOUT = {
   x: 16, y: 6, w: 608, h: 348,
-  SIDES: [104, 536], FEET: 196,
-  CARD_X: 224, CARD_STEP: 64, CARD_W: 60, CARD_TOP: 92, CARD_FEET: 176, CARD_H: 72,
+  SIDES: [104, 536], FEET: 196, RANDOM_W: 64, RANDOM_H: 96,
+  CARD_STEP: 64, CARD_W: 60, CARD_TOP: 92, CARD_FEET: 176, CARD_H: 72,
 };
+
+/** Card i's centre x in a centred row of `count` cards. @param {number} i @param {number} count */
+export const cardX = (i, count) => WIDTH / 2 + (i - (count - 1) / 2) * SELECT_LAYOUT.CARD_STEP;
+
+/**
+ * The "?" (random) panel: a dark box framed in red, w × h, its bottom centre at x, feet, with a big red "?".
+ * @param {CanvasRenderingContext2D} ctx @param {number} x @param {number} feet @param {number} w @param {number} h
+ */
+export function drawRandomPanel(ctx, x, feet, w, h) {
+  const left = Math.round(x - w / 2), top = feet - h;
+  ctx.fillStyle = '#252429';
+  ctx.fillRect(left, top, w, h);
+  frame(ctx, left, top, w, h, '#7a0a14', 1);
+  drawText(ctx, w >= 50 && h >= 60 ? 'huge-red' : 'large-red', '?', left + w / 2, top + Math.round(h / 2) - (h >= 60 ? 20 : 10), 'center');
+}
 
 /**
  * The frame round a card: 2 px in the side's colour, 3 once picked. When both choose the same, P2's is inset 3 px and
@@ -71,13 +92,15 @@ export function drawSelect(ctx, ui, view) {
   drawText(ctx, 'large-red', SELECT_TEXT.title[one ? 0 : 1], cx, L.y + 8, 'center');
   drawText(ctx, 'small-grey', `${modeLine(s)}${one ? `, LEVEL ${s.level}` : ''}, FIRST TO ${s.target}`, cx, L.y + 30, 'center');
 
-  // the cards
-  view.chars.forEach((ch, i) => {
-    const x = L.CARD_X + i * L.CARD_STEP, left = x - L.CARD_W / 2, h = L.CARD_FEET + 20 - L.CARD_TOP;
+  // the cards, then the "?" card (index view.chars.length)
+  const count = view.chars.length + 1;
+  for (let i = 0; i < count; i++) {
+    const ch = view.chars[i], x = cardX(i, count), left = x - L.CARD_W / 2, h = L.CARD_FEET + 20 - L.CARD_TOP;
     ctx.fillStyle = '#25242966';
     ctx.fillRect(left, L.CARD_TOP, L.CARD_W, h);
-    drawSprite(ctx, ch.sheet, ch.preview(0), anim(ch), x, L.CARD_FEET, L.CARD_H);
-    drawText(ctx, 'small', ch.name, x, L.CARD_FEET + 6, 'center');
+    if (ch) drawSprite(ctx, ch.sheet, ch.preview(0), anim(ch), x, L.CARD_FEET, L.CARD_H);
+    else drawRandomPanel(ctx, x, L.CARD_FEET, 40, 56);
+    drawText(ctx, 'small', ch ? ch.name : SELECT_TEXT.random, x, L.CARD_FEET + 6, 'center');
     [0, 1].forEach(side => {
       if (p.at[side] !== i) return;
       const inset = side === 1 && p.at[0] === i ? 3 : 0;
@@ -87,16 +110,17 @@ export function drawSelect(ctx, ui, view) {
         side === 0 ? left : left + L.CARD_W, L.CARD_TOP - 11, side === 0 ? 'left' : 'right');
     });
     hits.push({ x: left, y: L.CARD_TOP, w: L.CARD_W, h, sel: i });
-  });
+  }
 
-  // each side's choice, big, in its kit
+  // each side's choice, big, in its kit (the "?" panel while "?" is chosen)
   [0, 1].forEach(side => {
     const ch = view.chars[p.at[side]], x = L.SIDES[side];
-    if (!ch) return;
+    if (!ch && p.at[side] !== view.chars.length) return;
     const cpu = one && side === 1;
     drawText(ctx, side === 0 ? 'small-red' : 'small', side === 0 ? 'P1' : cpu ? 'CPU' : 'P2', x, L.y + 48, 'center');
-    drawSprite(ctx, ch.sheet, ch.preview(side), anim(ch), x, L.FEET, ART_HEIGHT);
-    drawText(ctx, 'large-white', ch.name, x, L.FEET + 6, 'center');
+    if (ch) drawSprite(ctx, ch.sheet, ch.preview(side), anim(ch), x, L.FEET, ART_HEIGHT);
+    else drawRandomPanel(ctx, x, L.FEET, L.RANDOM_W, L.RANDOM_H);
+    drawText(ctx, 'large-white', ch ? ch.name : SELECT_TEXT.random, x, L.FEET + 6, 'center');
     const lines = cpu ? (ui.touch ? SELECT_TEXT.cpuTouch : SELECT_TEXT.cpu)
       : [p.locked[side] ? SELECT_TEXT.picked : SELECT_TEXT.choose];
     // with touch the SOFT button sits over the lines under the CPU, so they go above its figure, and only the figure

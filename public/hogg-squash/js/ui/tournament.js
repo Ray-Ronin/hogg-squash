@@ -4,11 +4,13 @@
 // art/tools/a12-mock.js):
 //  - the menu when a tournament is saved (Continue / New tournament) and the question before replacing it;
 //  - the setup: players (2–16), humans, Same or Rising match length, first to …, the bots' level, START;
-//  - the characters: every slot in a list (P1, P2 … in red, the bots numbered), the selected one big beside it;
+//  - the characters: every slot in a list (P1, P2 … in red, the bots numbered), the selected one big beside it; a
+//    slot can be "?" (random, S18b); RANDOM BOTS (when there are bots) and START under the figure;
 //  - the bracket: the whole of it on one screen, the halves facing, the trophy and the final in the middle; the next
-//    match framed in red and named under it, with PLAY, or WATCH, SKIP and SKIP BOT MATCHES;
+//    match framed in red and named under it, with PLAY, or WATCH, SKIP and SKIP BOT MATCHES (and NEW DRAW until the
+//    first result, S18b: five items go in two columns);
 //  - the round title card over the court before a played or watched match;
-//  - the champion: the gold trophy, the champion beside it, each human's wins and tries.
+//  - the champion: the gold trophy, the champion (a human or a bot) beside it, each human's wins and where they went out.
 // The moves are screens.js's; this file only draws (and records what can be tapped).
 import { WIDTH } from '../engine/screen.js';
 import { drawText, textWidth } from '../render/text.js';
@@ -18,7 +20,8 @@ import { previewTag } from '../render/roster.js';
 import { drawList, drawHighlight, drawCursor, hits, BAR } from './menu.js';
 import { drawTitleBack, MENU } from './title.js';
 import { TMENU_ITEMS, TCONFIRM_ITEMS, TSETUP_ROWS, MODE_LABELS, CHAMPION_ITEMS, TSELECT_START, TSELECT_NEXT,
-  bracketItems, setupValue, setupValues } from './screens.js';
+  TSELECT_BOTS, RANDOM_CHAR, BRACKET_COL, bracketItems, setupValue, setupValues, tselectItems } from './screens.js';
+import { drawRandomPanel, SELECT_TEXT } from './select.js';
 import { roundCount, roundNameOf, lengthsFor, entrantLabel, isHuman, playersOf, nextMatch, champion, humanRecord }
   from '../sim/tournament.js';
 
@@ -67,7 +70,7 @@ export const TOUR_TEXT = {
   charsNote: 'Each human picks theirs in turn. The bots are random: change any you like.',
   change: '< change >',
   champion: 'CHAMPION',
-  tries: 'THE HUMANS',
+  humans: 'THE HUMANS',
   touchOne: 'With touch, one human only (more need a keyboard or gamepads)',
   menuHint: 'Up / down: choose     Enter or A: OK     Esc or B: back',
   setupHint: 'Up / down: choose     Left / right: change     Enter or A: OK     Esc or B: back',
@@ -160,7 +163,7 @@ export function drawTourSetup(ctx, ui) {
 
 /** The characters screen's list: the columns' x, the first row's top, the row step, rows per column; the figure. */
 export const TSELECT_LAYOUT = { COLS: [40, 200], TOP: 54, ROW: 11, PER_COL: 16, LABEL_W: 40, COL_W: 152,
-  FIG_X: 500, FIG_FEET: 214, START_Y: 284 };
+  FIG_X: 500, FIG_FEET: 214, START_Y: 290, ITEM_ROW: 22 };
 
 /** An entrant as listed: "P1 Ronin", "BOT 3 Coach Zain". @param {import('../sim/tournament.js').TournamentSetup | { humans: number }} s @param {number} e @param {string} name */
 export const entrantLine = (s, e, name) => `${entrantLabel(/** @type {any} */ (s), e)} ${name}`;
@@ -170,6 +173,7 @@ export function drawTourSelect(ctx, ui, view) {
   const L = TSELECT_LAYOUT, d = ui.tour.draft, s = { humans: d.humans }, chars = ui.tour.chars;
   panel(ctx, TOUR_TEXT.chars);
   drawText(ctx, 'small-grey', TOUR_TEXT.charsNote, WIDTH / 2, TOUR_PANEL.y + 30, 'center');
+  const nameOf = (/** @type {string} */ id) => (id === RANDOM_CHAR ? SELECT_TEXT.random : view.name(id));
   chars.forEach((id, e) => {
     const x = L.COLS[Math.floor(e / L.PER_COL)], y = L.TOP + (e % L.PER_COL) * L.ROW, on = ui.sel === e;
     if (on) {
@@ -177,23 +181,27 @@ export function drawTourSelect(ctx, ui, view) {
       ctx.fillRect(x - 4, y - 2, L.COL_W, L.ROW);
     }
     drawText(ctx, on ? 'small' : e < d.humans ? 'small-red' : 'small-grey', entrantLabel(/** @type {any} */ (s), e), x, y);
-    drawText(ctx, 'small', view.name(id), x + L.LABEL_W, y);
+    drawText(ctx, 'small', nameOf(id), x + L.LABEL_W, y);
     hits.push({ x: x - 4, y: y - 2, w: L.COL_W, h: L.ROW, sel: e });
   });
   const e = ui.sel < chars.length ? ui.sel : -1, id = chars[e];
   if (e >= 0) {                                            // the selected slot, big, in the kit it will mostly wear
     const ch = view.char?.(id), human = e < d.humans;
     drawText(ctx, human ? 'small-red' : 'small', entrantLabel(/** @type {any} */ (s), e), L.FIG_X, TOUR_PANEL.y + 48, 'center');
-    if (ch) {
+    if (id === RANDOM_CHAR) drawRandomPanel(ctx, L.FIG_X, L.FIG_FEET, 64, 96);
+    else if (ch) {
       drawSprite(ctx, ch.sheet, ch.preview(human ? 0 : 1), { ...createAnimator(), tag: previewTag(ch.sheet), t: view.t },
         L.FIG_X, L.FIG_FEET, ART_HEIGHT);
     }
-    drawText(ctx, 'large-white', view.name(id), L.FIG_X, L.FIG_FEET + 4, 'center');
+    drawText(ctx, 'large-white', nameOf(id), L.FIG_X, L.FIG_FEET + 4, 'center');
     drawText(ctx, 'small-grey', TOUR_TEXT.change, L.FIG_X, L.FIG_FEET + 26, 'center');
     hits.push({ x: L.FIG_X - 60, y: TOUR_PANEL.y + 60, w: 120, h: L.FIG_FEET + 40 - TOUR_PANEL.y - 60, sel: TSELECT_NEXT });
   }
-  drawList(ctx, ['START'], ui.sel === chars.length ? 0 : -1, L.FIG_X, L.START_Y, { font: 'large-white', center: true,
-    base: TSELECT_START });
+  // RANDOM BOTS (when there are bots) over START
+  const items = tselectItems(ui), first = chars.length;
+  items.forEach((item, i) => drawList(ctx, [item], ui.sel === first + i ? 0 : -1, L.FIG_X,
+    L.START_Y - (items.length - 1 - i) * L.ITEM_ROW, { font: i === items.length - 1 ? 'large-white' : 'large-red', center: true,
+      base: i === items.length - 1 ? TSELECT_START : TSELECT_BOTS }));
   hintLine(ctx, ui.touch ? TOUR_TEXT.selectTouch : TOUR_TEXT.selectHint);
 }
 
@@ -209,8 +217,8 @@ export function peopleLine(s) {
   return bots ? `${people}, ${bots} ${bots === 1 ? 'BOT' : 'BOTS'}, BOT LEVEL: ${s.level}` : `${people}, NO BOTS`;
 }
 
-/** The next match's line over its players: "NEXT: FIRST TO 9", ", TRY 2" on a replay. @param {import('../sim/tournament.js').MatchInfo} m */
-export const nextLine = m => `NEXT: FIRST TO ${m.length}${m.attempt > 1 ? `, TRY ${m.attempt}` : ''}`;
+/** The next match's line over its players: "NEXT: FIRST TO 9". @param {import('../sim/tournament.js').MatchInfo} m */
+export const nextLine = m => `NEXT: FIRST TO ${m.length}`;
 
 /** An entrant's name, or its short one where the name is wider than `max` in `font`. @param {TourView} view @param {string} id @param {import('../render/text.js').FontName} font @param {number} max */
 function fitName(view, id, font, max) {
@@ -223,7 +231,7 @@ function fitName(view, id, font, max) {
  * widths (the first round's cards, later rounds' tags) and the middle's width; the slot heights by style; the item rows.
  */
 export const BRACKET_LAYOUT = { HEAD_Y: 12, WHO_Y: 32, TOP: 48, BOTTOM: 208, BOTTOM_BIG: 228, W0: 76, WT: 44, CENTRE: 92,
-  SLOT_H: { card: 24, tag: 13, mini: 10 }, X0: 28, ITEM_ROW: 19 };
+  SLOT_H: { card: 24, tag: 13, mini: 10 }, X0: 28, ITEM_ROW: 19, COL_DX: 120 };
 
 /** A 1 px (or t px) frame around a box, outside it. @param {CanvasRenderingContext2D} ctx */
 function frame(ctx, x, y, w, h, colour, t = 1) {
@@ -365,7 +373,11 @@ export function drawBracket(ctx, ui, view) {
     drawText(ctx, 'large-white', who(champ), cx, y + 11, 'center');
     y += 34;
   }
-  drawList(ctx, items, ui.sel, cx, y, { font: 'large-white', center: true, row: items.length > 2 ? L.ITEM_ROW : BAR.ROW });
+  if (items.length > 4) {                                  // NEW DRAW makes five (S18b): two columns, three and two
+    drawList(ctx, items.slice(0, BRACKET_COL), ui.sel, cx - L.COL_DX, y, { font: 'large-white', center: true, row: L.ITEM_ROW });
+    drawList(ctx, items.slice(BRACKET_COL), ui.sel - BRACKET_COL, cx + L.COL_DX, y, { font: 'large-white', center: true,
+      row: L.ITEM_ROW, base: BRACKET_COL });
+  } else drawList(ctx, items, ui.sel, cx, y, { font: 'large-white', center: true, row: items.length > 2 ? L.ITEM_ROW : BAR.ROW });
 }
 
 // --- the round title card (A12): over the court before a played or watched match ---
@@ -373,9 +385,8 @@ export function drawBracket(ctx, ui, view) {
 /** The card's band across the front wall, and its rows. */
 export const CARD_LAYOUT = { X: 120, Y: 96, W: 400, H: 84, NAME_Y: 10, RULES_Y: 46, PLAYERS_Y: 58, V_GAP: 16 };
 
-/** The card's rules line: "FIRST TO 9, WIN BY 2, LEVEL 5" (no level for two humans; ", TRY 2" on a replay). @param {import('../sim/tournament.js').MatchInfo} m */
-export const cardRules = m => `FIRST TO ${m.length}, WIN BY 2${m.cpu[0] || m.cpu[1] ? `, LEVEL ${m.level}` : ''}${
-  m.attempt > 1 ? `, TRY ${m.attempt}` : ''}`;
+/** The card's rules line: "FIRST TO 9, WIN BY 2, LEVEL 5" (no level for two humans). @param {import('../sim/tournament.js').MatchInfo} m */
+export const cardRules = m => `FIRST TO ${m.length}, WIN BY 2${m.cpu[0] || m.cpu[1] ? `, LEVEL ${m.level}` : ''}`;
 
 /**
  * The round's title card on a dark band across the front wall (the court is drawn first, by main.js): the round's name
@@ -406,22 +417,24 @@ export function cardPlayer(s, e, view) {
 
 // --- the champion (A12) ---
 
-/**
- * A human's record: "3 wins in 4 tries", "1 win in 3 tries, out in the SEMI-FINAL".
- * @param {{ wins: number, tries: number, out: string | null }} rec
- */
-export const recordLine = rec => `${rec.wins} ${rec.wins === 1 ? 'win' : 'wins'} in ${rec.tries} ${rec.tries === 1 ? 'try' : 'tries'}${
-  rec.out ? `, out in the ${rec.out}` : ''}`;
+/** "3 wins", "1 win". @param {number} n */
+const winsWord = n => `${n} ${n === 1 ? 'win' : 'wins'}`;
 
 /**
- * A human's line on the champion screen when there are too many humans for the big rows: "P1 Ronin: 3 wins in 4
- * tries"; short (two columns): "P2 Adam: 3 tries".
+ * A human's record (S18b, no tries): "3 wins, champion", "1 win, out in the SEMI-FINAL", "0 wins, out in the
+ * QUARTER-FINAL".
+ * @param {{ wins: number, out: string | null, champion: boolean }} rec
+ */
+export const recordLine = rec => `${winsWord(rec.wins)}${rec.champion ? ', champion' : rec.out ? `, out in the ${rec.out}` : ''}`;
+
+/**
+ * A human's line on the champion screen when there are too many humans for the big rows: "P1 Ronin: 1 win, out in
+ * the SEMI-FINAL"; short (two columns, a saved 32 only): "P2 Adam: 3 wins".
  * @param {import('../sim/tournament.js').Tournament} t @param {number} h @param {string} name @param {boolean} [short]
  */
-export function triesLine(t, h, name, short = false) {
+export function humanLine(t, h, name, short = false) {
   const rec = humanRecord(t, h);
-  if (short) return `${entrantLine(t.setup, h, name)}: ${rec.tries} ${rec.tries === 1 ? 'try' : 'tries'}`;
-  return `${entrantLine(t.setup, h, name)}: ${recordLine(rec)}`;
+  return `${entrantLine(t.setup, h, name)}: ${short ? winsWord(rec.wins) : recordLine(rec)}`;
 }
 
 /**
@@ -455,8 +468,8 @@ export function drawChampion(ctx, ui, view) {
     drawText(ctx, human ? 'large-red' : 'large-white', entrantLine(s, champ, view.name(id)), L.NAME_X, L.FLOOR + 12, 'center');
     drawText(ctx, 'small-grey', `WON THE ${s.size}-PLAYER TOURNAMENT`, L.NAME_X, L.FLOOR + 32, 'center');
   }
-  // the humans' wins and tries
-  drawText(ctx, 'small-red', TOUR_TEXT.tries, L.LIST_X, L.LIST_Y);
+  // the humans' records
+  drawText(ctx, 'small-red', TOUR_TEXT.humans, L.LIST_X, L.LIST_Y);
   const big = s.humans <= L.BIG_MAX, short = s.humans > L.ONE_COL;
   for (let h = 0; h < s.humans; h++) {
     const name = view.name(s.chars[h]);
@@ -466,7 +479,7 @@ export function drawChampion(ctx, ui, view) {
       drawText(ctx, 'small-grey', recordLine(humanRecord(t, h)), L.LIST_X, y + 18);
     } else {
       const col = short ? Math.floor(h / L.ONE_COL) : 0, y = L.LIST_Y + 16 + (h % L.ONE_COL) * L.ROW;
-      drawText(ctx, h === champ ? 'small' : 'small-grey', triesLine(t, h, name, short), col ? L.LIST_X2 : L.LIST_X, y);
+      drawText(ctx, h === champ ? 'small' : 'small-grey', humanLine(t, h, name, short), col ? L.LIST_X2 : L.LIST_X, y);
     }
   }
   drawList(ctx, CHAMPION_ITEMS, ui.sel, L.MENU_X, L.MENU_Y, { font: 'large-white', center: true });
