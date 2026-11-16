@@ -54,7 +54,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [x] 💳 Approve SpriteCook spend for A12 *(you)* (optional: only if a trophy is generated) *(not needed: the trophy is hand-drawn, the owner's call)*
 - [x] **A12** Art: tournament screens (bracket, round titles, trophy, ending)
 - [x] **S18** Tournament art in the game; v2 release prep
-- [ ] **S18b** Tournament fix-up: a human who loses to a bot is out, and the tournament keeps going *(added at CP-J)*
+- [ ] **S18b** Tournament fix-up and random buttons: a human who loses to a bot is out and the tournament keeps going; a random character on both characters screens, RANDOM BOTS, NEW DRAW *(added at CP-J)*
 - [ ] **CP-J** Release play-test and go-live, version 2.0.0 *(you)*
 
 ---
@@ -928,37 +928,42 @@ Build S18's "In scope" list only. No new features.
 Go through "Done when", tick S18, add a Session log entry, and commit. Ask me before pushing.
 ```
 
-## S18b: Tournament fix-up: out on a loss *(added at CP-J)*
+## S18b: Tournament fix-up and random buttons *(added at CP-J)*
 
-**Goal:** CP-J's one fix. **A human who loses to a bot is out**, as one who loses to a human already is, and **the tournament keeps going**: no rematch. The owner's words: "When a player loses to a bot don't make it rematch, just keep going with the tournament." `decisions.md`, "Tournament", "Losing".
+**Goal:** CP-J's one fix, and three small buttons the owner asked for after it (2026-11-16). **A human who loses to a bot is out**, as one who loses to a human already is, and **the tournament keeps going**: no rematch. The owner's words: "When a player loses to a bot don't make it rematch, just keep going with the tournament." Plus **a random character button** on both characters screens (single matches and the tournament), **re-roll every bot** on the tournament's, and **a new random draw** on the bracket before the first match. `decisions.md`, "Tournament" ("Losing", "Random buttons") and "Characters" ("A random pick").
 
 **In scope**
-- **`js/sim/tournament.js`:** a human's loss to a bot is a result like any other: the bot moves on and the human is out (no `losses++`, no replay). Every match is played once.
+- **Out on a loss, `js/sim/tournament.js`:** a human's loss to a bot is a result like any other: the bot moves on and the human is out (no `losses++`, no replay). Every match is played once.
 - **When every human is out,** the tournament plays on to its champion, a bot: the bots' matches still offer WATCH, SKIP, SKIP BOT MATCHES and QUIT TO TITLE, and **SKIP BOT MATCHES skips to the end** (it stops at the next human's match, and there isn't one). The bracket's heading and wording still work with no humans left; the champion screen shows a bot as the champion ("BOT 3 Adam", the same trophy and figure).
 - **Tries go:** no ", TRY 2" on the bracket or the round card. The champion screen's human rows become each human's record without tries, using what `humanRecord` already works out: **"3 wins, champion"**, **"1 win, out in the SEMI-FINAL"**, **"0 wins, out in the QUARTER-FINAL"** (fit the rows and the short two-column rows; the heading THE HUMANS stays).
 - **Seeds stay as they are:** a match's seed already hashes `losses`, which is now always 0, so new tournaments' bots' matches give the same results as before.
 - **Old saves still load** (as a saved 32 does): a saved tournament whose next match is a human's, already lost to a bot (`losses` over 0, no winner), is **played once more** and the new rule applies from then; the lost attempts' scores were never saved, so it can't be decided for the bot. Don't bump the save version unless there's no other way, and say so if so.
-- Tests: a loss to a bot puts the human out and the bot on; the tournament carries on to a champion with every human out (one human, and two humans both losing to bots); SKIP BOT MATCHES skips to the champion once every human is out, and gives the same bracket as skipping one by one; the record lines; an old save with a pending lost match loads and plays it once more. Update S17's replay tests to the new rule.
+- **A random character, single matches** (`js/ui/select.js`, `screens.js`): a **RANDOM card ("?")** at the end of the row of characters (a fifth card at today's 64 px spacing; check it fits beside the right side's figure). Left / right reach it like any character; the side's big figure shows a "?" panel (no animation) while it's chosen. **Picking it picks a random character** (any in the roster, a mirror allowed), revealed as PICKED; undo goes back to the "?" card. Each human has it (P1 in 1P, both in 2P); the CPU's own random pick and its up / down roll are unchanged. Touch: tap the "?" card. Rematch keeps the character that was rolled, not "random". The hints keep their words if they still fit.
+- **A random character, tournament** (`js/ui/tournament.js`, `screens.js`): the same "?" choice after the last character in each slot's left / right cycle. A human's slot left on "?" gets its random character when that human presses OK, a bot's at START; either is shown at once on the screen and then on the bracket.
+- **Re-roll every bot** on the tournament's characters screen: a **RANDOM BOTS** item between the slots and START (shown only when there are bots), giving every bot a new random character; the humans keep theirs.
+- **A new random draw:** **NEW DRAW** on the bracket, only **until the first match is played or skipped** (before a human's match: PLAY, NEW DRAW, QUIT TO TITLE; before a bots' match: WATCH, SKIP, SKIP BOT MATCHES, NEW DRAW, QUIT TO TITLE). It makes a new seed, so a new draw (and new match seeds), keeping the setup and every slot's character; it redraws the bracket and saves. A12 left four choices filling the panel's bottom: fit a fifth (closer rows, or two columns), and say how. Once a result is in, NEW DRAW is gone and the draw is fixed. Every new word in the font (a test checks).
+- Tests: a loss to a bot puts the human out and the bot on; the tournament carries on to a champion with every human out (one human, and two humans both losing to bots); SKIP BOT MATCHES skips to the champion once every human is out, and gives the same bracket as skipping one by one; the record lines; an old save with a pending lost match loads and plays it once more; the "?" card on the select screen (picking it gives a roster character, undo returns to "?", 2P each side, rematch keeps the rolled one); "?" in the tournament rolled on OK / START; RANDOM BOTS leaves the humans alone; NEW DRAW keeps the setup and characters, changes the order (from a different seed), saves, and is offered only before the first result. Update S17's replay tests to the new rule.
 
-**Not in scope:** any other tournament rule, the bracket's look (A12), new screens or sounds, single matches, `js/sim/` outside `tournament.js`, more characters (the next plan).
+**Not in scope:** any other tournament rule, the bracket's look beyond fitting NEW DRAW (A12), new sounds, `js/sim/` outside `tournament.js`, more characters (the next plan).
 
 **Depends on:** CP-J's first play-test (2026-11-16).
 
-**Main files:** `js/sim/tournament.js`, `js/ui/tournament.js`, `js/ui/screens.js`, `test/tournament.test.js`, `test/screens.test.js`, `docs/decisions.md` ("Tournament": the "as built" lines for S18b).
+**Main files:** `js/sim/tournament.js`, `js/ui/tournament.js`, `js/ui/select.js`, `js/ui/screens.js`, `test/tournament.test.js`, `test/screens.test.js`, `docs/decisions.md` ("Tournament" and "Characters": the "as built" lines for S18b).
 
 **Done when…**
 - `npm test` and `npm run typecheck` pass.
-- In the browser (`?dev`, the human's match played by a CPU in their slot as in S17 and S18, or thrown on purpose): an 8-player tournament with one human who loses to a bot in the first round, then plays on through watched and skipped bots' matches (and SKIP BOT MATCHES) to a bot champion; a 4-player tournament with two humans where one loses to a bot and the other goes on (to the champion, or out too); a 1P and a 2P single match still work.
+- In the browser (`?dev`, the human's match played by a CPU in their slot as in S17 and S18, or thrown on purpose): an 8-player tournament with one human who loses to a bot in the first round, then plays on through watched and skipped bots' matches (and SKIP BOT MATCHES) to a bot champion; a 4-player tournament with two humans where one loses to a bot and the other goes on (to the champion, or out too).
+- The random buttons: a 1P and a 2P single match with a "?" pick (keys, a pad, and touch for 1P), and a rematch keeping it; a tournament with a human on "?", RANDOM BOTS pressed, and NEW DRAW pressed twice (a different bracket each time, the characters kept), then gone after the first match; Continue after NEW DRAW shows the new draw.
 - No ", TRY" anywhere; the champion screen's rows read right with a human champion and with a bot champion.
 - No console errors from a cold load to the champion. Version 1.18.1.
 
-**You check or decide at the end:** replay CP-J (the whole checklist, quickly where it's unchanged).
+**You check or decide at the end:** replay CP-J (the whole checklist, quickly where it's unchanged, plus the three new buttons).
 
 **Starter prompt**
 ```text
-We're doing Session S18b of docs/plan-v2.md: "Tournament fix-up: out on a loss".
-Read CLAUDE.md, docs/decisions.md ("Tournament", especially "Losing") and docs/plan-v2.md (rules, the S17, S18 and CP-J Session log entries, S18b). Check S18 is ticked.
-Build S18b's "In scope" list only: a human who loses to a bot is out, the tournament keeps going to its champion (a bot if every human is out), tries go, old saves still load.
+We're doing Session S18b of docs/plan-v2.md: "Tournament fix-up and random buttons".
+Read CLAUDE.md, docs/decisions.md ("Tournament", especially "Losing" and "Random buttons"; "Characters", "A random pick") and docs/plan-v2.md (rules, the S17, S18 and CP-J Session log entries, S18b). Check S18 is ticked.
+Build S18b's "In scope" list only: a human who loses to a bot is out and the tournament keeps going to its champion (a bot if every human is out), tries go, old saves still load; a "?" random character on both characters screens; RANDOM BOTS; NEW DRAW before the first match.
 Go through "Done when", tick S18b, add a Session log entry, and commit. Ask me before pushing.
 ```
 
@@ -1153,4 +1158,5 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **What comes next (CP-J's step 4):** **more characters**, in a new plan written once CP-J is ticked, built on the finalized-character template (as Coach Zain was made), with the trophy pose for every character in one SpriteCook session. Music (P2, A6c, S14c) and the crowd (A11, S16) **stay on hold**; v2 ships without them. A7–A10 stay `[-]`. `decisions.md`, "After v2".
   - **Plan changes:** S18b added before CP-J; `decisions.md`, "Tournament" ("Losing", "The end", SKIP BOT MATCHES and the TRY wording) and a new "After v2"; CP-J's starter prompt now ends "Ask me before pushing."
   - **Not reported on:** the rest of CP-J's checklist (the phone, sound, other browsers, the live site) gave no other notes; the replay after S18b covers it again.
-  - **Next:** S18b (tournament fix-up, 1.18.1), then CP-J again.
+  - **Added the same day (the owner's asks after the play-test):** a **random character button** for single matches and the tournament (a "?" card at the end of the characters: picking it picks a random one); **re-roll every bot** on the tournament's characters screen (RANDOM BOTS); and **a randomize order button** (NEW DRAW on the bracket, only until the first match is played or skipped). For the tournament's random characters the owner chose both (a human's own slot and all the bots), and for the draw "before the first match". Folded into S18b (now "Tournament fix-up and random buttons"), as it hadn't started and works in the same files. **Settled by the plan (say if you disagree):** the "?" card's place and look, a rolled character kept on rematch, the words RANDOM BOTS and NEW DRAW.
+  - **Next:** S18b (tournament fix-up and random buttons, 1.18.1), then CP-J again.
