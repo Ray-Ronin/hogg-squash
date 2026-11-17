@@ -20,7 +20,6 @@ const OUTPUTS = [
   { out: 'hit-1.mp3', src: 'a6/hit-r2_H4_jSKxIh9SYiD4ROxbRwTe.mp3', maxLen: 0.25 },
   { out: 'hit-soft-1.mp3', src: 'a6/hit-r2_H4_jSKxIh9SYiD4ROxbRwTe.mp3', pitch: 0.94, maxLen: 0.25 },
   { out: 'serve-1.mp3', src: 'a6/hit-r2_H4_jSKxIh9SYiD4ROxbRwTe.mp3', pitch: 1.04, maxLen: 0.25 },
-  { out: 'hit-dive-1.mp3', src: 'a6/hit-r2_H4_jSKxIh9SYiD4ROxbRwTe.mp3', pitch: 0.97, maxLen: 0.25 },
   { out: 'swing-1.mp3', src: 'a6/swing-soft_A_bBL7Z7vSC1WuVRBI58q9.mp3', maxLen: 0.4 },
   { out: 'bounce-1.mp3', src: 'a6/floor_A_dUJyFKb75zlCoAUk7wM5.mp3', maxLen: 0.2 },
   { out: 'glass-1.mp3', src: 'a6/glass_A_mofdFWbqJkFT6VTGRKxk.mp3', maxLen: 0.25 },

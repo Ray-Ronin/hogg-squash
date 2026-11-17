@@ -70,10 +70,10 @@ Made by `audio/make-sfx.mjs` from the picks above. Pitch changes are by resampli
 
 | File | From | Pitch | Start in the raw take | Length | Used by (`sfx.json`) |
 |---|---|---|---|---|---|
-| `hit-1.mp3` | H4 `jSKx…` | 1.00 | 0.702 s | 0.123 s | hit-hard |
+| `hit-1.mp3` | H4 `jSKx…` | 1.00 | 0.702 s | 0.123 s | hit-hard, hit-dive (since 2026-11-16) |
 | `hit-soft-1.mp3` | H4 `jSKx…` | 0.94 | 0.747 s | 0.132 s | hit-soft |
 | `serve-1.mp3` | H4 `jSKx…` | 1.04 | 0.675 s | 0.119 s | serve |
-| `hit-dive-1.mp3` | H4 `jSKx…` | 0.97 | 0.724 s | 0.127 s | hit-dive |
+| `hit-dive-1.mp3` | H4 `jSKx…` | 0.97 | 0.724 s | 0.127 s | hit-dive until 2026-11-16 (removed: the owner asked for the stretch hit to sound like the normal hit) |
 | `swing-1.mp3` | swing-soft `bBL7…` | 1.00 | 0 | 0.400 s | swing-hard, swing-soft |
 | `bounce-1.mp3` | floor A `dUJy…` | 1.00 | 0.138 s | 0.130 s | floor, wall-front, wall-side |
 | `glass-1.mp3` | glass A `mofd…` | 1.00 | 0 | 0.250 s | glass |
