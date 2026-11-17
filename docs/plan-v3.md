@@ -10,6 +10,10 @@ Tick a line (`[x]`) when its session or checkpoint is finished. **The next sessi
 A line marked `[-]` is on hold: it's skipped and doesn't count as unticked, until the owner brings it back.
 Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook spend approvals: the session after it stops and waits for your OK before generating anything.
 
+**Before November 20** *(the 96 subscription credits don't roll over)*
+- [x] 💳 Approve SpriteCook spend for A19z *(you)* *(up to 96, the whole balance, approved 2026-11-17)*
+- [ ] **A19z** Art: Coach Zain's trophy pose, which sets the tag the others follow in A19 *(added 2026-11-17)*
+
 **Ready for more characters**
 - [ ] **S19** The select screen in two rows past four characters, the "?" card always last (built now, tested with a longer test roster); a saved pick of a character who has left the roster falls back safely
 - [ ] **P3** Prerequisites *(you)*: who the two new characters are, their agreement and photos; SpriteCook credits (about 400 per character)
@@ -37,7 +41,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 
 **The trophy and the release**
 - [ ] 💳 Approve SpriteCook spend for A19 *(you)*
-- [ ] **A19** Art: the trophy pose for all four characters
+- [ ] **A19** Art: the trophy pose for the other three characters, matching Zain's (A19z)
 - [ ] **S20** The trophy pose on the champion screen; the recolour code's leftovers tidied
 - [ ] **CP-K** Play-test 7 and go-live *(you)*: the four characters, version 2.20.0
 
@@ -77,6 +81,32 @@ Settled by the plan (say so if you disagree):
 - **The trophy pose comes last (A19),** in one session for all four characters, as `plan-v2.md` (A12, S18) said. S20 then shows it on the champion screen.
 - **SpriteCook credits:** **96** on 2026-11-17; the subscription adds **800 on November 20** (and monthly after), and the owner is willing to buy more. Coach Zain cost 392: his concept 192 and his animations 200, with no re-runs. Three characters at about 400 each plus room for re-runs, and the trophy pose for four (about 100–160), comes to **about 1,300–1,400**. November's 800 covers about two characters, so a top-up of about 500 (or December's 800) is needed for the third and the trophy pose. Each 💳 line gets its own price first.
 - **Not in this plan:** music and the crowd (still on hold from `plan-v2.md`), stat differences between characters (looks only, as before), new courts, voice callouts.
+
+---
+
+## A19z: Art: Coach Zain's trophy pose *(added 2026-11-17)*
+
+**Why now:** the account's 96 subscription credits expire when the subscription resets on November 20 (the owner's understanding), and Zain is the only character whose sheet and concepts exist. This changes the S18 call ("one session for all of them together"): Zain's pose comes first and **sets the tag** that A19 follows for the other three. The owner accepted the small risk that his pose looks a little different from theirs.
+
+**In scope**
+- **Spend gate:** approved up to **96** (the whole balance). Still list the planned jobs with estimated credits first and stop for the owner's go. One `animate_game_art` job is about 20 credits by A8z's prices, so this leaves room for re-runs.
+- **Settle the tag first** and write it into `docs/art-style-guide.md` §3 as optional: suggested `trophy`, from the front, 8 frames, looping, the same `feet` pivot. Zain holds A12's gold trophy (`assets/tournament.png`, `trophy`) up in both hands, a small happy bob.
+- **Source:** Zain's front concept (`f5b47d79-0fad-4680-8868-d09f2f6124a5`, cleaned at 90% width as in A8z) or his cleaned `front_ready` frame, with a crop of our own trophy art as a reference (uploaded via the `spritecook-upload-assets` flow; it's our own art, so the IP rules allow it). If animating doesn't give him the trophy, a still `generate_game_art` edit of the front concept holding it, then animating that, is fine within the budget.
+- **Clean in Aseprite** to the tag: about 106 px head to soles, feet on the `feet` slice, locked to the palette, the trophy's gold from the palette entries the trophy art already uses, the shirt and print colours only in their own entries (so the white kit's swap still works). Add the tag to `art/character/zain.aseprite` and re-export `zain-100.png` + `.json`.
+- **Previews:** `art/mockups/a19z-trophy.png` and a GIF, in both kits, beside the trophy as drawn on the champion screen.
+- The manifest (asset IDs, prompts, credits) and the "Characters" table.
+
+**Not in scope:** game code (S20 shows the tag), the other characters (A19).
+
+**Done when…** the owner has approved the pose in both kits; the sheet still passes `sheetProblems` in Node and has the new tag; `npm test` passes; the manifest shows the credits within the 96. The game is unchanged until S20 (an extra tag is ignored; check there are no console warnings).
+
+**Starter prompt**
+```text
+We're doing Session A19z of docs/plan-v3.md: "Art: Coach Zain's trophy pose". The 96 SpriteCook credits expire on November 20, so this runs before then.
+Read CLAUDE.md, docs/decisions.md ("Characters", "Tournament": the look), docs/art-style-guide.md (§3, §4, "Characters"), docs/plan-v3.md (rules, decisions, A19z) and plan-v2.md ("Art sessions: shared rules", "Finalized characters", A8z and its Session log entry, A12).
+Spend is approved up to 96 credits. First check my SpriteCook balance and list the planned jobs with estimated credits, then STOP and wait for my go before generating anything.
+No game code changes. Never use ROM/MAME/Gaelco images as references. Finish with "Done when", tick A19z, add a Session log entry, and commit. Ask me before pushing.
+```
 
 ---
 
@@ -269,3 +299,5 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Settled by the plan (say if you disagree):** the palette cap goes from 48 to 64; the two-row screen is built first (S19) with a test roster; the ids stay `ronin`, `ben`, `adam`; the trophy pose is made for all four at the end (A19) and shown in S20; versions `2.<session>.<fix>`, with CP-K releasing 2.20.0.
   - **Next:** S19 (needs no credits). P3 (agreement, photos and the top-up) can be done alongside it.
 - 2026-11-17, planning (the same day, the owner's correction): **Ben and Adam were placeholders** and are replaced by two new characters (who they are is P3's), and **Ronin may be replaced too**. The order is now new character 1 (Ben's place), new character 2 (Adam's place), then Ronin or his replacement (L3 decides). New characters get their own ids in the replaced entry's place, and S19 also makes a saved pick or tournament naming a removed id fall back safely. Credits: the subscription adds 800 on November 20 (the owner may buy more); that covers the two new characters, and about 500 more (or December's 800) covers the third and the trophy pose.
+- 2026-11-17, planning: the owner thinks the 96 subscription credits don't roll over at the November 20 reset, so they go on **Coach Zain's trophy pose** now (A19z, approved up to 96), ahead of S19. It sets the trophy tag the other three follow in A19, which changes S18's call to make all the poses in one session; the owner accepted the small risk of a mismatch.
+  - **Next:** A19z (before November 20), then S19.
