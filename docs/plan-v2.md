@@ -55,7 +55,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are spend appr
 - [x] **A12** Art: tournament screens (bracket, round titles, trophy, ending)
 - [x] **S18** Tournament art in the game; v2 release prep
 - [x] **S18b** Tournament fix-up and random buttons: a human who loses to a bot is out and the tournament keeps going; a random character on both characters screens, RANDOM BOTS, NEW DRAW *(added at CP-J)*
-- [ ] **CP-J** Release play-test and go-live, version 2.0.0 *(you)*
+- [x] **CP-J** Release play-test and go-live, version 2.0.0 *(you)*
 
 ---
 
@@ -974,6 +974,8 @@ Go through "Done when", tick S18b, add a Session log entry, and commit. Ask me b
 3. When nothing is left to fix: version **2.0.0**, approve the push, and check https://roninray.com/hogg-squash/ in a private window. List 2.0.0 on the build page (`../roninray-site/content/versions.json`) if wanted.
 4. Pick what comes next (music, voice callouts, more courts, more characters…) for another plan, or stop here. *(Picked at CP-J's first play-test, 2026-11-16: **more characters next**, in a new plan once CP-J is ticked; music and the crowd stay on hold. `decisions.md`, "After v2".)*
 
+**Outcome (2026-11-16, the replay after S18b):** nothing to fix. Version 2.0.0. Two sound changes from after S18b went in first: the dive's hit plays the normal HARD hit, and hits in the stretch band have their own name, `hit-stretch`, which also plays the normal hit (the owner's pick). See the Session log.
+
 **Starter prompt** (planning-only session)
 ```text
 Planning only: change no files except docs/plan-v2.md, docs/decisions.md, the version (js/version.js, package.json) and CLAUDE.md's status line.
@@ -1168,3 +1170,7 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Checked in the browser** (the app's own Chrome, `?dev`, the hogg-squash-static server; real key events, real touch events for the tap, the human matches played by a CPU put in the human's slot, or thrown by standing still after serving): a 1P single match with P1 on "?" (rolled Adam; Esc back to the characters put it back on "?"; rolled again), played to 9–4, and REMATCH kept Adam; a 2P select with both on "?" by each player's keys (P2's HARD rolled Ronin, SOFT went back to "?", P1 rolled Coach Zain); a touch tap on the 1P "?" card (rolled Ben). An 8-player tournament, one human: P1 on "?" rolled on OK, RANDOM BOTS (the human kept), START, NEW DRAW twice (three different draws, the characters kept, saved), a reload and CONTINUE showed the second new draw; a watched bots' match, after which NEW DRAW was gone; P1 lost to BOT 7 0–5 and was out; a SKIP, then SKIP BOT MATCHES ran to BOT 6 Coach Zain as champion (47 ms; the same bracket as a copy skipped one by one; saved); the champion screen "0 wins, out in the QUARTER-FINAL". 4-player tournaments with two humans: one where P2 lost to a bot and P1 went on (won the semi, lost the final to a bot), and others where both went out; a 2-player one won by P1 ("1 win, champion"). A 16-player bracket's two columns of five choices inside the panel. An S17-style save with a lost match waiting (`losses` 2) continued, played once more, and the loss put P1 out. No console messages from a cold load to the champion.
   - **By tests only:** a gamepad on the "?" card (the pad's moves go through the same `navigate` as P1's and P2's keys); the human champion's line in the one-column small rows; a saved 32's short rows. **Not checked:** a real phone, other browsers, sound (no sound changed).
   - **Next:** CP-J again (the release play-test, 2.0.0): the whole checklist, quickly where unchanged, plus the three new buttons.
+- 2026-11-16, CP-J (release play-test, the replay after S18b; 2.0.0): the owner played and had **nothing to fix**. CP-J ticked; version **2.0.0** (`js/version.js`, `package.json`). v2 is released once pushed.
+  - **Sound, before the play-test (the owner's asks):** the dive's hit now plays the normal HARD hit (`hit-dive` → `hit-1.mp3` at level 1; `hit-dive-1.mp3` removed; 64cae95). Hits in the stretch band (the classifier's flag 2, between a clean hit and a dive) got their own sound name, `hit-stretch` (`sounds.js`, a placeholder in `synth.js`, 4 new checks in `audio.test.js`). Seven candidates cut from existing takes were offered; the owner kept the normal hit, so `sfx.json` points `hit-stretch` at `hit-1.mp3` at level 1 too, whatever the button (81bf228). No ElevenLabs credits spent. `npm test` passes (all 9 checks, 207 unit tests).
+  - **For the owner:** approve the push, then check https://roninray.com/hogg-squash/ in a private window (the corner should read 2.0.0); list 2.0.0 on the build page (`../roninray-site/content/versions.json`) if wanted.
+  - **Next:** more characters, in a new plan (CP-J's first round: `decisions.md`, "After v2"). Music and the crowd stay on hold.
