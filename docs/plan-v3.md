@@ -78,7 +78,7 @@ Settled by the plan (say so if you disagree):
 - **The two-row screen is built now (S19),** before any fifth character exists, and tested with a longer test roster. That way a later character is still art plus one roster entry, with no game code. With four characters the screen looks as it does today.
 - **The palette goes up from 48 colours to 64.** The palette has about 47 colours with Coach Zain, so three new faces, hair colours and perhaps shirts won't fit in 48. Sixty-four keeps one shared palette and leaves room for later characters. Each character's own shirt and print still get palette entries used nowhere else on its sprite, so its P2 / CPU kit swap works.
 - **Their kits:** each character wears the Hogg red-and-black kit (the standard swap, no `kit` entry) unless L1–L3 agree on their own shirt, as Coach Zain has.
-- **The trophy pose comes last (A19),** in one session for all four characters, as `plan-v2.md` (A12, S18) said. S20 then shows it on the champion screen.
+- **The trophy pose:** Coach Zain's first (A19z, before November 20's reset, with the expiring credits), setting the tag; the other three together at the end (A19), matching his. S20 then shows it on the champion screen.
 - **SpriteCook credits:** **96** on 2026-11-17; the subscription adds **800 on November 20** (and monthly after), and the owner is willing to buy more. Coach Zain cost 392: his concept 192 and his animations 200, with no re-runs. Three characters at about 400 each plus room for re-runs, and the trophy pose for four (about 100–160), comes to **about 1,300–1,400**. November's 800 covers about two characters, so a top-up of about 500 (or December's 800) is needed for the third and the trophy pose. Each 💳 line gets its own price first.
 - **Not in this plan:** music and the crowd (still on hold from `plan-v2.md`), stat differences between characters (looks only, as before), new courts, voice callouts.
 
@@ -226,15 +226,14 @@ No game code changes (the roster entry is allowed). Finish with "Done when", tic
 
 ---
 
-## A19: Art: the trophy pose for all four characters
+## A19: Art: the trophy pose for the other three characters
 
-**Goal:** each of the four characters holding A12's gold trophy (`assets/tournament.png`, `trophy`), for the champion screen.
+**Goal:** the other three characters each holding A12's gold trophy, matching Zain's pose from A19z (`assets/tournament.png`, `trophy`), for the champion screen.
 
 **In scope**
-- **Spend gate** as above: one animation per character, with the trophy as a reference. Settle the tag's name and frame count first (suggested: `trophy`, from the front, 8 frames, looping, the same `feet` pivot).
-- Clean each to that tag in its own sheet, with the trophy's colours from the palette. Re-export the four sheets.
-- Previews: the four together, in both kits (`art/mockups/a19-trophy.png`).
-- Record the tag in `docs/art-style-guide.md` §3 as optional (a sheet without it still works).
+- **Spend gate** as above: one animation per character, with the trophy and Zain's A19z pose as references. Use the tag A19z settled (its name, frames and pivot).
+- Clean each to that tag in its own sheet, with the trophy's colours from the palette. Re-export the three sheets.
+- Previews: all four together, with Zain's from A19z, in both kits (`art/mockups/a19-trophy.png`).
 
 **Not in scope:** game code (S20 uses the tag).
 
@@ -242,8 +241,8 @@ No game code changes (the roster entry is allowed). Finish with "Done when", tic
 
 **Starter prompt**
 ```text
-We're doing Session A19 of docs/plan-v3.md: "Art: the trophy pose for all four characters".
-Read CLAUDE.md, docs/decisions.md ("Characters", "Tournament": the look), docs/art-style-guide.md (§3, "Characters"), docs/plan-v3.md (rules, the A14/A16/A18 Session log entries, A19) and plan-v2.md ("Art sessions: shared rules", A12).
+We're doing Session A19 of docs/plan-v3.md: "Art: the trophy pose for the other three characters".
+Read CLAUDE.md, docs/decisions.md ("Characters", "Tournament": the look), docs/art-style-guide.md (§3, "Characters"), docs/plan-v3.md (rules, the A19z and A14/A16/A18 Session log entries, A19) and plan-v2.md ("Art sessions: shared rules", A12).
 First check my SpriteCook balance and list the planned generations with estimated credits, then STOP and wait for my OK before generating anything.
 No game code changes. Finish with "Done when", tick A19, add a Session log entry, and commit. Ask me before pushing.
 ```
