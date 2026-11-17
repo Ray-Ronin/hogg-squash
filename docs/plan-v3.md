@@ -12,7 +12,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 
 **Before November 20** *(the 96 subscription credits don't roll over)*
 - [x] 💳 Approve SpriteCook spend for A19z *(you)* *(up to 96, the whole balance, approved 2026-11-17)*
-- [ ] **A19z** Art: Coach Zain's trophy pose, which sets the tag the others follow in A19 *(added 2026-11-17)*
+- [x] **A19z** Art: Coach Zain's trophy pose, which sets the tag the others follow in A19 *(added 2026-11-17)*
 
 **Ready for more characters**
 - [ ] **S19** The select screen in two rows past four characters, the "?" card always last (built now, tested with a longer test roster); a saved pick of a character who has left the roster falls back safely
@@ -300,3 +300,9 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
 - 2026-11-17, planning (the same day, the owner's correction): **Ben and Adam were placeholders** and are replaced by two new characters (who they are is P3's), and **Ronin may be replaced too**. The order is now new character 1 (Ben's place), new character 2 (Adam's place), then Ronin or his replacement (L3 decides). New characters get their own ids in the replaced entry's place, and S19 also makes a saved pick or tournament naming a removed id fall back safely. Credits: the subscription adds 800 on November 20 (the owner may buy more); that covers the two new characters, and about 500 more (or December's 800) covers the third and the trophy pose.
 - 2026-11-17, planning: the owner thinks the 96 subscription credits don't roll over at the November 20 reset, so they go on **Coach Zain's trophy pose** now (A19z, approved up to 96), ahead of S19. It sets the trophy tag the other three follow in A19, which changes S18's call to make all the poses in one session; the owner accepted the small risk of a mismatch.
   - **Next:** A19z (before November 20), then S19.
+- 2026-11-17, A19z: **Coach Zain's trophy pose** is in his sheet as the optional `trophy` tag (frames 81–88: front view, 8 × 125 ms, looping, the `feet` pivot), approved by the owner in both kits. The tag is written into the style guide §3; A19 follows it.
+  - **Credits:** 68 of the 96 (a still edit of his front concept holding our A12 trophy, 48; the animation, 20; no re-runs), so 28 are left before the reset. Prompts, asset IDs and hashes are in the manifest.
+  - **Cleanup** (in `a8z-build.lua`, so his whole sheet still comes from one script): the generator kept reshaping the trophy, so frame 1's trophy and hands are stamped into all eight frames; a red-and-white wristband it drew was recoloured to skin; the shirt print is placed from the chest, not the sprite's top (which is now the trophy), so the white kit's swap works. Frames 0–80 are unchanged. `sheetProblems` finds nothing, `npm test` passes, and the game loads with no console messages.
+  - **For later:** the held trophy is about 31 px tall against the 84 px standing one, and is the generator's cup (no handles, the plate a red smudge), not A12's exact drawing. Whether the champion screen still shows the standing trophy beside a champion holding one is S20's call. At the top of the bob the trophy reaches the frame's top edge (nothing cut).
+  - **Lessons for A19:** the animator wants a square-ish source of 256 px or less, so pad the still (200×200 here); an edit can't take a reference image, so pass the trophy as a style image instead.
+  - **Next:** S19.

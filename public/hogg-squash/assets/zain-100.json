@@ -727,6 +727,78 @@
     "spriteSourceSize": { "x": 0, "y": 0, "w": 150, "h": 150 },
     "sourceSize": { "w": 150, "h": 150 },
     "duration": 125
+   },
+   {
+    "filename": "trophy 0",
+    "frame": { "x": 150, "y": 1500, "w": 150, "h": 150 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 150, "h": 150 },
+    "sourceSize": { "w": 150, "h": 150 },
+    "duration": 125
+   },
+   {
+    "filename": "trophy 1",
+    "frame": { "x": 300, "y": 1500, "w": 150, "h": 150 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 150, "h": 150 },
+    "sourceSize": { "w": 150, "h": 150 },
+    "duration": 125
+   },
+   {
+    "filename": "trophy 2",
+    "frame": { "x": 450, "y": 1500, "w": 150, "h": 150 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 150, "h": 150 },
+    "sourceSize": { "w": 150, "h": 150 },
+    "duration": 125
+   },
+   {
+    "filename": "trophy 3",
+    "frame": { "x": 600, "y": 1500, "w": 150, "h": 150 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 150, "h": 150 },
+    "sourceSize": { "w": 150, "h": 150 },
+    "duration": 125
+   },
+   {
+    "filename": "trophy 4",
+    "frame": { "x": 750, "y": 1500, "w": 150, "h": 150 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 150, "h": 150 },
+    "sourceSize": { "w": 150, "h": 150 },
+    "duration": 125
+   },
+   {
+    "filename": "trophy 5",
+    "frame": { "x": 900, "y": 1500, "w": 150, "h": 150 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 150, "h": 150 },
+    "sourceSize": { "w": 150, "h": 150 },
+    "duration": 125
+   },
+   {
+    "filename": "trophy 6",
+    "frame": { "x": 1050, "y": 1500, "w": 150, "h": 150 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 150, "h": 150 },
+    "sourceSize": { "w": 150, "h": 150 },
+    "duration": 125
+   },
+   {
+    "filename": "trophy 7",
+    "frame": { "x": 0, "y": 1650, "w": 150, "h": 150 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 150, "h": 150 },
+    "sourceSize": { "w": 150, "h": 150 },
+    "duration": 125
    }
  ],
  "meta": {
@@ -734,7 +806,7 @@
   "version": "1.3.18.6-x64",
   "image": "zain-100.png",
   "format": "I8",
-  "size": { "w": 1200, "h": 1650 },
+  "size": { "w": 1200, "h": 1800 },
   "scale": "1",
   "frameTags": [
    { "name": "ready", "from": 0, "to": 7, "direction": "forward", "color": "#000000ff" },
@@ -746,7 +818,8 @@
    { "name": "backhand", "from": 43, "to": 50, "direction": "forward", "repeat": "1", "color": "#000000ff", "data": "contact=3" },
    { "name": "overhead", "from": 51, "to": 58, "direction": "forward", "repeat": "1", "color": "#000000ff", "data": "contact=3" },
    { "name": "dive", "from": 59, "to": 72, "direction": "forward", "repeat": "1", "color": "#000000ff", "data": "contact=3" },
-   { "name": "front_ready", "from": 73, "to": 80, "direction": "forward", "color": "#000000ff" }
+   { "name": "front_ready", "from": 73, "to": 80, "direction": "forward", "color": "#000000ff" },
+   { "name": "trophy", "from": 81, "to": 88, "direction": "forward", "color": "#000000ff" }
   ],
   "slices": [
    { "name": "feet", "keys": [{ "frame": 0, "bounds": {"x": 65, "y": 145, "w": 16, "h": 4 }, "pivot": {"x": 8, "y": 3 } }] },

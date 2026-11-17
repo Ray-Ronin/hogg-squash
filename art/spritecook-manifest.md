@@ -192,3 +192,29 @@ All jobs: pixel-engine v1.1, pixel mode, Basic background removal, auto-enhance 
 **Cleaned** by `art/tools/a8z-build.lua` into `art/character/zain.aseprite`, exported to `public/hogg-squash/assets/zain-100.png` + `.json`. Previews: `art/mockups/a8z-strips.png`, `art/mockups/a8z-<tag>-p1.gif` and `-p2.gif`, `art/mockups/a8z-review.html`.
 
 **A8z total: 200 of the 296 approved credits** (10 animations, no re-runs). Account after A8z: 96 credits.
+
+## A19z: Coach Zain's trophy pose
+
+**Approved spend:** up to 96 credits, the whole balance (a still edit, 2 variations, 48; one animation, 20; one re-run in reserve, up to 20), 2026-11-17.
+
+**Uploads (free):** `art/spritecook/a19z/trophy-ref.png` (sha12 `2d96591313c1`), A12's `trophy` slice from `assets/tournament.png` at 3× with no smoothing (our own hand-drawn art), asset `eb729854-6a2b-4859-9e4b-1ac9d558266d`. `art/spritecook/a19z/still-2-200sq.png` (sha12 `e0775e84e679`), variation 2 below area-averaged to 200 px tall and centred on a 200 × 200 canvas, asset `a5c6f27f-ac95-4aff-ac19-a479e7fe1d42` (a first upload at 74 × 200, `31280cc3-6f76-4e60-a6ea-03857f98ee01`, was refused for animation at no charge: sources must be between 1:2 and 2:1). No photos of anyone were used.
+
+**1. The still** (job `b38f8c98-40db-4852-98be-3393938a3441`, **48 credits**): gpt-image-2.5-flare, medium, 1K, 1:1, pixel, transparent, 2 variations. `edit_asset_id` front concept 1 (`f5b47d79-0fad-4680-8868-d09f2f6124a5`), `style_asset_ids` the trophy upload (SpriteCook won't take an edit and a `reference_asset_id` together). Billed 2 × (8 + 2 × 8), as estimated.
+- **Prompt:** The same squash coach as the edited sprite, seen directly from the front, facing the camera, celebrating a tournament win: he holds the gold trophy from the reference image up high above his head with both hands, one hand on each side of the trophy's black plinth, arms raised, elbows slightly bent, and a big happy smile. The trophy looks exactly like the reference: a gold cup with two handles, a red band around the cup, on a black plinth with a red plate lettered HOGG. No racket. Same tall slim build, same face, short dark hair and neat short beard, same pixel art style, proportions and size. Same plain black short-sleeve team shirt with the small HOGG chest print, black shorts, white socks and white court shoes, feet planted shoulder-width apart, knees slightly bent. Single character, centred, whole body and the whole trophy visible from the top of the trophy to his feet.
+
+| File (`art/spritecook/a19z/`) | sha12 | Asset ID | Size | Notes |
+|---|---|---|---|---|
+| `still-1.png` | `78db6c510a7e` | `9de70acf-9f2a-46ed-9f69-fba1207be2f5` | 34×34 | broken: the pixel grid detection shrank it to a 34 px smudge |
+| `still-2.png` | `f66c93faa9d5` | `2e069b34-bc8a-485a-a148-c63d5d353e1d` | 306×306 | **picked**: the trophy up in both hands, HOGG on the plinth, his face and shirt kept |
+
+**2. The animation** (job `dab655b1-f1b3-4ebd-b15e-0dd0093cc1a9`, **20 credits**): pixel-engine v1.1, pixel mode, 8 frames, spritesheet, edge margin 15, Basic background removal, auto-enhance off, from `still-2-200sq.png`. 256 px cells.
+- **Prompt:** The tall, slim coach in a black short-sleeve team shirt, black shorts, white socks and white shoes is seen from the front, facing the camera, celebrating a win. He holds the gold trophy up above his head with both hands the whole time and never lets go of it; the trophy stays upright and the same size and shape in every frame. He does a small happy bounce in a looping rhythm: knees bend a little and straighten, the body bobs gently up and down, and the arms lift the trophy a little higher on each bounce. His face keeps smiling at the camera. Both feet stay planted in the same spot on the ground; he does not turn, step or jump.
+- **Negative prompt:** trophy disappearing, trophy changing shape, dropping the trophy, one-handed, racket, turning around, stepping away, jumping, face changing.
+
+| File (`art/spritecook/a19z/`) | sha12 | Asset ID | Frames | Used in the sheet |
+|---|---|---|---|---|
+| `trophy.png` | `5d07212cc3b6` | `71f867d8-40d0-4dfb-9800-394aa798ea16` | 8 | `trophy`: 1–8, with frame 1's trophy and hands stamped into every frame (the generator's trophy changes shape, stretching tall in frames 4 and 8) |
+
+**Cleaned** by `art/tools/a8z-build.lua` (the `trophy` tag, after `front_ready`) into `art/character/zain.aseprite`, exported to `public/hogg-squash/assets/zain-100.png` + `.json`. Previews: `art/mockups/a19z-trophy.png`, `a19z-trophy-p1.gif`, `a19z-trophy-p2.gif` (`art/tools/a19z-preview.lua`).
+
+**A19z total: 68 of the 96 approved credits** (one still round, one animation, no re-runs). Account after A19z: 28 credits.

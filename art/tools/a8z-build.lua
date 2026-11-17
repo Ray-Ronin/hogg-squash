@@ -1,6 +1,6 @@
 -- A8z build: Coach Zain's full sheet, from the SpriteCook animations (art/spritecook/a8z/), to player-100's contract
--- plus an 8-frame front_ready. Writes art/character/zain.aseprite; export with art/tools/a8z-export.sh, previews with
--- art/tools/a8z-preview.lua.
+-- plus an 8-frame front_ready and (A19z) an 8-frame trophy. Writes art/character/zain.aseprite; export with
+-- art/tools/a8z-export.sh, previews with art/tools/a8z-preview.lua (and art/tools/a19z-preview.lua for trophy).
 -- Run: Aseprite -b --script "C:/Hogg Squash/hogg-squash/art/tools/a8z-build.lua"
 --
 -- Every file is read at its own scale (106 px for its source pose, frame 1). In each used frame the shirt print is
@@ -102,7 +102,44 @@ local TAGS = {
     ms = { 40, 40, 42, 100, 230, 230, 230, 230, 230, 231, 100, 100, 100, 100 }, contact = 4, once = true, dive = true },
   -- Source frames 4 to 6 draw a ball over the racket, so the loop bobs down and up on the clean ones.
   { name = "front_ready", f = seq("front_ready", { 1, 2, 7, 3, 3, 8, 2, 1 }), ms = { 125 }, view = "front" },
+  -- A19z: holding A12's trophy up, from the front (art/spritecook/a19z/trophy.png). Last, so frames 0-80 keep their
+  -- places. The generator's trophy changes shape from frame to frame, so the trophy and hands of frame TROPHY_KEY
+  -- are stamped into every frame, lined up on the plinth's bottom and the body's centre line.
+  { name = "trophy", f = seq("trophy", { 1, 2, 3, 4, 5, 6, 7, 8 }), ms = { 125 }, view = "front", trophy = true },
 }
+local TROPHY_KEY = 1
+-- Above the plinth's bottom the trophy may use A12's gold (art/tools/a12-tournament.lua, `goldify`) besides the
+-- character colours.
+local GOLD = {}
+for k, v in pairs(ALLOW) do GOLD[k] = v end
+for _, n in ipairs({ "flash", "flash shade", "hair blond (S15)", "hair blond dark (S15)", "hair auburn dark (S15)" }) do
+  GOLD[I(n)] = true
+end
+local FILE_DIR = { trophy = "a19z" }
+
+-- In a trophy frame (a grid with alpha, or an index grid), the body's centre column at chest height, the top of the
+-- head (the first gap going up that centre line) and the plinth's bottom (the next opaque row above it).
+local function trophyRows(g, opaque)
+  local x0, y0, x1, y1 = 0, g.h, 0, -1
+  for y = 0, g.h - 1 do for x = 0, g.w - 1 do
+    if opaque(g.px[y][x]) then y0 = math.min(y0, y); y1 = math.max(y1, y) end
+  end end
+  local ry = math.floor(y1 - (y1 - y0) * 0.45)
+  local sx, n = 0, 0
+  for x = 0, g.w - 1 do if opaque(g.px[ry][x]) then sx = sx + x; n = n + 1 end end
+  local cx = math.floor(sx / n + 0.5)
+  local function solid(y)
+    for x = cx - 2, cx + 2 do if opaque(g.px[y][x]) then return true end end
+    return false
+  end
+  local y = ry
+  while y > y0 and solid(y) do y = y - 1 end
+  local head = y + 1
+  while y > y0 and not solid(y) do y = y - 1 end
+  return cx, head, y, y1
+end
+local function alphaOpaque(p) return p[4] > 0 end
+local function indexOpaque(c) return c ~= 0 end
 
 -- Hand fixes: tag -> tag frame (1-based) -> rectangles to erase, in frame pixels { x0, y0, x1, y1 }.
 local ERASE = {}
@@ -160,12 +197,13 @@ end
 local FILES = {}
 local function fileInfo(name)
   if FILES[name] then return FILES[name] end
-  local img = Image { fromFile = R .. "art/spritecook/a8z/" .. name .. ".png" }
-  local isFront = name == "front_ready"
+  local img = Image { fromFile = R .. "art/spritecook/" .. (FILE_DIR[name] or "a8z") .. "/" .. name .. ".png" }
+  local isFront = name == "front_ready" or name == "trophy"
   local info = { img = img, cell = img.height, squeeze = isFront and 0.9 or nil, islands = isFront and 200 or nil,
-    cache = {} }
+    cache = {}, trophy = name == "trophy" }
   local src = L.loadCell(img, 0, info.cell, info.cell)
   local _, y0, _, y1 = L.gridBounds(src)
+  if info.trophy then _, y0 = trophyRows(src, alphaOpaque) end   -- head to soles, not trophy to soles
   info.scale = HEIGHT / (y1 - y0 + 1)
   FILES[name] = info
   return info
@@ -183,7 +221,13 @@ local function cleanFrame(name, f)
     end
   end
   if info.squeeze then src = squeeze(src, info.squeeze) end
-  local q = L.quantize(pal, L.areaScale(src, info.scale), 0.5, ALLOW)
+  local scaled = L.areaScale(src, info.scale)
+  local q = L.quantize(pal, scaled, 0.5, ALLOW)
+  if info.trophy then
+    local _, _, plinth = trophyRows(src, alphaOpaque)
+    local gold = L.quantize(pal, scaled, 0.5, GOLD)
+    for y = 0, math.min(q.h - 1, math.floor((plinth + 1) * info.scale)) do q.px[y] = gold.px[y] end
+  end
   L.despeckle(q)
   L.smoothLone(q, { [O] = true })
   L.outline(q, O)
@@ -208,6 +252,21 @@ local function fileTemplate(name, view)
   local q = cleanFrame(name, 1)
   local x0, y0 = L.bounds(q)
   local V = VIEWS[view]
+  if info.trophy then
+    -- The sprite's top is the trophy, not his head, so the A7z grid is placed by the chest print instead: its HOGG
+    -- letters (the light pixels on the chest, under the head) start at the grid's 30, 28.
+    local cx, head = trophyRows(q, indexOpaque)
+    local lx, ly, hx, hy = q.w, q.h, -1, -1
+    for y = head + 16, head + 40 do for x = cx - 20, cx + 20 do
+      if CLASS[L.at(q, x, y)] == 2 then
+        lx = math.min(lx, x); ly = math.min(ly, y); hx = math.max(hx, x); hy = math.max(hy, y)
+      end
+    end end
+    print(string.format("trophy print box %d,%d - %d,%d (head top %d, centre %d)", lx, ly, hx, hy, head, cx))
+    -- 2 px further left than the generator's print: with his arms up the torso is narrower than in front_ready, and
+    -- there the stamp touched the shirt's edge
+    x0, y0 = lx - 32, ly - 28
+  end
   local t = { cx = x0 + V.centre[1], cy = y0 + V.centre[2], ox = x0, oy = y0, list = {} }
   for y = V.template[2], V.template[4] do for x = V.template[1], V.template[3] do
     local c = CLASS[L.at(q, x0 + x, y0 + y)] or 0
@@ -460,7 +519,15 @@ for _, t in ipairs(TAGS) do
     local opts = t.dive and { win = 50, amax = 36, astep = 6 }
       or (view == "front" and { win = 8, amax = 0, astep = 1 })
       or { win = 34, amax = 30, astep = 6 }
-    local x, y, a, match = track(q, tpl, opts)
+    local from = tpl
+    if t.trophy then
+      -- the bounce lifts the body up to 8 px: start the search where the head moved to, or it finds the face
+      local cx1, head1 = trophyRows(cleanFrame(name, 1), indexOpaque)
+      local cx, head = trophyRows(q, indexOpaque)
+      from = { cx = tpl.cx + cx - cx1, cy = tpl.cy + head - head1, list = tpl.list }
+      opts = { win = 4, amax = 0, astep = 1 }
+    end
+    local x, y, a, match = track(q, from, opts)
     local over = (TRACK[name] or {})[f]
     if over then x, y, a = over.x, over.y, over.a end
     if view == "front" or math.abs(a) <= 15 then a = 0 end   -- a small tilt only makes the letters jagged
@@ -484,6 +551,43 @@ for _, t in ipairs(TAGS) do
       match, racket and "" or "  (no racket found)"))
   end
   t.last = #frames
+end
+
+-- A19z: one trophy (and the hands holding it) for every trophy frame, from frame TROPHY_KEY.
+local TROPHY_HALF = 26   -- columns either side of the centre line taken as trophy and hands
+local WRIST = {}
+for _, n in ipairs({ "white", "front wall", "white kit shade", "side wall", "grey 3", "grey 2", "red 1 (deepest)", "red 2",
+  "tin", "Hogg red (court lines)", "kit red", "red highlight", "flash", "flash shade", "hair blond (S15)",
+  "hair blond dark (S15)", "hair auburn dark (S15)", "shirt print (A7z)" }) do WRIST[I(n)] = true end
+for _, t in ipairs(TAGS) do
+  if t.trophy then
+    local key = frames[t.first + TROPHY_KEY - 1].q
+    local kx, _, kp = trophyRows(key, indexOpaque)
+    for i = t.first, t.last do
+      local q = frames[i].q
+      local cx, head, plinth = trophyRows(q, indexOpaque)
+      if i ~= t.first + TROPHY_KEY - 1 then
+        local ox, oy = cx - kx, plinth - kp
+        for y = 0, plinth do for x = cx - TROPHY_HALF, cx + TROPHY_HALF do
+          if x >= 0 and x < q.w then q.px[y][x] = 0 end
+        end end
+        for y = 0, kp do for x = kx - TROPHY_HALF, kx + TROPHY_HALF do
+          local c = L.at(key, x, y)
+          local tx, ty = x + ox, y + oy
+          if c ~= 0 and tx >= 0 and ty >= 0 and tx < q.w and ty < q.h then q.px[ty][tx] = c end
+        end end
+      end
+      -- The generator gave his left wrist a white and red band (he wears none elsewhere), and the gold match turned
+      -- a few pixels of the hands gold: outside the trophy's columns (frame x 68-79, from frame 1's cup and plinth),
+      -- above the chest, those colours become skin.
+      for y = 0, math.min(q.h - 1, 56 - frames[i].dy) do for x = 0, q.w - 1 do
+        local fx = x + frames[i].dx
+        if (fx < 68 or fx > 79) and WRIST[q.px[y][x]] then q.px[y][x] = I("skin 3") end
+      end end
+      print(string.format("trophy %d  centre %d  head top %d  plinth bottom %d  (frame y %d, %d)", i - t.first + 1, cx,
+        head, plinth, head + frames[i].dy, plinth + frames[i].dy))
+    end
+  end
 end
 
 local spr = Sprite(FRAME, FRAME, ColorMode.INDEXED)
