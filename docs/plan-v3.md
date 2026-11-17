@@ -1,7 +1,7 @@
 # Hogg Squash after v2: more characters
 
 Written 2026-11-17 from `CLAUDE.md`, `docs/decisions.md` ("Characters", "After v2") and `docs/plan-v2.md` (its rules, "Finalized characters: shared rules and template", A7z, A8z, S15b and the Session log), with the owner's answers to the planning questions.
-v2 is released (CP-J, version 2.0.0). This plan turns the three recolours, **Ronin, Ben and Adam**, into finalized characters with their own full sheets, as Coach Zain was made. It also gets the game ready for more characters later, and gives all four characters a trophy pose for the champion screen.
+v2 is released (CP-J, version 2.0.0). This plan replaces the three recolours with finalized characters that have their own full sheets, as Coach Zain was made. **Ben and Adam were placeholders:** two new characters take their places. **Ronin** comes last: he gets his own sheet or is replaced by a new character too (the owner decides at L3). The plan also gets the game ready for more characters later, and gives all four characters a trophy pose for the champion screen.
 `docs/plan-v2.md` stays as the v2 history. Its rules, its art rules and its finalized-character template still apply, with the changes listed below. Read a section of it when a session here points at it.
 
 ## Status
@@ -11,29 +11,29 @@ A line marked `[-]` is on hold: it's skipped and doesn't count as unticked, unti
 Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook spend approvals: the session after it stops and waits for your OK before generating anything.
 
 **Ready for more characters**
-- [ ] **S19** The select screen in two rows past four characters, the "?" card always last (built now, tested with a longer test roster)
-- [ ] **P3** Prerequisites *(you)*: Ronin's, Ben's and Adam's agreement and photos; a SpriteCook top-up (about 1,300 credits)
+- [ ] **S19** The select screen in two rows past four characters, the "?" card always last (built now, tested with a longer test roster); a saved pick of a character who has left the roster falls back safely
+- [ ] **P3** Prerequisites *(you)*: who the two new characters are, their agreement and photos; SpriteCook credits (about 400 per character)
 
-**Ronin**
-- [ ] **L1** Agree Ronin's look *(you, planning only)*
+**New character 1** *(replaces Ben)*
+- [ ] **L1** Agree new character 1's look *(you, planning only)*
 - [ ] 💳 Approve SpriteCook spend for A13 *(you)*
-- [ ] **A13** Art: Ronin's concept, from the back and the front, in both kits
+- [ ] **A13** Art: new character 1's concept, from the back and the front, in both kits
 - [ ] 💳 Approve SpriteCook spend for A14 *(you)*
-- [ ] **A14** Art: Ronin, every animation and the front-view idle; he replaces his recolour in the roster
+- [ ] **A14** Art: new character 1, every animation and the front-view idle; replaces Ben in the roster
 
-**Ben**
-- [ ] **L2** Agree Ben's look *(you, planning only)*
+**New character 2** *(replaces Adam)*
+- [ ] **L2** Agree new character 2's look *(you, planning only)*
 - [ ] 💳 Approve SpriteCook spend for A15 *(you)*
-- [ ] **A15** Art: Ben's concept
+- [ ] **A15** Art: new character 2's concept
 - [ ] 💳 Approve SpriteCook spend for A16 *(you)*
-- [ ] **A16** Art: Ben, every animation; he replaces his recolour
+- [ ] **A16** Art: new character 2, every animation; replaces Adam
 
-**Adam**
-- [ ] **L3** Agree Adam's look *(you, planning only)*
+**Ronin, or his replacement**
+- [ ] **L3** Decide: Ronin with his own sheet, or a new character in his place; then agree the look *(you, planning only)*
 - [ ] 💳 Approve SpriteCook spend for A17 *(you)*
-- [ ] **A17** Art: Adam's concept
+- [ ] **A17** Art: the concept
 - [ ] 💳 Approve SpriteCook spend for A18 *(you)*
-- [ ] **A18** Art: Adam, every animation; he replaces his recolour
+- [ ] **A18** Art: every animation; replaces Ronin's recolour
 
 **The trophy and the release**
 - [ ] 💳 Approve SpriteCook spend for A19 *(you)*
@@ -49,7 +49,7 @@ The same as `docs/plan-v2.md`, "Rules for every session" and "Art sessions: shar
 1. **Start:** read `CLAUDE.md`, `docs/decisions.md` and this file, then the `plan-v2.md` sections the session names. Every line above your session must be ticked (or `[-]`). If one isn't, stop and ask.
 2. **Version numbers: `2.<session>.<fix>`, carrying on from S18.** S19 is 2.19.0, a fix after it 2.19.1. Art sessions (A13–A19) and planning lines (L1–L3) don't change the version. CP-K's release is S20's version, 2.20.0, or a fix after it. There's no 3.0.0 unless the owner asks for one.
 3. **Finalized characters** follow `plan-v2.md`, "Finalized characters: shared rules and template". A13–A18 copy A7z and A8z, and L1–L3 are the template's step 1.
-4. **Keep the ids.** Ronin, Ben and Adam keep `ronin`, `ben` and `adam` in `characters.json`, so saved settings and saved tournaments still find them. Each animation session swaps its character's entry from the shared `player-100` sheet (with its skin and hair recolours) to its own sheet. Nothing else in the roster moves.
+4. **Roster entries.** A new character takes the replaced entry's place in `characters.json` (the same position in the list) with **their own id**: new character 1 where `ben` was, new character 2 where `adam` was. If Ronin stays, he keeps `ronin` and his entry changes from the shared `player-100` sheet (with its skin and hair recolours) to his own sheet. A saved pick or saved tournament that names a removed id falls back safely (S19 makes sure of that). Nothing else in the roster moves.
 5. **Order on the select screen:** the roster's order as listed, with the "?" card always last (`decisions.md`, "Characters").
 6. **Commit messages and the hand-off** as in `plan-v2.md`. The plan file to name in hand-off prompts is `docs/plan-v3.md`. Every prompt ends with "Ask me before pushing."
 
@@ -64,17 +64,18 @@ The same as `docs/plan-v2.md`, "Rules for every session" and "Art sessions: shar
 ## Decisions made while writing this plan (2026-11-17)
 
 The owner's answers (also in `docs/decisions.md`, "Characters (v3)"):
-- **Four characters for now:** Coach Zain stays as he is, and **Ronin, Ben and Adam** get their own full sheets in their recolours' places, in that order. More characters can be added later.
+- **Four characters for now:** Coach Zain stays as he is. **Ben and Adam were placeholders** and are replaced by two new characters. **Ronin may be replaced too**, so he comes last (L3 decides). More characters can be added later.
 - **Full sheets,** not recolours: each of the three gets a concept session and an animation session, as Coach Zain did.
 - **The select screen:** one row of cards while there are four characters. **With five or more it becomes two rows,** and the "?" random card is **always last**.
 
 Settled by the plan (say so if you disagree):
-- **Real people, with their agreement.** Ronin, Ben and Adam are drawn from photos only once each has agreed (P3). Their photos stay outside the repo in `C:\Hogg Squash\Character References\<id>\`, as Coach Zain's do.
+- **The new characters come first, Ronin last,** so the decision about him can wait until two finalized characters are in the game.
+- **Real people, with their agreement.** Anyone drawn from photos has agreed first (P3, and L3 for Ronin or his replacement). Their photos stay outside the repo in `C:\Hogg Squash\Character References\<id>\`, as Coach Zain's do. An invented character (no photos) is fine too.
 - **The two-row screen is built now (S19),** before any fifth character exists, and tested with a longer test roster. That way a later character is still art plus one roster entry, with no game code. With four characters the screen looks as it does today.
 - **The palette goes up from 48 colours to 64.** The palette has about 47 colours with Coach Zain, so three new faces, hair colours and perhaps shirts won't fit in 48. Sixty-four keeps one shared palette and leaves room for later characters. Each character's own shirt and print still get palette entries used nowhere else on its sprite, so its P2 / CPU kit swap works.
 - **Their kits:** each character wears the Hogg red-and-black kit (the standard swap, no `kit` entry) unless L1–L3 agree on their own shirt, as Coach Zain has.
 - **The trophy pose comes last (A19),** in one session for all four characters, as `plan-v2.md` (A12, S18) said. S20 then shows it on the champion screen.
-- **SpriteCook credits:** **96** on 2026-11-17. Coach Zain cost 392: his concept 192 and his animations 200, with no re-runs. Three characters at about 400 each plus room for re-runs, and the trophy pose for four (about 100–160), comes to **about 1,300–1,400**. That means **a top-up of about 1,300 before A13** (P3). Each 💳 line gets its own price first.
+- **SpriteCook credits:** **96** on 2026-11-17; the subscription adds **800 on November 20** (and monthly after), and the owner is willing to buy more. Coach Zain cost 392: his concept 192 and his animations 200, with no re-runs. Three characters at about 400 each plus room for re-runs, and the trophy pose for four (about 100–160), comes to **about 1,300–1,400**. November's 800 covers about two characters, so a top-up of about 500 (or December's 800) is needed for the third and the trophy pose. Each 💳 line gets its own price first.
 - **Not in this plan:** music and the crowd (still on hold from `plan-v2.md`), stat differences between characters (looks only, as before), new courts, voice callouts.
 
 ---
@@ -90,7 +91,8 @@ Settled by the plan (say so if you disagree):
   - the cards stay clear of both big figures. If two rows at the current card size don't fit, smaller cards in two rows are fine (say which).
 - **Moves:** left / right through the cards in order, wrapping as now. Up / down moves between the rows to the nearest card, and P2 and the gamepad use the same moves. Touch taps hit the right card. The CPU's up / down roll still never lands on "?".
 - **The tournament's characters screen:** its slots cycle through the roster then "?", as now. Check it with the longer roster too.
-- **Tests** (`test/screens.test.js`): a test roster of 4, 5, 6, 8 and 9 characters. The cards fit and don't overlap each other or the big figures. "?" is last. The moves reach every card. The tap hit areas match the cards. The real four-character roster draws exactly as before.
+- **A removed character:** Ben and Adam will leave the roster (A14, A16), and Ronin may. A saved single-match pick whose id is gone falls back (as Will's did when Coach Zain replaced him in S15b: check it still does). A saved tournament whose entrants include a gone id must still load, play and show a name and a figure for that entrant: it gets the character now in that roster position, or a random one (say which), never a blank or a crash. A saved CPU pick the same.
+- **Tests** (`test/screens.test.js`, `test/tournament.test.js` or `test/roster.test.js`): a test roster of 4, 5, 6, 8 and 9 characters. The cards fit and don't overlap each other or the big figures. "?" is last. The moves reach every card. The tap hit areas match the cards. The real four-character roster draws exactly as before. A saved pick and a saved tournament naming `ben` against a roster without him.
 - **Docs:** `decisions.md` ("Characters", as built), `CLAUDE.md`'s status line.
 
 **Not in scope:** new art, the roster's real entries, anything in `js/sim/`.
@@ -115,16 +117,16 @@ Go through "Done when", tick S19, add a Session log entry, and commit. Ask me be
 
 ## P3: Prerequisites *(you)*
 
-- **Agreement:** Ronin, Ben and Adam each agree to be in the game, drawn from their photos.
-- **Photos** in `C:\Hogg Squash\Character References\ronin\`, `\ben\` and `\adam\`: the face (front and side if you can), the whole body, and the shirt's front and back if they get their own. Coach Zain's folder shows what worked.
-- **SpriteCook:** top up about 1,300 credits (96 now). A13 alone needs about 190.
+- **Who:** the two new characters (real people who agree, or invented ones). Ronin's decision can wait until L3.
+- **Photos** for anyone real, in `C:\Hogg Squash\Character References\<id>\` (a short lowercase id, such as `zain`): the face (front and side if you can), the whole body, and the shirt's front and back if they get their own. Coach Zain's folder shows what worked.
+- **SpriteCook:** about 400 credits per character. November 20's 800 covers A13–A16; the third character and the trophy pose need a top-up of about 500 or December's credits.
 
 ---
 
 ## L1, L2, L3: Agree each character's look *(you, planning only)*
 
-The template's step 1 (`plan-v2.md`, "Finalized characters"), one character at a time, before that character's concept. No credits.
-- Who they are. The name for the select screen, plus a `short` one if it's wider than the 62 px name slot. That they have agreed.
+The template's step 1 (`plan-v2.md`, "Finalized characters"), one character at a time, before that character's concept. No credits. **L3 starts with the owner's call:** Ronin with his own sheet (keeps `ronin`), or a new character in his place (a new id).
+- Who they are, and their id. The name for the select screen, plus a `short` one if it's wider than the 62 px name slot. That they have agreed (if real).
 - Their body (height about 94–108 px head to soles against the standard 100, and their build), skin and hair.
 - Their kit: the Hogg red and black (the standard swap), or their own shirt and its P2 / CPU version.
 - Which photos to use.
@@ -133,9 +135,9 @@ The template's step 1 (`plan-v2.md`, "Finalized characters"), one character at a
 **Starter prompt** (planning-only session; swap the name)
 ```text
 Planning only: change no files except docs/plan-v3.md and docs/decisions.md.
-We're doing L1 of docs/plan-v3.md: "Agree Ronin's look". Read docs/plan-v3.md and plan-v2.md's "Finalized characters" and A7z.
-The photos are in C:\Hogg Squash\Character References\ronin\ (look at them; never commit them).
-Ask me the template's step-1 questions, write the answers into A13's "Agreed with the owner", tick L1, and commit. Ask me before pushing.
+We're doing L1 of docs/plan-v3.md: "Agree new character 1's look". Read docs/plan-v3.md and plan-v2.md's "Finalized characters" and A7z.
+The photos are in C:\Hogg Squash\Character References\<id>\ (look at them; never commit them).
+Ask me the template's step-1 questions, write the answers into A13's "Agreed with the owner" (and the character's name into the Status lines), tick L1, and commit. Ask me before pushing.
 ```
 
 ---
@@ -159,9 +161,9 @@ Ask me the template's step-1 questions, write the answers into A13's "Agreed wit
 
 **Starter prompt** (swap the session, name and folder)
 ```text
-We're doing Session A13 of docs/plan-v3.md: "Art: Ronin's concept".
+We're doing Session A13 of docs/plan-v3.md: "Art: <name>'s concept".
 Read CLAUDE.md, docs/decisions.md ("Characters"), docs/art-style-guide.md, docs/plan-v3.md (rules, decisions, A13) and plan-v2.md ("Art sessions: shared rules", "Finalized characters", A7z and its Session log entry). Check L1 is ticked.
-The reference photos are in C:\Hogg Squash\Character References\ronin\ (never commit them).
+The reference photos are in C:\Hogg Squash\Character References\<id>\ (never commit them).
 First check my SpriteCook balance and list the planned generations with estimated credits, then STOP and wait for my OK before generating anything.
 No game code changes. Finish with "Done when", tick A13, add a Session log entry, and commit. Ask me before pushing.
 ```
@@ -176,17 +178,17 @@ No game code changes. Finish with "Done when", tick A13, add a Session log entry
 - **Spend gate** as above: 10 animations (the nine contract tags plus `front_ready`) at about 20 credits each, plus up to 4 re-runs.
 - Animate the picked back and front concepts, and clean to the sheet contract (the same height in every frame, `feet` lined up, contact frames, `racket <tag>` slices, the overhead inside the frame, any shirt colours only in their own entries).
 - Export `public/hogg-squash/assets/<id>-100.png` + `.json`.
-- **The roster** (art sessions may edit it): the character's entry keeps its id and changes to `"sheet": "<id>-100"`, drops its skin and hair recolours, and gets a `kit` and `short` if needed.
-- Check them in the game: a match in each kit, the select screen from the front, a mirror match. No console warnings.
+- **The roster** (art sessions may edit it): the new character's entry, with their own id and `"sheet": "<id>-100"` (plus `kit` and `short` if needed), goes where the replaced entry was (A14: Ben's place, A16: Adam's). If Ronin stays (A18), his entry keeps `ronin`, changes to his own sheet and drops its skin and hair recolours.
+- Check them in the game: a match in each kit, the select screen from the front, a mirror match, and a saved pick of the replaced character falling back (S19). No console warnings.
 - Previews (`art/mockups/a14-*` etc.): a strip and GIFs per tag in both kits.
 
 **Not in scope:** game code (if the game needs a change to show them, stop and ask), the trophy pose (A19).
 
-**Done when…** the owner has approved every animation and the front idle in both kits; the sheet passes `sheetProblems` in Node; the roster entry is in with its old id; `npm test` passes; the manifest shows the credits within the approved amount.
+**Done when…** the owner has approved every animation and the front idle in both kits; the sheet passes `sheetProblems` in Node; the roster entry is in, in the replaced entry's place; `npm test` passes; the manifest shows the credits within the approved amount.
 
 **Starter prompt** (swap the session, name and concept session)
 ```text
-We're doing Session A14 of docs/plan-v3.md: "Art: Ronin, every animation".
+We're doing Session A14 of docs/plan-v3.md: "Art: <name>, every animation".
 Read CLAUDE.md, docs/decisions.md ("Characters"), docs/art-style-guide.md (§3, §4, "Characters"), docs/plan-v3.md (rules, A13's Session log entry, A14) and plan-v2.md ("Art sessions: shared rules", "Finalized characters", A8z and its Session log entry). Check A13 is ticked.
 First check my SpriteCook balance and list the planned generations with estimated credits, then STOP and wait for my OK before generating anything.
 No game code changes (the roster entry is allowed). Finish with "Done when", tick A14, add a Session log entry, and commit. Ask me before pushing.
@@ -266,3 +268,4 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **SpriteCook:** 96 credits (checked 2026-11-17, apprentice tier, active). Coach Zain cost 392 (concept 192, animations 200). The plan needs about 1,300–1,400, so a top-up of about 1,300 is needed before A13.
   - **Settled by the plan (say if you disagree):** the palette cap goes from 48 to 64; the two-row screen is built first (S19) with a test roster; the ids stay `ronin`, `ben`, `adam`; the trophy pose is made for all four at the end (A19) and shown in S20; versions `2.<session>.<fix>`, with CP-K releasing 2.20.0.
   - **Next:** S19 (needs no credits). P3 (agreement, photos and the top-up) can be done alongside it.
+- 2026-11-17, planning (the same day, the owner's correction): **Ben and Adam were placeholders** and are replaced by two new characters (who they are is P3's), and **Ronin may be replaced too**. The order is now new character 1 (Ben's place), new character 2 (Adam's place), then Ronin or his replacement (L3 decides). New characters get their own ids in the replaced entry's place, and S19 also makes a saved pick or tournament naming a removed id fall back safely. Credits: the subscription adds 800 on November 20 (the owner may buy more); that covers the two new characters, and about 500 more (or December's 800) covers the third and the trophy pose.

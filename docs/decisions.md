@@ -230,9 +230,9 @@ Settled decisions. Newest at the bottom of each section. If something here confl
 - **Music and the crowd stay on hold** (P2, A6c, S14c; A11, S16). v2 ships without them; a later plan can pick them up.
 
 ## Characters (v3) (2026-11-17, the owner's answers for `plan-v3.md`)
-- **Four characters for now:** Coach Zain as he is, and **Ronin, Ben and Adam** made into finalized characters with their own full sheets (not recolours), in that order, in their recolours' places with the same ids. More characters can be added later.
+- **Four characters for now:** Coach Zain as he is, and three finalized characters with their own full sheets (not recolours) in the recolours' places. **Ben and Adam were placeholders** and are replaced by two new characters, each with their own id in the replaced entry's place; **Ronin may be replaced too**, so he comes last (`plan-v3.md`, L3). A saved pick or tournament naming a removed id falls back safely (S19). More characters can be added later.
 - **The select screen:** one row of cards up to four characters; **two rows with five or more**; the "?" random card is **always last**. Built ahead of time in S19 so a later character needs no game code.
-- **Settled by the plan (say if you disagree):** the shared palette's cap goes from 48 colours to 64; they are drawn from photos only once each has agreed (photos outside the repo, as Zain's); the trophy pose for all four in one session at the end (A19, S20); versions `2.<session>.<fix>` from S19, the plan's release 2.20.0 (no 3.0.0 unless asked).
+- **Settled by the plan (say if you disagree):** the shared palette's cap goes from 48 colours to 64; anyone drawn from photos has agreed first (photos outside the repo, as Zain's); the trophy pose for all four in one session at the end (A19, S20); versions `2.<session>.<fix>` from S19, the plan's release 2.20.0 (no 3.0.0 unless asked).
 
 ## Audio (2026-10-23)
 - **Effects only:** racket hits, the ball on the walls, floor, tin and glass, the serve, shoes, short point and game jingles, menu sounds. No music and no voice callouts for now.
