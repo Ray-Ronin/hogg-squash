@@ -53,6 +53,10 @@ test('the sounds by what happened: HARD / SOFT / dive hits, misses, the serve, t
   assert.deepEqual(one({ type: 'hit', kind: 'swing', button: 'hard', reach: true }), ['hit-hard']);
   assert.deepEqual(one({ type: 'hit', kind: 'swing', button: 'soft', reach: true }), ['hit-soft']);
   assert.deepEqual(one({ type: 'hit', kind: 'dive', button: 'hard', reach: true }), ['hit-dive']);
+  assert.deepEqual(one({ type: 'hit', kind: 'swing', button: 'hard', flags: 2, reach: true }), ['hit-stretch'], 'a stretch');
+  assert.deepEqual(one({ type: 'hit', kind: 'swing', button: 'soft', flags: 6, reach: true }), ['hit-stretch'], 'a backhand stretch');
+  assert.deepEqual(one({ type: 'hit', kind: 'swing', button: 'hard', flags: 1, reach: true }), ['hit-hard'], 'a high clean hit');
+  assert.deepEqual(one({ type: 'hit', kind: 'dive', button: 'hard', flags: 0x12, reach: true }), ['hit-dive'], 'a dive, not a stretch');
   assert.deepEqual(one({ type: 'swing', kind: 'swing', button: 'hard', reach: false }), ['swing-hard']);
   assert.deepEqual(one({ type: 'swing', kind: 'swing', button: 'soft', reach: true }), [], 'its hit sounds on contact');
   assert.deepEqual(one({ type: 'swing', kind: 'dive', button: 'soft', reach: true }), ['dive']);

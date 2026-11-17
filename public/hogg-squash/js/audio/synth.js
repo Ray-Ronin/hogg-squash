@@ -41,6 +41,10 @@ export const RECIPES = {
     { kind: 'noise', lp: 2500, hp: 400, dur: 0.04, gain: 0.5, decay: 0.01 },
     { kind: 'tone', wave: 'sine', f: 700, f2: 420, dur: 0.05, gain: 0.45, decay: 0.015 },
   ],
+  'hit-stretch': [
+    { kind: 'noise', lp: 3000, hp: 700, dur: 0.04, gain: 0.55, decay: 0.012 },
+    { kind: 'tone', wave: 'triangle', f: 800, f2: 520, dur: 0.05, gain: 0.4, decay: 0.016 },
+  ],
   'hit-dive': [
     { kind: 'noise', lp: 3500, hp: 600, dur: 0.05, gain: 0.6, decay: 0.014 },
     { kind: 'tone', wave: 'triangle', f: 850, f2: 480, dur: 0.06, gain: 0.45, decay: 0.02 },

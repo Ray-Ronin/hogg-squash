@@ -4,7 +4,8 @@
 // replace the placeholders (synth.js) by these names, with no code change. Pure: no audio, so Node can test that
 // every event and rally reason is covered (test/audio.test.js). Sound never changes the sim.
 //
-//  hit: by the button (HARD / SOFT) and the contact type (a dive's stretch hit has its own sound)
+//  hit: by the button (HARD / SOFT) and the contact type: a hit in the stretch band (the classifier's flag 2, between a
+//    clean hit and a dive) has its own sound, as does a dive's hit
 //  swing: a miss whooshes (by the button); a dive that reaches makes the lunge sound; a swing that reaches is silent
 //    (its hit sounds on the contact frame)
 //  serveSwing: silent (the serve sounds on the launch, 'serve', SERVE_WINDUP frames later)
@@ -21,7 +22,7 @@
 
 /** Every sound name: the placeholders in synth.js and the names sfx.json uses. */
 export const SOUNDS = /** @type {const} */ ([
-  'hit-hard', 'hit-soft', 'hit-dive', 'serve', 'swing-hard', 'swing-soft', 'dive',
+  'hit-hard', 'hit-soft', 'hit-stretch', 'hit-dive', 'serve', 'swing-hard', 'swing-soft', 'dive',
   'wall-front', 'wall-side', 'floor', 'glass', 'tin', 'out',
   'point', 'game',
   'menu-move', 'menu-ok', 'menu-back', 'menu-key',
@@ -37,9 +38,12 @@ export const BALL_SOUNDS = { frontWall: 'wall-front', sideWall: 'wall-side', flo
 export const REASON_SOUNDS = { tin: 'tin', out: 'out', down: null, notUp: null };
 
 /** @typedef {import('../sim/player.js').SwingEvent} SwingEvent */
+/** The classifier's "stretching" flag (squash-physics.js, classifyContact): the ball in the band past a clean hit. */
+export const STRETCH_FLAG = 2;
 /** Each event type's sound (null: silent). @type {Record<WorldEvent['type'], (e: any) => SoundName | null>} */
 export const EVENT_SOUNDS = {
-  hit: (/** @type {SwingEvent} */ e) => (e.kind === 'dive' ? 'hit-dive' : e.button === 'hard' ? 'hit-hard' : 'hit-soft'),
+  hit: (/** @type {SwingEvent} */ e) => (e.kind === 'dive' ? 'hit-dive' : (e.flags & STRETCH_FLAG) ? 'hit-stretch'
+    : e.button === 'hard' ? 'hit-hard' : 'hit-soft'),
   swing: (/** @type {SwingEvent} */ e) =>
     (!e.reach ? (e.button === 'hard' ? 'swing-hard' : 'swing-soft') : e.kind === 'dive' ? 'dive' : null),
   serveSwing: () => null,
@@ -98,7 +102,7 @@ export const SHAPE = { SPEED: { FULL: 4, MIN: 0.25 }, BACK: 0.25, PAN: 0.3, PITC
 
 /** The sounds whose pitch varies: the racket and the ball. @type {ReadonlySet<SoundName>} */
 export const VARIED = new Set(/** @type {SoundName[]} */ ([
-  'hit-hard', 'hit-soft', 'hit-dive', 'serve', 'wall-front', 'wall-side', 'floor', 'glass', 'tin',
+  'hit-hard', 'hit-soft', 'hit-stretch', 'hit-dive', 'serve', 'wall-front', 'wall-side', 'floor', 'glass', 'tin',
 ]));
 
 /** One sound to play: its name, a volume (0–1, on top of its sfx.json level) and a pan (-1 left … 1 right).

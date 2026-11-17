@@ -70,7 +70,7 @@ Made by `audio/make-sfx.mjs` from the picks above. Pitch changes are by resampli
 
 | File | From | Pitch | Start in the raw take | Length | Used by (`sfx.json`) |
 |---|---|---|---|---|---|
-| `hit-1.mp3` | H4 `jSKx…` | 1.00 | 0.702 s | 0.123 s | hit-hard, hit-dive (since 2026-11-16) |
+| `hit-1.mp3` | H4 `jSKx…` | 1.00 | 0.702 s | 0.123 s | hit-hard, hit-dive, hit-stretch (since 2026-11-16; for hit-stretch the owner kept the normal hit over seven candidates cut from existing takes) |
 | `hit-soft-1.mp3` | H4 `jSKx…` | 0.94 | 0.747 s | 0.132 s | hit-soft |
 | `serve-1.mp3` | H4 `jSKx…` | 1.04 | 0.675 s | 0.119 s | serve |
 | `hit-dive-1.mp3` | H4 `jSKx…` | 0.97 | 0.724 s | 0.127 s | hit-dive until 2026-11-16 (removed: the owner asked for the stretch hit to sound like the normal hit) |
