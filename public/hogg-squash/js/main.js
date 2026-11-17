@@ -25,7 +25,6 @@
 // screen, Sound on/off in the pause menu and on the speaker button (both saved), and the sound stops while paused,
 // blurred, hidden or turned sideways. ?sound=log logs every sound as it plays; ?sound=off starts with Sound off.
 // A ball sound's volume follows the ball's speed and depth, and every sound pans a little by the ball's x (S14).
-// About one hit in three that comes off a sharp stop squeaks the player's shoes (S14b, from their recent places).
 // Debug keys: ` toggles the debug overlay, ' steps the court view:
 // the painted court, the code court (with the code ball and effects), and the painted court with the code's lines
 // over it in cyan, for checking that they match.
@@ -79,7 +78,7 @@ import { makeUi, navigate, captureKey, matchOver, autoPause, assignInMatch, show
 import { drawTourMenu, drawTourSetup, drawTourSelect, drawBracket, drawRoundCard, drawChampion, useTournamentArt }
   from './ui/tournament.js';
 import { createAudio, loadSound, saveSound } from './audio/audio.js';
-import { cuesFor, menuSound, menuState, squeakCues, SQUEAK } from './audio/sounds.js';
+import { cuesFor, menuSound, menuState } from './audio/sounds.js';
 import { FP } from './squash-physics.js';
 import { clearHits, hitAt } from './ui/menu.js';
 import { drawTitle, useTitle } from './ui/title.js';
@@ -158,8 +157,6 @@ const shotLog = createShotLog();
 let lastEvent = null;
 /** @type {import('./render/debug.js').DebugInfo['lastContact']} */
 let lastContact = null;
-/** Each player's places over the last few steps, for the shoe squeak (S14b). @type {import('./audio/sounds.js').Spot[][]} */
-const tracks = [[], []];
 let showDebug = false;
 /** @type {import('./render/court.js').CourtView} */
 let courtView = PAINTED_FITS ? (COURT_VIEWS.find(v => v === query.get('court')) ?? 'art') : 'code';
@@ -499,12 +496,6 @@ function simStep() {
   for (const c of cuesFor(events, { x: b.x / FP, z: b.z / FP, speed: Math.hypot(b.vx, b.vy, b.vz) / FP })) {
     audio.play(c.name, c);
   }
-  world.players.forEach((pl, i) => {                    // read only: where each player is, for the shoe squeak
-    const t = tracks[i];
-    t.push({ x: pl.x / FP, z: pl.z / FP });
-    if (t.length > SQUEAK.RECENT + 1) t.shift();
-  });
-  for (const c of squeakCues(events, tracks, Math.random)) audio.play(c.name, c);
   shotLog.add(events, world);
 }
 

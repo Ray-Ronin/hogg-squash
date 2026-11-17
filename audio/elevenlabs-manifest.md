@@ -132,8 +132,8 @@ Made by `audio/make-sfx.mjs` like A6's. 124 KB for all the sound files.
 | File | From | Start in the raw take | Length | Used by (`sfx.json`) |
 |---|---|---|---|---|
 | `dive-1.mp3` | dive D2 `CaSV…` | 0 | 0.403 s | dive (level 0.6) |
-| `squeak-1.mp3` | squeak S1 `7Pxl…` (raw peak +3.3 dB) | 0 | 0.300 s | not listed yet: S14b adds `squeak` (level 0.18) |
-| `squeak-2.mp3` | squeak S1 `H0X6…` (raw peak +1.5 dB) | 0 | 0.300 s | not listed yet: S14b adds `squeak` |
+| ~~`squeak-1.mp3`~~ | squeak S1 `7Pxl…` (raw peak +3.3 dB) | 0 | 0.300 s | removed from the game (2026-11-17, the owner's call) |
+| ~~`squeak-2.mp3`~~ | squeak S1 `H0X6…` (raw peak +1.5 dB) | 0 | 0.300 s | removed from the game (2026-11-17) |
 | `menu-move-1.mp3` | menu-move B `bSVx…` | 0 | 0.480 s (the whole take) | menu-move (0.35) |
 | `menu-ok-1.mp3` | menu-ok B `UltL…` (raw peak +2.5 dB) | 0 | 0.480 s | menu-ok (0.15: much louder than the others raw) |
 | `menu-back-1.mp3` | menu-back B `gg4q…` | 0 | 0.480 s | menu-back (0.3) |
