@@ -5,9 +5,12 @@
 // as PICKED. In 1P the CPU's choice is random, and up / down (or a tap on it) rolls another. Characters are looks only.
 // A character whose sheet has a front view plays it here (S15b, roster.js's previewTag); the others show `ready` from
 // the back. The row ends with a "?" card (S18b): picking it picks a random character; while it's chosen, the side's big
-// figure is a "?" panel. The moves are screens.js's; this file only draws (and records the cards and the CPU's panel
-// for taps).
+// figure is a "?" panel. Up to five cards (four characters and "?") make one row; with six or more there are two
+// rows (S19: cardRect), the first full, the second centred, "?" last. The moves are screens.js's (up / down between
+// the rows: cardBelow); this file only draws (and records the cards and the CPU's panel for taps).
 import { WIDTH } from '../engine/screen.js';
+import { SELECT_LAYOUT, cardRect } from './cards.js';
+export { SELECT_LAYOUT, cardRect, cardX, cardBelow } from './cards.js';
 import { drawText } from '../render/text.js';
 import { drawPanel } from '../render/ui.js';
 import { createAnimator, drawSprite, ART_HEIGHT } from '../render/sprites.js';
@@ -30,24 +33,12 @@ export const SELECT_TEXT = {
   random: 'Random',
   choose: '< choose >',
   cpu: ['random', 'Up / down: another'],
+  cpuRows: ['random', 'Up at the top: another'],
   cpuTouch: ['random', 'Tap for another'],
   hint1: 'Left / right: choose     Enter or A: pick     Esc or B: back',
   hint2: 'Each player: left / right to choose, HARD to pick, SOFT to undo     Esc: back',
   touchHint: 'Tap a player to pick them     SOFT: back',
 };
-
-/**
- * The panel, each side's big figure (centre x, feet y) and its "?" panel's size, and the row of cards (spacing, feet
- * y, size; the row is centred, the "?" card last).
- */
-export const SELECT_LAYOUT = {
-  x: 16, y: 6, w: 608, h: 348,
-  SIDES: [104, 536], FEET: 196, RANDOM_W: 64, RANDOM_H: 96,
-  CARD_STEP: 64, CARD_W: 60, CARD_TOP: 92, CARD_FEET: 176, CARD_H: 72,
-};
-
-/** Card i's centre x in a centred row of `count` cards. @param {number} i @param {number} count */
-export const cardX = (i, count) => WIDTH / 2 + (i - (count - 1) / 2) * SELECT_LAYOUT.CARD_STEP;
 
 /**
  * The "?" (random) panel: a dark box framed in red, w × h, its bottom centre at x, feet, with a big red "?".
@@ -95,21 +86,21 @@ export function drawSelect(ctx, ui, view) {
   // the cards, then the "?" card (index view.chars.length)
   const count = view.chars.length + 1;
   for (let i = 0; i < count; i++) {
-    const ch = view.chars[i], x = cardX(i, count), left = x - L.CARD_W / 2, h = L.CARD_FEET + 20 - L.CARD_TOP;
+    const ch = view.chars[i], c = cardRect(i, count), { x, left, top, w, h } = c;
     ctx.fillStyle = '#25242966';
-    ctx.fillRect(left, L.CARD_TOP, L.CARD_W, h);
-    if (ch) drawSprite(ctx, ch.sheet, ch.preview(0), anim(ch), x, L.CARD_FEET, L.CARD_H);
-    else drawRandomPanel(ctx, x, L.CARD_FEET, 40, 56);
-    drawText(ctx, 'small', ch ? ch.name : SELECT_TEXT.random, x, L.CARD_FEET + 6, 'center');
+    ctx.fillRect(left, top, w, h);
+    if (ch) drawSprite(ctx, ch.sheet, ch.preview(0), anim(ch), x, c.feet, c.figure);
+    else drawRandomPanel(ctx, x, c.feet, 40, 56);
+    drawText(ctx, 'small', ch ? ch.name : SELECT_TEXT.random, x, c.feet + 6, 'center');
     [0, 1].forEach(side => {
       if (p.at[side] !== i) return;
       const inset = side === 1 && p.at[0] === i ? 3 : 0;
-      frame(ctx, left + inset, L.CARD_TOP + inset, L.CARD_W - 2 * inset, inset ? L.CARD_FEET + 5 - L.CARD_TOP - inset : h,
+      frame(ctx, left + inset, top + inset, w - 2 * inset, inset ? c.feet + 5 - top - inset : h,
         FRAME[side], p.locked[side] ? 3 : 2);
       drawText(ctx, side === 0 ? 'small-red' : 'small', side === 0 ? 'P1' : one ? 'CPU' : 'P2',
-        side === 0 ? left : left + L.CARD_W, L.CARD_TOP - 11, side === 0 ? 'left' : 'right');
+        side === 0 ? left : left + w, top - 11, side === 0 ? 'left' : 'right');
     });
-    hits.push({ x: left, y: L.CARD_TOP, w: L.CARD_W, h, sel: i });
+    hits.push({ x: left, y: top, w, h, sel: i });
   }
 
   // each side's choice, big, in its kit (the "?" panel while "?" is chosen)
@@ -121,7 +112,7 @@ export function drawSelect(ctx, ui, view) {
     if (ch) drawSprite(ctx, ch.sheet, ch.preview(side), anim(ch), x, L.FEET, ART_HEIGHT);
     else drawRandomPanel(ctx, x, L.FEET, L.RANDOM_W, L.RANDOM_H);
     drawText(ctx, 'large-white', ch ? ch.name : SELECT_TEXT.random, x, L.FEET + 6, 'center');
-    const lines = cpu ? (ui.touch ? SELECT_TEXT.cpuTouch : SELECT_TEXT.cpu)
+    const lines = cpu ? (ui.touch ? SELECT_TEXT.cpuTouch : count > L.ROW_MAX ? SELECT_TEXT.cpuRows : SELECT_TEXT.cpu)
       : [p.locked[side] ? SELECT_TEXT.picked : SELECT_TEXT.choose];
     // with touch the SOFT button sits over the lines under the CPU, so they go above its figure, and only the figure
     // is tapped to roll another

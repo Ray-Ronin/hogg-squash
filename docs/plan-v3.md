@@ -15,7 +15,7 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **A19z** Art: Coach Zain's trophy pose, which sets the tag the others follow in A19 *(added 2026-11-17)*
 
 **Ready for more characters**
-- [ ] **S19** The select screen in two rows past four characters, the "?" card always last (built now, tested with a longer test roster); a saved pick of a character who has left the roster falls back safely
+- [x] **S19** The select screen in two rows past four characters, the "?" card always last (built now, tested with a longer test roster); a saved pick of a character who has left the roster falls back safely
 - [ ] **P3** Prerequisites *(you)*: who the two new characters are, their agreement and photos; SpriteCook credits (about 400 per character)
 
 **New character 1** *(replaces Ben)*
@@ -306,3 +306,10 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **For later:** the held trophy is about 31 px tall against the 84 px standing one, and is the generator's cup (no handles, the plate a red smudge), not A12's exact drawing. Whether the champion screen still shows the standing trophy beside a champion holding one is S20's call. At the top of the bob the trophy reaches the frame's top edge (nothing cut).
   - **Lessons for A19:** the animator wants a square-ish source of 256 px or less, so pad the still (200×200 here); an edit can't take a reference image, so pass the trophy as a style image instead.
   - **Next:** S19.
+- 2026-11-17, S19 (2.19.0): **the characters screens are ready for more characters.** Up to five cards (four characters and "?") stay one row, exactly as before (a test checks every card's spot against S18b's). Six or more are two rows at the **same card size**, the first full (five), the second centred, "?" last; past ten cards the rows narrow to fit (tests only). The layout moved to a new `js/ui/cards.js` so `screens.js` stays free of drawing code.
+  - **Moves:** with two rows, up / down go to the nearest card in the other row, for each side's own keys. **In 1P, up / down with no row that way roll the CPU** (with one row: always, as before); its hint becomes "Up at the top: another" with two rows. Taps hit the right card in either row.
+  - **A removed character:** a saved single-match or CPU pick falls back as Will's did (first / second). A saved tournament's entrant whose id has gone gets a **random** roster character, chosen from the tournament's seed and the entrant so it's the same on every load (written into the save with the next result); its name and figure show on every screen.
+  - **Tests:** 7 new (213 unit tests in all): layouts of 4, 5, 6, 8 and 9 characters (no overlaps, clear of both figures and the lines under them, "?" last), the drawn tap areas against the layout, left / right / up / down reaching every card, the 1P roll, a saved pick and a saved tournament naming `ben` without him, and the test roster.
+  - **Checked in the browser** (`?roster=9`, `?drop=ben`): the real roster unchanged in 1P and 2P; with nine, the two rows, "?" last, P1's and P2's keys between the rows, a tap on a second-row card and on "?" (synthetic touches), the tournament's characters screen cycling through all nine then "?"; the owner's saved 8-player tournament (it names Ben) loaded with `?drop=ben` showed Ronin in Ben's place on the bracket (and the save was put back as it was). No console messages. **Not checked:** a real gamepad (it sends the same moves as the keys) or a real phone.
+  - **For later:** each extra character adds its select-screen previews (about 0.76 MB of canvas per kit), so nine characters' screen holds about 14 MB of previews against four's 6.
+  - **Next:** P3 (the owner's prerequisites), then L1.

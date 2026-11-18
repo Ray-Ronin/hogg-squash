@@ -115,6 +115,23 @@ function kitPairs(list, out) {
 }
 
 /**
+ * A test roster for trying the characters screen with more (or fewer) characters (S19, the page's ?roster=N and
+ * ?drop=id,id): the characters named in `drop` left out, then copies of the rest in turn until there are `count`
+ * (2–16; 0 keeps the length). A copy's id is "<id>-<n>" and its name "<short or name> <n>" (Ronin 2, Zain 2).
+ * @template {{ id: string, name: string, short: string | null }} C
+ * @param {C[]} characters @param {number} count @param {string[]} [drop] @returns {C[]}
+ */
+export function testRoster(characters, count, drop = []) {
+  const kept = characters.filter(c => !drop.includes(c.id));
+  if (!kept.length || !count) return kept;
+  const n = Math.min(16, Math.max(2, Math.floor(count)));
+  return Array.from({ length: n }, (_, i) => {
+    const c = kept[i % kept.length], k = Math.floor(i / kept.length) + 1;
+    return k === 1 ? c : { ...c, id: `${c.id}-${k}`, name: `${c.short ?? c.name} ${k}`, short: null };
+  });
+}
+
+/**
  * Read characters.json: the characters that pass, and a line for each one left out.
  * @param {any} json
  * @returns {{ characters: Character[], problems: string[] }}

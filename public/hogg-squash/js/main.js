@@ -39,6 +39,8 @@
 // ?scale=int whole-number scaling only (default: fill the window),
 // ?slow=<n> slow motion (the sim runs n times slower), ?dev exposes the game as window.hogg for testing,
 // ?court=code|lines starts on that court view, ?logo=on shows the logo slot (LOGO in render/hud.js) for testing.
+// ?roster=<n> a test roster of n characters (copies of the real ones, S19) and ?drop=ben,adam one without those, for the
+// characters screens (a pick of a copy falls back to the real roster on the next normal visit).
 // The players are the animated sprites of the characters they picked (S15: assets/characters.json, the roster; each
 // character's sheet, e.g. player-100.png + .json, loaded before the game starts, recoloured for its skin and hair, P2 /
 // the CPU in the swapped kit, the character's own swap if it has one, S15b). A roster entry or sheet that breaks the
@@ -66,7 +68,7 @@ import { drawCourt, useCourt, COURT_VIEWS } from './render/court.js';
 import { drawActors, heights, shifts } from './render/actors.js';
 import { loadAssets } from './engine/assets.js';
 import { parseSheet, createAnimator, stepAnimator, frameAt, RACKET } from './render/sprites.js';
-import { parseRoster, sheetProblems, sideNames, atlasOf, previewOf, keepFor, NAME_SLOT } from './render/roster.js';
+import { parseRoster, testRoster, sheetProblems, sideNames, atlasOf, previewOf, keepFor, NAME_SLOT } from './render/roster.js';
 import { createEffects } from './render/effects.js';
 import { drawHud, loadLogo, LOGO } from './render/hud.js';
 import { useFont, drawText, lineHeight, textWidth } from './render/text.js';
@@ -661,7 +663,10 @@ try {
 }
 try {
   // the roster, then every sheet it names (all at once); a bad entry or sheet leaves out just those characters
-  const { characters, problems } = parseRoster((await assets.ready).roster);
+  const parsed = parseRoster((await assets.ready).roster), problems = parsed.problems;
+  // ?roster=N, ?drop=id,id: a longer (or shorter) test roster for the characters screen (S19; never saved)
+  const characters = testRoster(parsed.characters, Number(query.get('roster')) || 0,
+    (query.get('drop') ?? '').split(',').filter(Boolean));
   for (const p of problems) console.warn(`Hogg Squash: left out of the roster: ${p}`);
   const sheets = [...new Set(characters.map(c => c.sheet))].map(name => {
     const load = loadAssets({ json: { kind: 'json', url: `assets/${name}.json` }, image: { kind: 'image', url: `assets/${name}.png` } });

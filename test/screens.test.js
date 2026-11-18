@@ -1066,3 +1066,193 @@ test('S18b: the new words are in the font and fit', () => {
   // the champion screen with a bot champion: its line fits as a human's does
   fits('large-white', 'BOT 15 Coach Zain', 2 * (CHAMPION_LAYOUT.NAME_X - 16 - 4));
 });
+
+// --- S19: the characters screen ready for more characters ---
+import { cardRect, cardBelow, drawSelect } from '../public/hogg-squash/js/ui/select.js';
+import { hits, clearHits } from '../public/hogg-squash/js/ui/menu.js';
+import { testRoster } from '../public/hogg-squash/js/render/roster.js';
+
+/** A ui on the characters screen with a roster of n ids (c0, c1 …), its random numbers from a list. */
+function onSelect(n, players = 2, rolls = [0]) {
+  const ui = makeUi();
+  setRoster(ui, Array.from({ length: n }, (_, i) => `c${i}`));
+  let k = 0;
+  ui.rand = () => rolls[k++ % rolls.length];
+  run(ui, players === 2 ? ['down', 'ok', 'ok'] : ['ok', 'ok', 'ok']);
+  assert.equal(ui.screen, 'select');
+  return ui;
+}
+
+/** A canvas that draws nothing (the screen's tap areas are still recorded as it draws). */
+const noCtx = /** @type {any} */ (new Proxy({}, {
+  get: (_, k) => (k === 'canvas' ? { width: 640, height: 360 } : () => ({})), set: () => true }));
+
+test('S19: up to five cards are one row exactly as S18b drew it; six or more are two rows, "?" last', () => {
+  for (const count of [2, 3, 4, 5]) {
+    for (let i = 0; i < count; i++) {
+      const c = cardRect(i, count);
+      assert.deepEqual([c.x, c.top, c.w, c.h, c.feet, c.figure, c.row], [320 + (i - (count - 1) / 2) * 64, 92, 60, 104, 176, 72, 0]);
+    }
+  }
+  const L = SELECT_LAYOUT;
+  const fonts = parseFonts(JSON.parse(fs.readFileSync('public/hogg-squash/assets/font.json', 'utf8')));
+  // what's drawn under the big figures (the widest name, the CPU's lines), which the second row sits beside
+  const under = [['large-white', 'Coach Zain', L.FEET + 6], ['small-grey', SELECT_TEXT.cpuRows[1], L.FEET + 41],
+    ['small-grey', SELECT_TEXT.choose, L.FEET + 30], ['large-white', SELECT_TEXT.random, L.FEET + 6]]
+    .map(([f, s, y]) => ({ half: measureWith(fonts, /** @type {any} */ (f), String(s)) / 2, y: Number(y) }));
+  for (const chars of [4, 5, 6, 8, 9]) {
+    const count = chars + 1, cards = Array.from({ length: count }, (_, i) => cardRect(i, count));
+    assert.equal(new Set(cards.map(c => c.row)).size, count <= 5 ? 1 : 2, `${chars} characters: the rows`);
+    if (count > 5) assert.equal(cards.filter(c => c.row === 0).length, 5, 'the first row full');
+    const last = cards[count - 1];
+    assert.ok(cards.every(c => c.row < last.row || (c.row === last.row && c.x <= last.x)), `${chars}: "?" last`);
+    const second = cards.filter(c => c.row === 1);
+    if (second.length) assert.equal(second[0].x + second[second.length - 1].x, 640, 'the second row centred');
+    cards.forEach((a, i) => {
+      assert.ok(a.left >= L.SIDES[0] + 50 && a.left + a.w <= L.SIDES[1] - 50, `${chars}: card ${i} clear of the big figures`);
+      assert.ok(a.top - 11 >= L.y + 30 + 9 && a.top + a.h <= L.y + L.h - 62 - 2, `${chars}: card ${i} between the title lines and the note`);
+      for (const u of under) {
+        if (u.y + 9 > a.top - 11 && u.y < a.top + a.h)
+          assert.ok(a.left + a.w < L.SIDES[1] - u.half && a.left > L.SIDES[0] + u.half, `${chars}: card ${i} clear of the lines under the figures`);
+      }
+      cards.slice(i + 1).forEach((b, j) => {
+        const apart = a.left + a.w <= b.left || b.left + b.w <= a.left || a.top + a.h + 11 <= b.top || b.top + b.h + 11 <= a.top;
+        assert.ok(apart, `${chars}: cards ${i} and ${i + 1 + j} don't overlap (with the P1 / P2 labels)`);
+      });
+    });
+  }
+  // past ten cards the rows get narrower but still fit
+  const many = Array.from({ length: 17 }, (_, i) => cardRect(i, 17));
+  assert.ok(many.every(c => c.left >= L.SIDES[0] + 50 && c.left + c.w <= L.SIDES[1] - 50));
+});
+
+test('S19: the tap areas are the cards, and the real four draw as before', () => {
+  for (const n of [4, 5, 8, 9]) {
+    const ui = onSelect(n);
+    const ch = { name: 'Ronin', sheet: /** @type {any} */ ({ tags: { ready: { from: 0, to: 0, loop: true, ms: [100] } }, frameW: 150, frameH: 150, pivot: { x: 75, y: 140 } }),
+      preview: () => /** @type {any} */ ({ cells: [{ x: 0, y: 0 }], canvas: null }) };
+    clearHits();
+    drawSelect(noCtx, ui, { chars: Array(n).fill(ch), t: 0 });
+    const cards = hits.filter(h => typeof h.sel === 'number' && h.sel >= 0 && h.sel <= n);
+    assert.deepEqual(cards.map(h => h.sel), Array.from({ length: n + 1 }, (_, i) => i));
+    cards.forEach(h => {
+      const c = cardRect(h.sel, n + 1);
+      assert.deepEqual([h.x, h.y, h.w, h.h], [c.left, c.top, c.w, c.h], `${n}: card ${h.sel}'s tap area`);
+    });
+    if (n === 4) assert.deepEqual(cards.map(h => [h.x, h.y, h.w]), [162, 226, 290, 354, 418].map(x => [x, 92, 60]), 'where S18b drew them');
+    // a tap on the last character picks them (touch is P1's)
+    const t = onSelect(n, 1, [0.5]);
+    assert.equal(tap(t, n + 1), null, 'past the "?" card: nothing');
+    assert.equal(tap(t, n - 1), 'prepare');
+    assert.equal(t.settings.picks[0], `c${n - 1}`, `${n}: a tap on the last character picks them`);
+  }
+  clearHits();
+});
+
+test('S19: left / right go through every card in order; up / down move to the nearest card in the other row', () => {
+  for (const n of [4, 5, 8, 9]) {
+    const count = n + 1, rowOf = (/** @type {number} */ i) => cardRect(i, count).row, xOf = (/** @type {number} */ i) => cardRect(i, count).x;
+    for (const side of /** @type {const} */ ([0, 1])) {
+      const ui = onSelect(n);
+      const seen = [];
+      for (let k = 0; k < count; k++) { seen.push(ui.pick.at[side]); navigate(ui, 'right', side); }
+      assert.equal(new Set(seen).size, count, `${n}: right reaches every card`);
+      assert.equal(ui.pick.at[side], seen[0], 'and wraps');
+      for (let i = 0; i < count; i++) {
+        ui.pick.at[side] = i;
+        navigate(ui, 'down', side);
+        const down = ui.pick.at[side];
+        if (count <= 5 || rowOf(i) === 1) assert.equal(down, i, `${n}: no row below card ${i}`);
+        else {
+          assert.equal(rowOf(down), 1);
+          const gaps = Array.from({ length: count }, (_, k) => k).filter(k => rowOf(k) === 1).map(k => Math.abs(xOf(k) - xOf(i)));
+          assert.equal(Math.abs(xOf(down) - xOf(i)), Math.min(...gaps), `${n}: down from ${i} to the nearest`);
+        }
+        ui.pick.at[side] = i;
+        navigate(ui, 'up', side);
+        if (rowOf(i) === 0) assert.equal(ui.pick.at[side], i, `${n}: no row above card ${i} (2P: nothing happens)`);
+        else assert.equal(rowOf(ui.pick.at[side]), 0);
+      }
+    }
+    // every card can be reached from P1's start with left / right / up / down
+    const reach = new Set([0]), todo = [0];
+    while (todo.length) {
+      const i = /** @type {number} */ (todo.pop());
+      for (const nav of ['left', 'right', 'up', 'down']) {
+        const ui = onSelect(n);
+        ui.pick.at[0] = i;
+        navigate(ui, /** @type {any} */ (nav), 0);
+        if (!reach.has(ui.pick.at[0])) { reach.add(ui.pick.at[0]); todo.push(ui.pick.at[0]); }
+      }
+    }
+    assert.equal(reach.size, count, `${n}: every card reachable`);
+  }
+  assert.equal(cardBelow(7, 10, 'up'), 2, '9 characters: up from the bottom row\'s third card to the top row\'s third');
+  assert.equal(cardBelow(5, 7, 'up'), 1, '6 characters: the left one of two as near');
+});
+
+test('S19, 1P: with two rows up / down move P1 between them; with no row that way the CPU rolls (never "?")', () => {
+  const ui = onSelect(8, 1, [0.3, 0.99, 0.5, 0.0]);
+  const cpu = ui.pick.at[1];
+  navigate(ui, 'down');
+  assert.equal(ui.pick.at[0], 5, 'down: P1 to the bottom row');
+  assert.equal(ui.pick.at[1], cpu, 'the CPU keeps its pick');
+  navigate(ui, 'down');
+  assert.notEqual(ui.pick.at[1], cpu, 'down from the bottom row: the CPU rolls another');
+  assert.equal(ui.pick.at[0], 5);
+  navigate(ui, 'up');
+  assert.equal(ui.pick.at[0], 0, 'up: back to the top row');
+  for (let k = 0; k < 20; k++) {
+    navigate(ui, 'up');
+    assert.ok(ui.pick.at[1] < 8, 'the CPU never lands on "?"');
+  }
+  assert.equal(ui.pick.at[0], 0);
+  // one row: up / down roll, as before
+  const four = onSelect(4, 1, [0.3, 0.9]);
+  navigate(four, 'up');
+  assert.deepEqual([four.pick.at[0], four.pick.at[1] !== 1], [0, true]);
+});
+
+test('S19: a saved pick of a character who has left falls back; so does a saved CPU pick', () => {
+  const roster = ['ronin', 'adam', 'zain'];                 // Ben has left
+  assert.deepEqual(pickIndices({ ...DEFAULT_SETTINGS, picks: ['ben', 'zain'] }, roster), [0, 2], 'P1\'s pick of Ben: the first');
+  assert.deepEqual(pickIndices({ ...DEFAULT_SETTINGS, picks: ['zain', 'ben'] }, roster), [2, 1], 'P2\'s (or the CPU\'s): the second');
+  const ui = makeUi({ picks: ['ben', 'ben'] });
+  setRoster(ui, roster);
+  run(ui, ['down', 'ok', 'ok']);
+  assert.deepEqual(ui.pick.at, [0, 1], 'the characters screen starts on Ronin and Adam');
+  assert.equal(navigate(ui, 'ok', 0), null);
+  assert.equal(navigate(ui, 'ok', 1), 'prepare');
+  assert.deepEqual(ui.settings.picks, ['ronin', 'adam']);
+});
+
+test('S19: a saved tournament naming Ben loads with a roster character in his place, the same every load', () => {
+  const setup = { size: 4, humans: 1, mode: /** @type {const} */ ('same'), length: 5, level: 5, chars: ['ben', 'zain', 'ben', 'adam'], seed: 77 };
+  const roster = ['ronin', 'adam', 'zain'];
+  const first = makeUi();
+  setRoster(first, roster);
+  setTournament(first, makeTournament(setup));                 // the roster first, then the save
+  const second = makeUi();
+  setTournament(second, makeTournament(setup));                // the save first (as main.js does), then the roster
+  assert.deepEqual(second.tour.t?.setup.chars, setup.chars, 'nothing changes before the roster is known');
+  setRoster(second, roster);
+  const chars = first.tour.t?.setup.chars ?? [];
+  assert.ok(chars.every(c => roster.includes(c)), 'every entrant has a roster character');
+  assert.deepEqual([chars[1], chars[3]], ['zain', 'adam'], 'the others keep theirs');
+  assert.deepEqual(second.tour.t?.setup.chars, chars, 'the same replacement however it loads');
+  const t = /** @type {any} */ (first.tour.t), m = nextMatch(t);
+  assert.ok(m && m.sides.every((/** @type {number} */ e) => roster.includes(t.setup.chars[e])), 'its next match has two roster characters');
+});
+
+test('S19: the test roster (?roster, ?drop)', () => {
+  const real = [{ id: 'ronin', name: 'Ronin', short: null }, { id: 'adam', name: 'Adam', short: null },
+    { id: 'ben', name: 'Ben', short: null }, { id: 'zain', name: 'Coach Zain', short: 'Zain' }];
+  assert.equal(testRoster(real, 0).length, 4);
+  const nine = testRoster(real, 9);
+  assert.deepEqual(nine.map(c => c.id), ['ronin', 'adam', 'ben', 'zain', 'ronin-2', 'adam-2', 'ben-2', 'zain-2', 'ronin-3']);
+  assert.deepEqual(nine.slice(4, 8).map(c => c.name), ['Ronin 2', 'Adam 2', 'Ben 2', 'Zain 2']);
+  assert.deepEqual(testRoster(real, 0, ['ben']).map(c => c.id), ['ronin', 'adam', 'zain']);
+  assert.equal(testRoster(real, 99).length, 16);
+  const fonts = parseFonts(JSON.parse(fs.readFileSync('public/hogg-squash/assets/font.json', 'utf8')));
+  assert.ok(measureWith(fonts, 'small', 'Ronin 3') <= SELECT_LAYOUT.CARD_W - 4, 'a copy\'s name fits its card');
+});

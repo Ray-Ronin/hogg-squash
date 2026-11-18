@@ -31,6 +31,7 @@ import { SETUP_SIZES, TOURNAMENT_DEFAULTS, makeTournament, nextMatch, recordResu
   drawFixed, newDraw } from '../sim/tournament.js';
 import { ACTIONS, defaultLayouts, refusal, duplicateNote, keyLabel, resetLayouts, laptopPreset } from '../input/keymap.js';
 import { defaultSound, SOUND_LEVELS } from '../audio/audio.js';
+import { cardBelow } from './cards.js';
 
 /**
  * @typedef {'title' | 'length' | 'level' | 'select' | 'assign' | 'match' | 'pause' | 'result' | 'options' | 'keytest' |
@@ -212,6 +213,20 @@ export function makeUi(settings = {}, screen = 'title', keys = defaultLayouts(),
 /** A tournament was loaded from the browser (main.js, at the start): the title offers to continue it. @param {Ui} ui @param {import('../sim/tournament.js').Tournament | null} t */
 export function setTournament(ui, t) {
   ui.tour.t = t;
+  replaceGone(ui);
+}
+
+/**
+ * A saved tournament's entrants whose character has left the roster (S19: Ben, Adam and maybe Ronin are replaced in
+ * plan-v3) get a random one instead, chosen from the tournament's seed and the entrant, so it's the same however
+ * often the page loads; it's saved with the next result. Without a roster (or a tournament) there's nothing to do.
+ * @param {Ui} ui
+ */
+function replaceGone(ui) {
+  const t = ui.tour.t, r = ui.roster;
+  if (!t || !r.length) return;
+  t.setup.chars = t.setup.chars.map((c, e) =>
+    (r.includes(c) ? c : r[(Math.imul((t.setup.seed | 0) ^ (e + 1), 0x9e3779b1) >>> 0) % r.length]));
 }
 
 /**
@@ -226,6 +241,7 @@ export function matchPicks(ui) {
 /** The roster has loaded: its characters' ids, in order (main.js). @param {Ui} ui @param {string[]} ids */
 export function setRoster(ui, ids) {
   ui.roster = ids;
+  replaceGone(ui);
 }
 
 /**
@@ -738,8 +754,9 @@ export function reroll(ui) {
  * A move on the characters screen. Left / right move that side's choice through the roster and the "?" card
  * (wrapping), OK picks it ("?" picks a random character, S18b), back undoes the pick (a rolled one goes back to "?";
  * with nothing picked, back a screen); when every side has picked, the picks are kept (a rolled character stays for a
- * rematch) and the controllers screen comes up. In 1P every control is P1's, and up / down rolls the CPU's pick
- * again. A mirror match is allowed.
+ * rematch) and the controllers screen comes up. With two rows of cards (S19) up / down move that side to the nearest
+ * card in the other row. In 1P every control is P1's, and up / down with no row that way (always, with one row) rolls
+ * the CPU's pick again. A mirror match is allowed.
  * @param {Ui} ui @param {Nav} nav @param {0 | 1 | null} side @returns {Effect}
  */
 function select(ui, nav, side) {
@@ -748,8 +765,9 @@ function select(ui, nav, side) {
   const who = one ? 0 : side ?? (nav === 'back' ? (p.locked[1] ? 1 : 0) : (p.locked[0] ? 1 : 0));
   if (nav === 'left' || nav === 'right') {
     if (!p.locked[who]) p.at[who] = (p.at[who] + (nav === 'left' ? n : 1)) % (n + 1);
-  } else if (nav === 'up' || nav === 'down') {
-    if (one) reroll(ui);
+  } else if (nav === 'up' || nav === 'down') {             // to the other row (S19); in 1P with no row that way, the CPU rolls
+    const to = cardBelow(p.at[who], n + 1, nav);
+    if (to !== null) { if (!p.locked[who]) p.at[who] = to; } else if (one) reroll(ui);
   } else if (isOk(nav)) {
     if (p.locked[who]) return null;
     if (p.at[who] >= n) {                                    // the "?" card: a random character, shown as PICKED
