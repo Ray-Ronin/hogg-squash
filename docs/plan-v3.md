@@ -180,7 +180,7 @@ Ask me the template's step-1 questions, write the answers into A13's "Agreed wit
 
 **A13, Mr. Sells (L1, 2026-11-17)**
 - **Who:** David Sells, a real person who has agreed to be in the game. Id: `sells` (the plan's pick; the owner can change it before A13). His photos go in `C:\Hogg Squash\Character References\sells\`, outside the repo.
-- **Name:** "Mr. Sells" on the select screen. It's probably wider than the 62 px name slot, so the short name is "Sells" (the plan's pick; A13 measures it in `large-white`).
+- **Name:** "Mr. Sells" everywhere, with no short name (the owner's call: it's shorter than "Coach Zain"). Coach Zain's full name shows on the select screen, but the score panel's 62 px slot uses his short "Zain". So A13 measures "Mr. Sells" in `large-white`; if it's wider than 62 px, ask the owner for a short name before A14 adds the roster entry.
 - **Body:** a little shorter than the others, about 96 px head to soles (they are 100). Heavy build: a round belly, a broad torso, thicker arms and legs.
 - **Skin and hair** (from the owner's photo): fair skin. Short brown hair going grey, a little longer on top and swept to the side. A short full beard and moustache, brown going grey. Rectangular glasses with dark frames.
 - **Kit:** his own shirt. **Still to come:** the owner is sending photos of its front and back. Its look and its P2 / CPU version get agreed (and written here) when they arrive, before A13's spend gate.
