@@ -18,12 +18,12 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] **S19** The select screen in two rows past four characters, the "?" card always last (built now, tested with a longer test roster); a saved pick of a character who has left the roster falls back safely
 - [ ] **P3** Prerequisites *(you)*: who the two new characters are, their agreement and photos; SpriteCook credits (about 400 per character)
 
-**New character 1** *(replaces Ben)*
-- [ ] **L1** Agree new character 1's look *(you, planning only)*
-- [ ] 💳 Approve SpriteCook spend for A13 *(you)*
-- [ ] **A13** Art: new character 1's concept, from the back and the front, in both kits
-- [ ] 💳 Approve SpriteCook spend for A14 *(you)*
-- [ ] **A14** Art: new character 1, every animation and the front-view idle; replaces Ben in the roster
+**New character 1: Mr. Sells** *(replaces Ben)*
+- [x] **L1** Agree Mr. Sells's look *(you, planning only)* *(2026-11-17; his shirt is still to come, see A13)*
+- [ ] 💳 Approve SpriteCook spend for A13 (Mr. Sells) *(you)*
+- [ ] **A13** Art: Mr. Sells's concept, from the back and the front, in both kits
+- [ ] 💳 Approve SpriteCook spend for A14 (Mr. Sells) *(you)*
+- [ ] **A14** Art: Mr. Sells, every animation and the front-view idle; replaces Ben in the roster
 
 **New character 2** *(replaces Adam)*
 - [ ] **L2** Agree new character 2's look *(you, planning only)*
@@ -177,6 +177,16 @@ Ask me the template's step-1 questions, write the answers into A13's "Agreed wit
 **Goal:** the character's look, approved from the back and the front in both kits, so the next session can animate them.
 
 **Agreed with the owner:** *(filled in by L1 / L2 / L3)*
+
+**A13, Mr. Sells (L1, 2026-11-17)**
+- **Who:** David Sells, a real person who has agreed to be in the game. Id: `sells` (the plan's pick; the owner can change it before A13). His photos go in `C:\Hogg Squash\Character References\sells\`, outside the repo.
+- **Name:** "Mr. Sells" on the select screen. It's probably wider than the 62 px name slot, so the short name is "Sells" (the plan's pick; A13 measures it in `large-white`).
+- **Body:** a little shorter than the others, about 96 px head to soles (they are 100). Heavy build: a round belly, a broad torso, thicker arms and legs.
+- **Skin and hair** (from the owner's photo): fair skin. Short brown hair going grey, a little longer on top and swept to the side. A short full beard and moustache, brown going grey. Rectangular glasses with dark frames.
+- **Kit:** his own shirt. **Still to come:** the owner is sending photos of its front and back. Its look and its P2 / CPU version get agreed (and written here) when they arrive, before A13's spend gate.
+- **Photos to use:** the face, and the shirt's front and back.
+- **Replaces:** Ben, so the roster becomes Ronin, Adam, Mr. Sells, Coach Zain.
+- **Before A13 starts:** the face and shirt photos are in the `sells` folder, and the shirt is agreed here.
 
 **In scope:** as `plan-v2.md`'s A7z, for this character:
 - **Spend gate:** check the balance, list the generations with model, quality and estimated credits (reference images are billed once per variation), then stop for the owner's OK.
