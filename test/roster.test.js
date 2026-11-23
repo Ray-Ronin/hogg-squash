@@ -17,18 +17,21 @@ const rosterJson = read('characters.json');
 const sheetJson = read('player-100.json');
 const zainJson = read('zain-100.json');
 
-test('the roster: Ronin, Adam, Ben and Coach Zain, in that order, none left out', () => {
+test('the roster: Ronin, Adam, Mr. Sells and Coach Zain, in that order, none left out', () => {
   const { characters, problems } = parseRoster(rosterJson);
   assert.deepEqual(problems, []);
   assert.deepEqual(characters.map(c => [c.id, c.name, c.sheet]),
-    [['ronin', 'Ronin', 'player-100'], ['adam', 'Adam', 'player-100'], ['ben', 'Ben', 'player-100'], ['zain', 'Coach Zain', 'zain-100']]);
+    [['ronin', 'Ronin', 'player-100'], ['adam', 'Adam', 'player-100'], ['sells', 'Mr. Sells', 'sells-100'], ['zain', 'Coach Zain', 'zain-100']]);
+  const sells = characters[2];
+  assert.equal(sells.short, 'Sells');
+  assert.deepEqual(sells.kit, [['#960e1e', '#252429'], ['#d21a28', '#3a3940'], ['#f04842', '#5a5962']], 'A13\'s swap');
   assert.deepEqual(characters[1].skin, [], 'Adam is the sheet as drawn');
   assert.deepEqual(characters[1].hair, []);
   const zain = characters[3];
   assert.equal(zain.short, 'Zain');
   assert.deepEqual([zain.skin, zain.hair], [[], []], 'his skin and hair are drawn into his sheet');
   assert.deepEqual(zain.kit, [['#26252a', '#e6e6ea'], ['#3b3a41', '#ffffff'], ['#dcdce0', '#252429']], 'A7z\'s swap');
-  assert.deepEqual(characters.slice(0, 3).map(c => [c.short, c.kit]), [[null, null], [null, null], [null, null]],
+  assert.deepEqual(characters.slice(0, 2).map(c => [c.short, c.kit]), [[null, null], [null, null]],
     'the recolours have neither');
 });
 

@@ -145,13 +145,13 @@ Also needed: the ball + shadow, landing marker, front-wall impact ring, the cour
 **After A19z (2026-11-17):** 28 credits (A19z spent 68). Animation sources must also be between 1:2 and 2:1 (a tall, narrow still is refused at no charge: pad it to a square). An edit (`edit_asset_id`) can't take a `reference_asset_id` too; pass the reference as a style image, billed the same.
 
 ## Characters (S15)
-The roster is `public/hogg-squash/assets/characters.json`, in order: since S15b Ronin, Adam and Ben, recolours of `player-100`, and Coach Zain on his own sheet (A7–A10 stay on hold; new bodies come one at a time as finalized characters). A recolour is a list of [from, to] palette colours: **skin** applies everywhere, **hair** only to the head (the largest blob of the sheet's two hair colours in each frame, which are also the shorts' shading). The white kit is the kit swap above, on top. A recolour must not use the kit's reds. Preview: `art/mockups/s15-roster.png` (both kits, ready, forehand contact, dive).
+The roster is `public/hogg-squash/assets/characters.json`, in order: since A14 Ronin and Adam, recolours of `player-100`, then Mr. Sells (in Ben's place) and Coach Zain on their own sheets (from S15b to A14 the third was Ben, a recolour) (A7–A10 stay on hold; new bodies come one at a time as finalized characters). A recolour is a list of [from, to] palette colours: **skin** applies everywhere, **hair** only to the head (the largest blob of the sheet's two hair colours in each frame, which are also the shorts' shading). The white kit is the kit swap above, on top. A recolour must not use the kit's reds. Preview: `art/mockups/s15-roster.png` (both kits, ready, forehand contact, dive).
 
 | Character | Skin (skin 6 → skin 1 become) | Hair (`hair`, `hair dark` become) |
 |---|---|---|
 | Ronin (P1's start) | skin 7, 6, 5, 4, 3, 2 | auburn `#8a4a24`, auburn dark `#5c2e18` |
 | Adam (P2's start) | as drawn | as drawn |
-| Ben | as drawn | hair dark, outline |
+| Ben (replaced by Mr. Sells in A14) | as drawn | hair dark, outline |
 | Will (replaced by Coach Zain in S15b; his blond tones stay in the palette, unused) | skin 8, 7, 6, 5, 4, 2 | blond `#d9b060`, blond dark `#a87e3c` |
 
 **Coach Zain (A7z, 2026-11-07), the first finalized character** (`plan-v2.md`, "Finalized characters"): his own body and art, in the roster since S15b in Will's place. The concept is `art/character/zain.aseprite` (built by `art/tools/a7z-build.lua` from SpriteCook back concept 3 and front concept 1, `art/spritecook-manifest.md`), 150 × 150 frames with the `feet` pivot at 73, 148 like `player-100`: frame 1 `ready` (from the back), frame 2 `front_ready` (from the front, squeezed to 90% width). Previews: `art/mockups/a7z-print.png` (the print at 4×), `art/mockups/a7z-zain.png` (beside Ronin on the court).
@@ -191,7 +191,19 @@ The roster is `public/hogg-squash/assets/characters.json`, in order: since S15b 
 | Print, front | centred on the chest: a side-on boar (red 2, red 1) ringed in white, HOGG in red 2 3 × 4 capitals ringed in white, and MIDDLE SCHOOL as a broken white line |
 | Shorts, socks, shoes | black kit, white, as everyone's |
 
-**His planned `kit` swap (for A14's roster entry, replacing the standard one):** the tee turns black, as the store's black tee; the print stays: `[["#960e1e", "#252429"], ["#d21a28", "#3a3940"], ["#f04842", "#5a5962"]]`. **Name:** "Mr. Sells" is 80 px in `large-white`, wider than the 62 px name slot, so A14's entry uses the short name "Sells" (48 px; the owner's call, 2026-11-23).
+**His `kit` swap (in `characters.json` since A14, replacing the standard one):** the tee turns black, as the store's black tee; the print stays: `[["#960e1e", "#252429"], ["#d21a28", "#3a3940"], ["#f04842", "#5a5962"]]`. **Name:** "Mr. Sells" is 80 px in `large-white`, wider than the 62 px name slot, so his entry uses the short name "Sells" (48 px; the owner's call, 2026-11-23).
+
+**His sheet (A14, 2026-11-23), with a trombone:** the owner's call, after the racket version was made: **he plays with a brass trombone instead of a racket**, swung like one. `public/hogg-squash/assets/sells-100.png` + `.json`, from `art/character/sells.aseprite` (built by `art/tools/a14-build.lua`, exported by `art/tools/a14-export.sh`, previews by `art/tools/a14-preview.lua`): 81 frames of 150 × 150 px in rows of 8 (1200 × 1650, 86 KB), the nine tags, frame counts, timings and contact frames of §3, plus `front_ready` (8 × 125 ms, loops, from the front). In the roster since A14, in Ben's place. Previews: `art/mockups/a14-strips.png`, `a14-<tag>-p1.gif`, `-p2.gif`, `a14-review.html`.
+- **The trombone's colours** are A12's trophy gold (flash, hair blond, flash shade, hair blond dark, hair auburn dark, plus outline), so no new palette entries. The animator squeezes each file into about 22 colours and draws most of the brass in his skin's colours; the build finds it from the one dark brass brown each file has only on the trombone (and, in the front view, only left of his chest, where it always is), and puts it on the gold ramp by brightness.
+- **The prints** are A13's, stamped afresh in every frame at the tee's top centre (`art/tools/a14-print.lua`); the dive keeps the generator's. Seen from the back he is 96 px head to soles, as in A13.
+
+| Racket slice (the trombone's centre) | Frame pixels | |
+|---|---|---|
+| `racket serve` | 96, 51 | the trombone up over his right shoulder |
+| `racket forehand` | 115, 58 | out on his right (the contact frame is `backhand.png` 9's) |
+| `racket backhand` | 25, 72 | out to the left at shoulder height |
+| `racket overhead` | 74, 45 | across above his head |
+| `racket dive` | 112, 119 | on the floor at the end of the right arm |
 
 A new sheet must keep player-100's contract (§3; `SHEET_CONTRACT` in `js/render/roster.js`), or the game leaves its characters out with a console warning.
 

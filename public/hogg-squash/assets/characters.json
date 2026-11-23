@@ -1,5 +1,5 @@
 {
-  "note": "The roster (S15, S15b; docs/art-style-guide.md, \"Characters\"). Each character: id, name, sheet (assets/<sheet>.png + .json), and optional: short (for the score panel's 62 px name slot and the result, when name doesn't fit), skin and hair recolours as [from, to] palette colours (skin everywhere, hair only on the head), kit as [from, to] palette colours (the P2 / CPU kit, in place of the standard swap). The game reads the order as listed; P1 starts on the first, P2 on the second.",
+  "note": "The roster (S15, S15b, A14; docs/art-style-guide.md, \"Characters\"). Each character: id, name, sheet (assets/<sheet>.png + .json), and optional: short (for the score panel's 62 px name slot and the result, when name doesn't fit), skin and hair recolours as [from, to] palette colours (skin everywhere, hair only on the head), kit as [from, to] palette colours (the P2 / CPU kit, in place of the standard swap). The game reads the order as listed; P1 starts on the first, P2 on the second.",
   "characters": [
     {
       "id": "ronin", "name": "Ronin", "sheet": "player-100",
@@ -9,8 +9,8 @@
     },
     { "id": "adam", "name": "Adam", "sheet": "player-100" },
     {
-      "id": "ben", "name": "Ben", "sheet": "player-100",
-      "hair": [["#3b261c", "#1e1410"], ["#1e1410", "#0b0a0d"]]
+      "id": "sells", "name": "Mr. Sells", "short": "Sells", "sheet": "sells-100",
+      "kit": [["#960e1e", "#252429"], ["#d21a28", "#3a3940"], ["#f04842", "#5a5962"]]
     },
     {
       "id": "zain", "name": "Coach Zain", "short": "Zain", "sheet": "zain-100",

@@ -259,3 +259,69 @@ All jobs: pixel-engine v1.1, pixel mode, Basic background removal, auto-enhance 
 **Cleaned** by `art/tools/a13-build.lua` into `art/character/sells.aseprite` (`ready` from the back, `front_ready` from the front, 96 px head to soles); prints redrawn by hand. Previews: `art/mockups/a13-print.png`, `art/mockups/a13-sells.png`.
 
 **A13 total: 192 of the 256 approved credits** (the spare back round wasn't needed). Account after A13: 636 credits.
+
+## A14: Mr. Sells, every animation (with his trombone)
+
+**Approved spend:** up to 280 credits for the ten animations with a racket (10 at 20 + up to 4 re-runs), 2026-11-23. Then, after those were made, **the owner's call: his racket becomes a trombone**, with up to 290 more approved for it (two still edits and the ten animations again, plus up to 2 re-runs), the same day. Account before A14: 636 credits.
+
+All animation jobs: pixel-engine v1.1, pixel mode, Basic background removal, auto-enhance off, spritesheet output (8 fps), 20 credits each. Edge margin 6 for `ready`, the runs and `front_ready` (224 px cells), 15 for `serve`, `forehand` and `backhand`, 25 for `overhead` and `dive` (256 px cells). No photos of anyone were used; all sources are our own SpriteCook output.
+
+### 1. With a racket (not used in the sheet): 200 credits
+
+**Source:** back concept 4 (`eaea04a1-…`, 200 × 200) as it is; front concept 2 (`ecf84f12-…`, 330 px, over the animator's 256 px limit) area-averaged to `art/spritecook/a14/front-2-200.png` (sha12 `64ba49a3ae6c`), a free upload, asset `4d998e50-2de0-41e3-a533-12d2eb758a18`.
+
+**Prompts:** A8z's (v1's A2 and A3 wording), each beginning "The short, heavy-set squash player with greying hair, in a red short-sleeve crew-neck T-shirt with SELLS and a small boar's head on the back, black shorts, white socks and white shoes", with "held up in front" as "held up on the right", A8z's extra serve sentence and A8z's negative prompts (the swings add "two rackets"). `front_ready`: "…with short greying hair, dark rectangular glasses and a short greying beard, in a red short-sleeve crew-neck T-shirt with a HOGG boar print on the chest…", as A8z's otherwise; its negative prompt adds "ball, glasses disappearing".
+
+| File (`art/spritecook/a14/`) | sha12 | Asset ID | Job | Frames |
+|---|---|---|---|---|
+| `ready.png` | `38bd8a82b642` | `cfcddc95-5d41-41ba-8383-e2d0760bd298` | `6867d968-edd4-44e9-8e18-f7957318610d` | 8 |
+| `run_side.png` | `8e6d97e1a90c` | `ad23752e-7442-4aa9-bf2b-f1fa8638a53c` | `d3d400fb-5a84-4102-bad1-7626f7aa4b5f` | 8 |
+| `run_up.png` | `0c8cbc620fa9` | `3b9c445c-714c-4b8f-8517-9fa056e36183` | `9ef22ce7-822e-4b7c-9af8-b8f7cc5c133e` | 8 |
+| `run_down.png` | `e5c5ec84e7d7` | `255d77db-97a4-4942-a3a2-f7cd5a7ffad3` | `52ecc1d2-b6ce-4f0c-b9e4-52df25848acd` | 8 |
+| `serve.png` | `41afde8bc200` | `5fc61447-8825-40d4-b5eb-6b9eb60ef01a` | `eac75cd3-f4b6-4cf5-a2d1-b02346ca9f69` | 12 |
+| `forehand.png` | `12819d089ad1` | `da455a0e-f41e-417e-bb3b-d2017df2bd1e` | `88aa2b3a-116a-484a-a78d-597862ba7f29` | 12 |
+| `backhand.png` | `0ea603538566` | `4883ac18-07c0-49fd-a3c0-627e24f085c9` | `dca3f2e2-5756-4579-9960-38623203f753` | 12 |
+| `overhead.png` | `be66243a86f3` | `c2367a37-9e8d-493e-a5f7-4fe43d716262` | `b91c6ed4-9309-4c3d-946b-feeaac22a160` | 12 |
+| `dive.png` | `b63cb9e71ea0` | `d54d4761-900e-40c7-a6bc-b2e702a2626a` | `6694f411-d825-432d-9f7d-388069b52437` | 16 |
+| `front_ready.png` | `cbb17880eb4a` | `61199e88-d59e-4dc5-b18f-ab4046f4d51e` | `09f57439-e0f0-4e2b-9302-0a45b57aaefd` | 8 |
+
+These were cleaned into a full sheet (the forehand's contact from `backhand.png` 9, its doubled racket head erased) before the owner asked for the trombone; that sheet was replaced and never committed.
+
+### 2. The trombone stills: 64 credits
+
+Both: gpt-image-2.5-flare, medium, 1K, 1:1, pixel, transparent, 2 variations, size hint 200 × 200, an edit (`edit_asset_id`) with no other references. **Billed 32 each** (2 × (8 + 8): the edited image counts as a reference; the plan had priced the back at 16).
+
+- **Back** (job `87b29dda-757a-4d75-8a6d-3845181a8459`), editing back concept 4. **Prompt:** The same squash player as the edited sprite, seen directly from behind in the same ready stance, but instead of a squash racket he holds a shiny brass trombone in his right hand, gripped by its neck like a racket, held up on the right side of the picture with the bell pointing up, the long U-shaped slide hanging down beside his right arm. The trombone is gold-coloured brass with a round flared bell, clearly readable. Everything else exactly the same: the same short heavy build, greying hair, the red crew-neck T-shirt with SELLS and the small boar's head on the back, black shorts, white socks and white shoes, the same pixel art style, proportions and size. Single character, centred, whole body and the whole trombone visible.
+- **Front** (job `a15f7df1-6642-4c56-ab25-505006e1c93a`), editing front concept 2. **Prompt:** the same, seen directly from the front, the trombone in his right hand "(on the left side of the picture)", with "the same face with dark rectangular glasses and a short greying beard", "the HOGG boar print on the chest" and "the same pixel art style, proportions, size and framing, the whole head visible".
+
+| File (`art/spritecook/a14/`) | sha12 | Asset ID | Size | Notes |
+|---|---|---|---|---|
+| `tb-back-1.png` | `f2549dd5a8ae` | `d9a8f3bf-3872-4029-91d3-55efe42947bc` | 230×230 | a good trombone, but a red collar band behind his head: **its trombone used** (below) |
+| `tb-back-2.png` | `76518f7ce314` | `2a67e88e-5561-4fd7-8e73-229deee267fd` | 108×108 | small, the same collar |
+| `tb-front-1.png` | `bc52455e8f58` | `61c36512-6228-493e-8352-d3febeb653f3` | 298×298 | taller and slimmer than him |
+| `tb-front-2.png` | `041a6abc65fa` | `c4492ba9-88a9-41eb-9b83-aaf3add6c06c` | 258×258 | **picked**: his build, glasses and beard, the trombone up on the left |
+
+**Uploads (free):** `tb-back-src.png` (sha12 `319b78506252`), asset `b34493a5-75fd-46a9-a658-02deb6deaf97`: back concept 4 with its racket removed and `tb-back-1.png`'s trombone pasted in behind his hand, area-averaged to his scale (`art/tools/a14-trombone-source.lua`). `tb-front-2-200.png` (sha12 `4d4279582ff5`), asset `e4bb42a6-0a4a-4558-b3af-441f1adc61b7`: `tb-front-2.png` area-averaged to 200 px.
+
+### 3. The trombone animations (used): 200 credits
+
+**Prompts:** as in 1, with "who plays with a gold brass trombone instead of a racket," after the shoes, "the racket" as "the trombone" ("bell up" where it is held up; the swings add "like a racket"), and the negative prompts' "racket" as "trombone" plus "racket" itself. Sources: `tb-back-src.png` for the nine back tags, `tb-front-2-200.png` for `front_ready`.
+
+| File (`art/spritecook/a14/trombone/`) | sha12 | Asset ID | Job | Frames | Used in the sheet |
+|---|---|---|---|---|---|
+| `ready.png` | `fdf2e4e706b3` | `3d9d60be-2f95-4622-885d-b9d2d298aff9` | `645be538-4d60-46cb-894f-f1fe270f5db6` | 8 | `ready`: 1–8 |
+| `run_side.png` | `bde64234e45d` | `04cb4cf5-0096-4d72-a92c-d73ab11e7720` | `33386a53-3008-41bd-83ea-52bf4127e7dc` | 8 | `run_side`: 2–8 |
+| `run_up.png` | `73e1ca4d482c` | `9bf822ea-7c54-45d9-a3ec-69ad4e393d09` | `aa8c3e76-cf16-40a9-a70b-d25ff0baf40f` | 8 | `run_up`: 2–8 |
+| `run_down.png` | `81226df31c5a` | `78c8612f-3fd6-43e7-996b-2f962aa77705` | `97a38b0f-bea5-473c-a7a5-c72959ecf638` | 8 | `run_down`: 2–8 |
+| `serve.png` | `953879842d21` | `7b8f1cab-edf1-4f1b-bbf1-84d105b96ce0` | `c425d05c-30c1-431b-b91f-835fc4439834` | 12 | `serve`: 3, 5, 7, 8, 9, 11 |
+| `forehand.png` | `8ccecf82006d` | `db5eacd6-6103-46f0-889e-08fb5be80a31` | `a65a7d2c-f6f3-4bf6-831e-aa32d2b36734` | 12 | `forehand`: 3, 4, 5, then `backhand.png` 9 (contact), then 7, 8, 10, 12 |
+| `backhand.png` | `2b5ad20071fc` | `d3468417-c701-4ccb-8fcc-231e6cf64b97` | `e5418a47-8b3f-4e3c-aab9-32e2089e1506` | 12 | `backhand`: 3, 4, 5, 6, 7, 9, 10, 12 |
+| `overhead.png` | `7ad490a61dda` | `e675d33b-974d-47d6-9fa3-500292f986ad` | `5df19d6e-4a15-48a9-9051-4786e14dfe3e` | 12 | `overhead`: 3, 5, 6, 7, 8, 9, 10, 12 |
+| `dive.png` | `0f3a92a94df1` | `93d44e1d-0f94-4f89-8b8b-b3206a689331` | `1f6f8db5-ec20-4732-9c2a-96ea2ff1e86e` | 16 | `dive`: 2, 4, 5, 6, …, 16 (contact on 6) |
+| `front_ready.png` | `210412e77472` | `0550bc14-a49b-4970-8cb0-89f90e0a9ba2` | `3d0e447e-59d8-43f9-bc4d-c91cad5f9db5` | 8 | `front_ready`: 1–8 |
+
+**Frames left out:** `forehand.png` 6, its own contact frame, smears the trombone into two thin lines with no bell (they vanish at sprite size), so the contact is `backhand.png` 9. The rest are left out only to fit the contract's frame counts.
+
+**Cleaned** by `art/tools/a14-build.lua` (with `a14-lib.lua`, and the prints in `a14-print.lua`, taken from A13's concept by `a14-print-extract.lua`) into `art/character/sells.aseprite`, exported by `art/tools/a14-export.sh` to `public/hogg-squash/assets/sells-100.png` + `.json`. Previews: `art/mockups/a14-strips.png`, `a14-<tag>-p1.gif` and `-p2.gif`, `a14-review.html` (`art/tools/a14-preview.lua`).
+
+**A14 total: 464 credits** (the racket round 200 of its 280; the trombone 264 of its 290; no re-runs). Account after A14: 172 credits.
