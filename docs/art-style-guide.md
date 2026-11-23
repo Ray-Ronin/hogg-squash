@@ -18,7 +18,7 @@ a whole-number upscale with no smoothing, then a smooth shrink to fit, so pixels
 - Court: white walls, red lines, light wood floor (like the Hogg courts). Bright and readable. The **ball must stand out from every background** (walls and floor), with a dark shadow under it on the floor.
 - Players: a darker outline (or selective outlining) so they read against the floor.
 
-**The palette (A1, 2026-10-20):** `art/palette/hogg-squash.gpl`, 36 colours, 42 since S15's skin and hair tones, 47 since A7z's Coach Zain entries (hex values in `theme.md`). Load it in Aseprite and keep sprites in indexed mode on it. Characters use only the neutrals, reds, skin and hair (and a finalized character's own shirt entries); wood, glass, effects and the Mission colours are for the court and UI. New colours go into the `.gpl` file (up to 48), never ad hoc.
+**The palette (A1, 2026-10-20):** `art/palette/hogg-squash.gpl`, 36 colours, 42 since S15's skin and hair tones, 47 since A7z's Coach Zain entries, 50 since A13's Mr. Sells entries (hex values in `theme.md`). Load it in Aseprite and keep sprites in indexed mode on it. Characters use only the neutrals, reds, skin and hair (and a finalized character's own shirt entries); wood, glass, effects and the Mission colours are for the court and UI. New colours go into the `.gpl` file (up to 64), never ad hoc.
 
 **Kit swap (P2 / CPU, white and black):** recolour these palette entries, and nothing else:
 
@@ -178,6 +178,20 @@ The roster is `public/hogg-squash/assets/characters.json`, in order: since S15b 
 | `racket backhand` | 39, 75 | out to the left at shoulder height |
 | `racket overhead` | 97, 53 | up on the right, beside his head (the racket's top is level with his crown), lower than `player-100`'s 79, 15, which is straight up. How it looks in play: `plan-v2.md`, S15b's Session log entry |
 | `racket dive` | 118, 130 | on the floor at the end of the right arm |
+
+**Mr. Sells (A13, 2026-11-23), the second finalized character** (`plan-v3.md`, A13): his own body and art, replacing Ben in A14. The concept is `art/character/sells.aseprite` (built by `art/tools/a13-build.lua` from SpriteCook back concept 4 and front concept 2, `art/spritecook-manifest.md`), 150 × 150 frames with the `feet` pivot at 73, 148 like `player-100`: frame 1 `ready` (from the back), frame 2 `front_ready` (from the front). Previews: `art/mockups/a13-print.png` (the tee at 4×, both colours), `art/mockups/a13-sells.png` (beside Coach Zain on the court, both kits).
+
+| | |
+|---|---|
+| Height | 96 px head to soles (the others 100), heavy: 68 px wide from the back, 66 from the front |
+| Skin | skin 4, 5, 6, 7 (fair), drawn in; no recolour |
+| Hair, beard and glasses | hair dark, hair, grey 1 and 2 (short, going grey; short full beard; dark rectangular glasses, seen from the front) |
+| P1 shirt | the red Hogg Middle School spirit tee in its own entries: `shirt red shade` `#960e1e`, `shirt red` `#d21a28`, `shirt red light` `#f04842` (unused so far), used nowhere else |
+| Print, back | SELLS in white 3 × 5 capitals with an outline ring across the shoulders, over a small boar's head (red 2, red 1, a white tusk) ringed in white |
+| Print, front | centred on the chest: a side-on boar (red 2, red 1) ringed in white, HOGG in red 2 3 × 4 capitals ringed in white, and MIDDLE SCHOOL as a broken white line |
+| Shorts, socks, shoes | black kit, white, as everyone's |
+
+**His planned `kit` swap (for A14's roster entry, replacing the standard one):** the tee turns black, as the store's black tee; the print stays: `[["#960e1e", "#252429"], ["#d21a28", "#3a3940"], ["#f04842", "#5a5962"]]`. **Name:** "Mr. Sells" is 80 px in `large-white`, wider than the 62 px name slot, so A14's entry uses the short name "Sells" (48 px; the owner's call, 2026-11-23).
 
 A new sheet must keep player-100's contract (§3; `SHEET_CONTRACT` in `js/render/roster.js`), or the game leaves its characters out with a console warning.
 

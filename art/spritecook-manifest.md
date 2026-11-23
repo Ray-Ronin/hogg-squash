@@ -218,3 +218,44 @@ All jobs: pixel-engine v1.1, pixel mode, Basic background removal, auto-enhance 
 **Cleaned** by `art/tools/a8z-build.lua` (the `trophy` tag, after `front_ready`) into `art/character/zain.aseprite`, exported to `public/hogg-squash/assets/zain-100.png` + `.json`. Previews: `art/mockups/a19z-trophy.png`, `a19z-trophy-p1.gif`, `a19z-trophy-p2.gif` (`art/tools/a19z-preview.lua`).
 
 **A19z total: 68 of the 96 approved credits** (one still round, one animation, no re-runs). Account after A19z: 28 credits.
+
+## A13: Mr. Sells's concept (back and front)
+
+**Approved spend:** up to 256 credits (back round 128, front round 64, one spare back round 64, at the A7z rate of 8 a variation plus 8 per reference per variation), 2026-11-23. Account before A13: 828 credits.
+
+**Reference upload** (no credits): the owner's picture of the Hogg Middle School spirit T-shirt in its two store colours, black and red (from the Hogg PTA spirit store; Hogg's name and logo are approved for use by the owner). The file stays outside the repo in `C:\Hogg Squash\Character References\sells\` and is never committed. No face photo: the face comes from the written description in `plan-v3.md`, A13.
+
+| Photo | sha12 | Asset ID |
+|---|---|---|
+| `shirts-front.png` (718×362) | `a1b01e967b8d` | `b97a7971-7bee-466a-b6a7-6b0dd6b1838e` |
+
+### Back round (job `6e3f3990-1775-4ae8-aa77-5046d0369973`): 128 credits
+
+- **Model:** GPT 2.5 Flare (`gpt-image-2.5-flare`), quality medium, 1K square, pixel art, transparent background, 4 variations, size hint 128×128, smart crop tightest, outline repair on.
+- **References (3):** `reference_asset_id` the shirts photo; `style_asset_ids` A1 concept 4 (`db1eb2a8-…`) and Coach Zain's picked back concept 3 (`e60bd106-…`), so the characters match. Billed 4 × (8 + 3 × 8) = 128.
+- **Prompt:** Full-body adult male squash player seen directly from behind (back view, we see his back and the back of his head, not his face), in a ready stance waiting for the ball: knees bent, feet shoulder-width apart, weight forward, racket held up in the right hand in front of the body. He is a little shorter than an average player, with a heavy build: a round belly, a broad torso, thick arms and legs. Short brown hair going grey, a little longer on top, and the arms of dark rectangular glasses just visible over his ears; a short full beard, brown going grey, just visible along the jaw from behind. Fair skin. He wears a plain bright red short-sleeve crew-neck cotton T-shirt in the same red as the red shirt in the reference photo. On the back of the shirt: the name SELLS in white block capital letters with a thin black outline running across the shoulders, and under it, between the shoulder blades, a small dark red razorback boar head emblem outlined in white. Black shorts, white socks, white court shoes. Single character, centred, whole body visible from head to feet.
+- **Style:** clean 16-bit sports game sprite, bold readable shapes, dark outline, limited palette, bright even lighting, matching the style guide sprites
+- **Theme:** indoor squash court sports game, school colours red, black and white
+
+| File (`art/spritecook/a13/`) | sha12 | Asset ID | Size | Notes |
+|---|---|---|---|---|
+| `back-1.png` | `c97b6226b895` | `8f984f96-8d5c-48db-8db0-4b8d9902c4fe` | 128×128 | square-on, SELLS small and blurred |
+| `back-2.png` | `44b295c05a34` | `d893e2f2-beb1-4d5e-9ca7-08d99ad49ca5` | 128×128 | three-quarter view, off-style |
+| `back-3.png` | `2727302cbc5b` | `144dad8e-ca45-4a55-bb87-cac1d60171c9` | 32×32 | came out tiny |
+| `back-4.png` | `1717fd4e7690` | `eaea04a1-714f-4cfc-a090-2aa22b67ef72` | 200×200 | **picked**: square-on, heavy build, SELLS and the boar read |
+
+### Front round (job `6ecd2db7-ea64-4fa6-88b3-70d348239083`): 64 credits
+
+- **Settings:** as the back round, 2 variations.
+- **References (3):** `reference_asset_id` back concept 4 (`eaea04a1-…`); `style_asset_ids` Coach Zain's picked front concept 1 (`f5b47d79-…`) and the shirts photo. Billed 2 × (8 + 3 × 8) = 64.
+- **Prompt:** The same squash player as the reference sprite, now seen directly from the front (front view, facing the camera, we see his face), in the same ready stance waiting for the ball: knees bent, feet shoulder-width apart, weight forward, racket held up in his right hand in front of the body (on the left side of the picture). Same short heavy build with a round belly, broad torso and thick arms and legs, same pixel art style, same proportions and size. His face: fair skin, short brown hair going grey, a little longer on top and swept to the side, rectangular glasses with dark frames, a short full beard and moustache, brown going grey, a friendly expression. He wears the same plain bright red short-sleeve crew-neck T-shirt as the red shirt in the shirt photo, with its print centred on the chest like the photo: a dark red razorback boar standing side-on, under it the word HOGG in red slanted block capitals with a white and black outline, and under that MIDDLE SCHOOL in small white capitals. Black shorts, white socks, white court shoes. Single character, centred, whole body visible from head to feet.
+- **Style:** clean 16-bit sports game sprite, bold readable shapes, dark outline, limited palette, bright even lighting, matching the reference sprite exactly
+
+| File (`art/spritecook/a13/`) | sha12 | Asset ID | Size | Notes |
+|---|---|---|---|---|
+| `front-1.png` | `de7ee0ec0e0a` | `aff48e13-b8c0-4c7b-a914-8827adc24f8d` | 120×120 | small; the print a smudge |
+| `front-2.png` | `218087d8c4d7` | `ecf84f12-cb9b-41f9-9c07-3baec104598f` | 330×330 | **picked**: glasses, grey-brown beard, the HOGG print reads |
+
+**Cleaned** by `art/tools/a13-build.lua` into `art/character/sells.aseprite` (`ready` from the back, `front_ready` from the front, 96 px head to soles); prints redrawn by hand. Previews: `art/mockups/a13-print.png`, `art/mockups/a13-sells.png`.
+
+**A13 total: 192 of the 256 approved credits** (the spare back round wasn't needed). Account after A13: 636 credits.

@@ -3,8 +3,8 @@ Name: Hogg Squash
 Columns: 8
 #
 # The shared palette for every Hogg Squash sprite, court piece and UI element (A1, 2026-10-20).
-# 47 colours (S15 added six for the roster's recolours, A7z five for Coach Zain). Sprites are locked to it in Aseprite. Add new colours here
-# (up to 48), never ad hoc.
+# 50 colours (S15 added six for the roster's recolours, A7z five for Coach Zain, A13 three for Mr. Sells). Sprites are locked to it in Aseprite. Add new colours here
+# (up to 64), never ad hoc.
 #
 # Neutrals and outline
  11  10  13	outline
@@ -63,3 +63,8 @@ Columns: 8
  38  37  42	shirt black (A7z)
  59  58  65	shirt black light (A7z)
 220 220 224	shirt print (A7z)
+# Mr. Sells (A13): his red spirit tee's own entries, used nowhere else, so his P2 / CPU kit can turn them black
+# without touching the print (which uses the standard reds and white)
+150  14  30	shirt red shade (A13)
+210  26  40	shirt red (A13)
+240  72  66	shirt red light (A13)

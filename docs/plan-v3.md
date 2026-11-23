@@ -20,8 +20,8 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 
 **New character 1: Mr. Sells** *(replaces Ben)*
 - [x] **L1** Agree Mr. Sells's look *(you, planning only)* *(2026-11-17; his shirt is still to come, see A13)*
-- [ ] 💳 Approve SpriteCook spend for A13 (Mr. Sells) *(you)*
-- [ ] **A13** Art: Mr. Sells's concept, from the back and the front, in both kits
+- [x] 💳 Approve SpriteCook spend for A13 (Mr. Sells) *(you)* *(up to 256, approved 2026-11-23)*
+- [x] **A13** Art: Mr. Sells's concept, from the back and the front, in both kits *(2026-11-23)*
 - [ ] 💳 Approve SpriteCook spend for A14 (Mr. Sells) *(you)*
 - [ ] **A14** Art: Mr. Sells, every animation and the front-view idle; replaces Ben in the roster
 
@@ -180,13 +180,16 @@ Ask me the template's step-1 questions, write the answers into A13's "Agreed wit
 
 **A13, Mr. Sells (L1, 2026-11-17)**
 - **Who:** David Sells, a real person who has agreed to be in the game. Id: `sells` (the plan's pick; the owner can change it before A13). His photos go in `C:\Hogg Squash\Character References\sells\`, outside the repo.
-- **Name:** "Mr. Sells" everywhere, with no short name (the owner's call: it's shorter than "Coach Zain"). Coach Zain's full name shows on the select screen, but the score panel's 62 px slot uses his short "Zain". So A13 measures "Mr. Sells" in `large-white`; if it's wider than 62 px, ask the owner for a short name before A14 adds the roster entry.
+- **Name:** "Mr. Sells" everywhere, with no short name (the owner's call: it's shorter than "Coach Zain"). Coach Zain's full name shows on the select screen, but the score panel's 62 px slot uses his short "Zain". So A13 measures "Mr. Sells" in `large-white`; if it's wider than 62 px, ask the owner for a short name before A14 adds the roster entry. **A13 (2026-11-23):** it's 80 px, so the owner picked the short name **"Sells"** (48 px) for the score panel; A14's entry is `{ "id": "sells", "name": "Mr. Sells", "short": "Sells", "sheet": "sells-100", "kit": [...] }`.
 - **Body:** a little shorter than the others, about 96 px head to soles (they are 100). Heavy build: a round belly, a broad torso, thicker arms and legs.
 - **Skin and hair** (from the owner's photo): fair skin. Short brown hair going grey, a little longer on top and swept to the side. A short full beard and moustache, brown going grey. Rectangular glasses with dark frames.
-- **Kit:** his own shirt. **Still to come:** the owner is sending photos of its front and back. Its look and its P2 / CPU version get agreed (and written here) when they arrive, before A13's spend gate.
-- **Photos to use:** the face, and the shirt's front and back.
+- **Kit (A13, 2026-11-23, the owner's pick from the Hogg PTA spirit store):** the Hogg Middle School spirit T-shirt, a plain crew-neck tee. **P1 wears the red one, P2 / CPU the black one** (the same shirt in its two store colours, so a mirror match is easy to tell apart). Black shorts, white socks and white shoes, as the standard kit.
+  - **Front** (from the store photo): centred on the chest, the red razorback standing side-on, the word HOGG under it in red slanted block capitals with a white and black outline, and MIDDLE SCHOOL in small white capitals under that. The print is the same on both colours.
+  - **Back** (no photo; designed in A13, the owner's call): SELLS in white block capitals with a thin black outline across the shoulders, and under it, between the shoulder blades, a small red razorback head like the front's, outlined in white. Kept simple so it reads at the 100 px scale, and different from Coach Zain's vertical SQUASH.
+  - **Palette:** the shirt red is its own entry (not the kit red `#e8202a`), and the print's reds and white are their own entries, so the P2 swap turns only the shirt's reds into black and dark greys and leaves the print alone. The `kit` swap is written down in A13 for A14's roster entry.
+- **Photos to use:** the shirts' front (`shirts-front.png` in the `sells` folder, from the store). No face photo yet, so the face is drawn from the written description above; if one arrives later, it can be used for a re-run.
 - **Replaces:** Ben, so the roster becomes Ronin, Adam, Mr. Sells, Coach Zain.
-- **Before A13 starts:** the face and shirt photos are in the `sells` folder, and the shirt is agreed here.
+- **Before A13 starts:** settled in A13 (2026-11-23): the shirt above, no face photo for now.
 
 **In scope:** as `plan-v2.md`'s A7z, for this character:
 - **Spend gate:** check the balance, list the generations with model, quality and estimated credits (reference images are billed once per variation), then stop for the owner's OK.
@@ -323,3 +326,9 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Checked in the browser** (`?roster=9`, `?drop=ben`): the real roster unchanged in 1P and 2P; with nine, the two rows, "?" last, P1's and P2's keys between the rows, a tap on a second-row card and on "?" (synthetic touches), the tournament's characters screen cycling through all nine then "?"; the owner's saved 8-player tournament (it names Ben) loaded with `?drop=ben` showed Ronin in Ben's place on the bracket (and the save was put back as it was). No console messages. **Not checked:** a real gamepad (it sends the same moves as the keys) or a real phone.
   - **For later:** each extra character adds its select-screen previews (about 0.76 MB of canvas per kit), so nine characters' screen holds about 14 MB of previews against four's 6.
   - **Next:** P3 (the owner's prerequisites), then L1.
+- 2026-11-23, A13: **Mr. Sells's concept**, from the back and the front, approved by the owner in both kits. `art/character/sells.aseprite` (frame 1 `ready`, frame 2 `front_ready`, 150 × 150, the `feet` pivot at 73, 148), built by `art/tools/a13-build.lua`; previews `art/mockups/a13-sells.png` (beside Coach Zain on the court) and `a13-print.png`.
+  - **His shirt (the owner's calls):** first "keep it simple" (the standard red kit), then the owner sent the Hogg Middle School spirit tee from the PTA spirit store in its two colours (the store page needs a login, so the owner sent the picture): **red for P1, black for P2 / CPU**, the store's front print, and a back designed here (SELLS across the shoulders over a small boar's head). No face photo: the face is drawn from L1's description (glasses, greying hair and beard).
+  - **Credits:** 192 of the 256 approved (back round 4 variations, 128; front round 2, 64; the spare re-run wasn't needed). Account: 828 before, 636 after. Prompts, asset IDs and hashes are in the manifest.
+  - **Cleanup:** 96 px head to soles; the cleaner picks only skin 4–7 (fair); the tee's reds moved into three new palette entries (`shirt red shade`, `shirt red`, `shirt red light`, 50 of 64), so the P2 swap turns only the tee black and the print, which uses the standard reds and white, stays. Both prints redrawn by hand at sprite size. `npm test` passes.
+  - **For A14:** the `kit` swap is `[["#960e1e", "#252429"], ["#d21a28", "#3a3940"], ["#f04842", "#5a5962"]]`. "Mr. Sells" is 80 px in `large-white`, so the owner picked the short name **"Sells"** (48 px). From the back his hair reads mostly dark grey, a little like a cap; fine for now (the owner approved it).
+  - **Next:** 💳 approve A14's spend, then A14 (about 320; 636 on the account).
