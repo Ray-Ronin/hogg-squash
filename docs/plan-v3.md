@@ -25,12 +25,12 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 - [x] 💳 Approve SpriteCook spend for A14 (Mr. Sells) *(you)* *(up to 280, then up to 290 more for the trombone, approved 2026-11-23)*
 - [x] **A14** Art: Mr. Sells, every animation and the front-view idle; replaces Ben in the roster *(2026-11-23)*
 
-**New character 2** *(replaces Adam)*
-- [ ] **L2** Agree new character 2's look *(you, planning only)*
-- [ ] 💳 Approve SpriteCook spend for A15 *(you)*
-- [ ] **A15** Art: new character 2's concept
-- [ ] 💳 Approve SpriteCook spend for A16 *(you)*
-- [ ] **A16** Art: new character 2, every animation; replaces Adam
+**New character 2: Mr. Canales** *(replaces Adam)*
+- [x] **L2** Agree Mr. Canales's look *(you, planning only)* *(2026-11-23; his skin and hair are still to come, from his photo, see A15)*
+- [ ] 💳 Approve SpriteCook spend for A15 (Mr. Canales) *(you)*
+- [ ] **A15** Art: Mr. Canales's concept, from the back and the front, in both kits, holding his keyboard
+- [ ] 💳 Approve SpriteCook spend for A16 (Mr. Canales) *(you)*
+- [ ] **A16** Art: Mr. Canales, every animation and the front-view idle; replaces Adam in the roster
 
 **Ronin, or his replacement**
 - [ ] **L3** Decide: Ronin with his own sheet, or a new character in his place; then agree the look *(you, planning only)*
@@ -191,6 +191,17 @@ Ask me the template's step-1 questions, write the answers into A13's "Agreed wit
 - **Replaces:** Ben, so the roster becomes Ronin, Adam, Mr. Sells, Coach Zain.
 - **Before A13 starts:** settled in A13 (2026-11-23): the shirt above, no face photo for now.
 
+**A15, Mr. Canales (L2, 2026-11-23)**
+- **Who:** Mr. Canales, a real person who has agreed to be in the game. Id: `canales` (the owner's pick). His photos go in `C:\Hogg Squash\Character References\canales\`, outside the repo.
+- **Name:** "Mr. Canales" on the select screen. A15 measures it in `large-white`; if it's wider than the 62 px name slot (Mr. Sells's was 80 px, so it very likely is), **ask the owner for a short name** for the score panel before A16 adds the roster entry.
+- **Body:** average height and build, the standard 100 px head to soles.
+- **Skin and hair:** **still to come**, from the owner's photo (not sent yet). Agreed and written here when it arrives, before A15's spend gate.
+- **Kit:** the standard Hogg red and black (the standard swap, so no `kit` entry in the roster).
+- **His racket is a computer keyboard** (the owner's call), swung like a racket: looks only, as Mr. Sells's trombone. **Unlike Mr. Sells, he holds it from the concept on** (A15's back and front views), so A16 animates him with it in one round, with no second round of still edits and animations (that cost Mr. Sells 264 extra credits). The `racket <tag>` slices go on the keyboard's centre. A plain dark keyboard with light keys, kept simple so it reads at the 100 px scale; its colours come from the palette's existing greys and blacks if they fit.
+- **Photos to use:** the owner's photo of him (the face, and the whole body if there is one). **Still to come.**
+- **Replaces:** Adam, so the roster becomes Ronin, Mr. Canales, Mr. Sells, Coach Zain.
+- **Before A15 starts:** his photo is in the `canales` folder, and his skin and hair are agreed here.
+
 **In scope:** as `plan-v2.md`'s A7z, for this character:
 - **Spend gate:** check the balance, list the generations with model, quality and estimated credits (reference images are billed once per variation), then stop for the owner's OK.
 - Upload the photos (the `spritecook-upload-assets` flow), make the back concept (style reference: A1 concept 4, `db1eb2a8-7816-44de-b78a-ee5810bd5790`, plus Coach Zain's picked back concept, `e60bd106-76db-4638-a31d-d397282be092`, so the four match), then the front view.
@@ -340,3 +351,6 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
   - **Checks:** `sheetProblems` finds nothing; `npm test` passes (213 unit tests; `test/roster.test.js` now expects Mr. Sells where it expected Ben: test data only); `npm run typecheck` passes. In the browser: the select screen with Mr. Sells from the front in both kits, a mirror match (P1's red tee, P2's black, P1 / P2 on the panels), the serve and a swing in play; no console messages. **Not checked in the browser:** a saved tournament naming Ben (S19's tests cover it against the real roster, and pass); single-match picks aren't kept between visits.
   - **For later:** the trombone is thin at the back of the court and the generator's brass is rough in places (the swings smear it); the front-view face is the generator's darker skin shading, a little more orange than A13's concept. The animations with a racket are kept in `art/spritecook/a14/` (not used).
   - **Next:** L2 (new character 2's look).
+- 2026-11-23, L2: **Mr. Canales's look agreed** (planning only), replacing Adam: id `canales`, "Mr. Canales" (A15 measures it and asks for a short name if needed), average height and build (100 px), the standard red and black kit, and **a keyboard for a racket**, held from the concept on so A16 needs only one round of animations. Written into A15's "Agreed with the owner".
+  - **Still to come:** his photo, and his skin and hair from it. Both are needed before A15's spend gate.
+  - **Next:** the owner puts his photo in `C:\Hogg Squash\Character References\canales\` and his skin and hair get agreed into A15; then 💳 approve A15's spend (Mr. Sells's concept cost 192; 172 credits were left after A14, so it needs December's credits or a top-up), then A15.
