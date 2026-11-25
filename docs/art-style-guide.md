@@ -18,7 +18,7 @@ a whole-number upscale with no smoothing, then a smooth shrink to fit, so pixels
 - Court: white walls, red lines, light wood floor (like the Hogg courts). Bright and readable. The **ball must stand out from every background** (walls and floor), with a dark shadow under it on the floor.
 - Players: a darker outline (or selective outlining) so they read against the floor.
 
-**The palette (A1, 2026-10-20):** `art/palette/hogg-squash.gpl`, 36 colours, 42 since S15's skin and hair tones, 47 since A7z's Coach Zain entries, 50 since A13's Mr. Sells entries (hex values in `theme.md`). Load it in Aseprite and keep sprites in indexed mode on it. Characters use only the neutrals, reds, skin and hair (and a finalized character's own shirt entries); wood, glass, effects and the Mission colours are for the court and UI. New colours go into the `.gpl` file (up to 64), never ad hoc.
+**The palette (A1, 2026-10-20):** `art/palette/hogg-squash.gpl`, 36 colours, 42 since S15's skin and hair tones, 47 since A7z's Coach Zain entries, 50 since A13's Mr. Sells entries, still 50 after A17's Mr. Alvarado, who reuses Mr. Sells's shirt entries (hex values in `theme.md`). Load it in Aseprite and keep sprites in indexed mode on it. Characters use only the neutrals, reds, skin and hair (and a finalized character's own shirt entries); wood, glass, effects and the Mission colours are for the court and UI. New colours go into the `.gpl` file (up to 64), never ad hoc.
 
 **Kit swap (P2 / CPU, white and black):** recolour these palette entries, and nothing else:
 
@@ -142,6 +142,7 @@ Also needed: the ball + shadow, landing marker, front-wall impact ring, the cour
 **After A5 (2026-10-22):** 488 credits (A4 spent 8, A5 32).
 **After A7z (2026-11-07):** 296 credits (A7z spent 192). **Flare bills each reference image once per variation**, not once per job: 4 variations with 3 references cost 4 × (8 + 3 × 8) = 128.
 **After A8z (2026-11-08):** 96 credits (A8z spent 200). An animation is still 20 credits on pixel-engine v1.1, whatever the frame count. **Pixel animation sources must be 256 px or smaller** (a larger one is refused, free of charge), and cells stop at 256 px, so a 256 px source gets no edge margin.
+**After A17 (2026-11-25):** 1,828 credits (172 before A17, topped up to 2,020, now the Adventurer tier; A17 spent 192).
 **After A19z (2026-11-17):** 28 credits (A19z spent 68). Animation sources must also be between 1:2 and 2:1 (a tall, narrow still is refused at no charge: pad it to a square). An edit (`edit_asset_id`) can't take a `reference_asset_id` too; pass the reference as a style image, billed the same.
 
 ## Characters (S15)
@@ -204,6 +205,22 @@ The roster is `public/hogg-squash/assets/characters.json`, in order: since A14 R
 | `racket backhand` | 25, 72 | out to the left at shoulder height |
 | `racket overhead` | 74, 45 | across above his head |
 | `racket dive` | 112, 119 | on the floor at the end of the right arm |
+
+**Mr. Alvarado (A17, 2026-11-25), the third finalized character** (`plan-v3.md`, A17): his own body and art, replacing Ronin in A18. The concept is `art/character/alvarado.aseprite` (built by `art/tools/a17-build.lua` from SpriteCook back concept 1 and front concept 2, `art/spritecook-manifest.md`), 150 × 150 frames with the `feet` pivot at 73, 148 like `player-100`: frame 1 `ready` (from the back), frame 2 `front_ready` (from the front). **He holds an American football from the concept on**, swung like a racket in A18. Previews: `art/mockups/a17-print.png` (the top half at 4×, both polos), `art/mockups/a17-alvarado.png` (beside Coach Zain and Mr. Sells on the court, both kits).
+
+| | |
+|---|---|
+| Height | 96 px head to soles (the others 100), average build: 56 px wide from the back, 61 from the front |
+| Skin | skin 2, 3, 4, 5, 6 (light-medium tan), drawn in; no recolour |
+| Hair, beard and glasses | hair dark, hair (short black hair under the cap; a moustache joining a goatee, a beard shadow); glasses like Mr. Sells's (the owner's call): a grey 1 bar across the face, black kit light lens sides, hair dark pupils |
+| Cap | a Hogg cap worn forwards: black crown (black kit, hair dark), red brim (Hogg red, tin), a small razorback on the front (red 2, red 1, tin); the standard reds, so it's the same in both kits. From the back only the black crown shows |
+| P1 shirt | his red Hogg football coach's polo, in Mr. Sells's three shirt entries (`shirt red shade`, `shirt red`, `shirt red light`), used nowhere else on his sprite |
+| Print, back | COACH in white 3 × 5 capitals ringed in outline across the shoulders (as SELLS); no number |
+| Print, front | on his left chest: a small boar (red 2, red 1) ringed in white, over a white line for HOGG FOOTBALL |
+| Football | hair auburn, hair auburn dark (Ronin's tones, free once he leaves), hair dark, with white, grey and white kit shade laces and stripes; drawn about the size of a racket head |
+| Shorts, socks, shoes | black kit, white, as everyone's |
+
+**His planned `kit` swap (for A18's roster entry):** Mr. Sells's, so the polo turns black and the prints and cap stay: `[["#960e1e", "#252429"], ["#d21a28", "#3a3940"], ["#f04842", "#5a5962"]]`. **Name:** "Mr. Alvarado" is 120 px in `large-white` ("Alvarado" alone 88), wider than the 62 px name slot, so the owner picks a short name before A18.
 
 A new sheet must keep player-100's contract (§3; `SHEET_CONTRACT` in `js/render/roster.js`), or the game leaves its characters out with a console warning.
 

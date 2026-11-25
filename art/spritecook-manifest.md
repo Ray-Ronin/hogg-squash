@@ -325,3 +325,46 @@ Both: gpt-image-2.5-flare, medium, 1K, 1:1, pixel, transparent, 2 variations, si
 **Cleaned** by `art/tools/a14-build.lua` (with `a14-lib.lua`, and the prints in `a14-print.lua`, taken from A13's concept by `a14-print-extract.lua`) into `art/character/sells.aseprite`, exported by `art/tools/a14-export.sh` to `public/hogg-squash/assets/sells-100.png` + `.json`. Previews: `art/mockups/a14-strips.png`, `a14-<tag>-p1.gif` and `-p2.gif`, `a14-review.html` (`art/tools/a14-preview.lua`).
 
 **A14 total: 464 credits** (the racket round 200 of its 280; the trombone 264 of its 290; no re-runs). Account after A14: 172 credits.
+
+## A17: Mr. Alvarado's concept (back and front, holding his football)
+
+**Approved spend:** up to 192 credits (back round 128, front round 64, at 8 a variation plus 8 per reference per variation), 2026-11-25, after a top-up. Account before A17: 172 credits, then 2,020 after the owner's top-up (now the Adventurer tier).
+
+**Reference upload** (no credits): the owner's photo of Mr. Alvarado's face, who has agreed to be in the game. The file stays outside the repo in `C:\Hogg Squash\Character References\alvarado\` and is never committed. No cap or body photo: those come from the written description in `plan-v3.md`, A17.
+
+| Photo | sha12 | Asset ID |
+|---|---|---|
+| `face-1.png` (46×55) | `659791650798` | `43a06a6a-ae67-48e4-b408-8359630ff843` |
+
+### Back round (job `e5d1699e-1f10-4b52-8a13-ecab97c610c9`): 128 credits
+
+- **Model:** GPT 2.5 Flare (`gpt-image-2.5-flare`), quality medium, 1K square, pixel art, transparent background, 4 variations, size hint 128×128, smart crop tightest, outline repair on.
+- **References (3):** `reference_asset_id` the face photo; `style_asset_ids` A1 concept 4 (`db1eb2a8-…`) and Coach Zain's picked back concept 3 (`e60bd106-…`), so the characters match. Billed 4 × (8 + 3 × 8) = 128.
+- **Prompt:** Full-body adult male squash player seen directly from behind (back view, we see his back and the back of his head, not his face), in a ready stance waiting for the ball: knees bent, feet shoulder-width apart, weight forward. Instead of a racket he holds a brown leather American football with white laces and white stripes in his right hand, held up in front of the body like a racket; the football is drawn bigger than a real one, about the size of a racket head. He is a little shorter than an average player, with an average build and normal proportions. Light-medium tan skin. Short black hair seen at the sides and the back of his neck under a baseball cap worn forwards: from behind we see the cap's black crown and its strap at the back. The thin arms of light-framed glasses are just visible over his ears. He wears a bright red short-sleeve polo shirt with a collar. On the back of the polo: the word COACH in white block capital letters with a thin black outline running across the shoulders. No number. Black shorts, white socks, white court shoes. Single character, centred, whole body visible from head to feet.
+- **Style:** clean 16-bit sports game sprite, bold readable shapes, dark outline, limited palette, bright even lighting, matching the style guide sprites
+- **Theme:** indoor squash court sports game, school colours red, black and white
+
+| File (`art/spritecook/a17/`) | sha12 | Asset ID | Size | Notes |
+|---|---|---|---|---|
+| `back-1.png` | `8a586acf78e8` | `ef2295b1-be2b-4f24-b72d-fefd7518c26d` | 250×250 | **picked**: the stance and proportions closest to Sells's and Zain's, the ball up on the right where their rackets are, short and average build; under 256 px, so A18 can animate it as it is |
+| `back-2.png` | `8c5ddcb3c6a6` | `cb3ca86c-f5fb-4a53-bebd-1992d4785c58` | 270×270 | the biggest ball, a wide stance |
+| `back-3.png` | `3a783ed191f1` | `32a5a402-e753-41c3-a1e9-e6e34ad20cc7` | 236×236 | like 1, a little softer |
+| `back-4.png` | `1548b41d642e` | `dcd5e2a6-08e8-442c-9d59-21c3e6d0d377` | 328×328 | the crispest, but longer-legged and taller-looking |
+
+### Front round (job `c52944d1-e758-453f-9419-44f07775108c`): 64 credits
+
+- **Settings:** as the back round, 2 variations.
+- **References (3):** `reference_asset_id` back concept 1 (`ef2295b1-…`); `style_asset_ids` Coach Zain's picked front concept 1 (`f5b47d79-…`) and the face photo. Billed 2 × (8 + 3 × 8) = 64.
+- **Prompt:** The same squash player as the reference sprite, now seen directly from the front (front view, facing the camera, we see his face), in the same ready stance waiting for the ball: knees bent, feet shoulder-width apart, weight forward, holding the same big brown leather American football with white laces and white stripes up in his right hand in front of the body (on the left side of the picture), where a racket would be. Same short average build, same pixel art style, same proportions and size. His face, like the face photo: light-medium tan skin, a dark moustache joining a goatee, a short dark beard shadow along the jaw, thin light-grey rectangular glasses, a friendly expression; short black hair at the sides under his cap. He wears a baseball cap forwards: a black crown with a red brim, and a small red razorback boar on the front of the crown. He wears the same bright red short-sleeve polo shirt with a collar and a short button placket; small on his left chest (the right side of the picture) a small red razorback boar with the words HOGG FOOTBALL under it in tiny white letters. Black shorts, white socks, white court shoes. Single character, centred, whole body visible from head to feet.
+- **Style:** clean 16-bit sports game sprite, bold readable shapes, dark outline, limited palette, bright even lighting, matching the reference sprite exactly
+
+| File (`art/spritecook/a17/`) | sha12 | Asset ID | Size | Notes |
+|---|---|---|---|---|
+| `front-1.png` | `278d21859de7` | `761655bf-7690-4f35-8e15-30a18a9f0712` | 310×310 | a very wide stance (77 px wide at 96 tall, against the back's 56): too broad for an average build |
+| `front-2.png` | `7c69608ad41d` | `4290c4ff-e2f5-4f25-97a4-c2bcf083a940` | 250×250 | **picked**: 61 px wide, close to the back; the cap's red brim and razorback, moustache and goatee read |
+
+Neither front drew glasses that read at sprite size, and the eyes were 2 px dark marks, so the eyes and glasses are drawn by hand in the cleanup, like Mr. Sells's (dark frames; the owner's call).
+
+**Cleaned** by `art/tools/a17-build.lua` into `art/character/alvarado.aseprite` (`ready` from the back, `front_ready` from the front, 96 px head to soles); the prints, eyes and glasses redrawn by hand. Previews: `art/mockups/a17-print.png`, `art/mockups/a17-alvarado.png`.
+
+**A17 total: 192 of the 192 approved credits.** Account after A17: 1,828 credits.
