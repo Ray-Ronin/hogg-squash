@@ -27,17 +27,17 @@ Lines marked *(you)* are things the owner does. Lines marked 💳 are SpriteCook
 
 **New character 2: Mr. Canales** *(replaces Adam)*
 - [x] **L2** Agree Mr. Canales's look *(you, planning only)* *(2026-11-23; his skin and hair are still to come, from his photo, see A15)*
-- [ ] 💳 Approve SpriteCook spend for A15 (Mr. Canales) *(you)*
-- [ ] **A15** Art: Mr. Canales's concept, from the back and the front, in both kits, holding his keyboard
-- [ ] 💳 Approve SpriteCook spend for A16 (Mr. Canales) *(you)*
-- [ ] **A16** Art: Mr. Canales, every animation and the front-view idle; replaces Adam in the roster
+- [-] 💳 Approve SpriteCook spend for A15 (Mr. Canales) *(you)* *(on hold 2026-11-24, the owner's call: waiting for his photo)*
+- [-] **A15** Art: Mr. Canales's concept, from the back and the front, in both kits, holding his keyboard *(on hold 2026-11-24: his photo hasn't come yet)*
+- [-] 💳 Approve SpriteCook spend for A16 (Mr. Canales) *(you)* *(on hold with A15)*
+- [-] **A16** Art: Mr. Canales, every animation and the front-view idle; replaces Adam in the roster *(on hold with A15)*
 
-**Ronin, or his replacement**
-- [ ] **L3** Decide: Ronin with his own sheet, or a new character in his place; then agree the look *(you, planning only)*
-- [ ] 💳 Approve SpriteCook spend for A17 *(you)*
-- [ ] **A17** Art: the concept
-- [ ] 💳 Approve SpriteCook spend for A18 *(you)*
-- [ ] **A18** Art: every animation; replaces Ronin's recolour
+**New character 3: Mr. Alvarado** *(replaces Ronin)*
+- [x] **L3** Decide: Ronin with his own sheet, or a new character in his place; then agree the look *(you, planning only)* *(2026-11-25: a new character, Mr. Alvarado; his skin and hair are still to come, from his photo, see A17)*
+- [ ] 💳 Approve SpriteCook spend for A17 (Mr. Alvarado) *(you)*
+- [ ] **A17** Art: Mr. Alvarado's concept, from the back and the front, in both polos, holding his football
+- [ ] 💳 Approve SpriteCook spend for A18 (Mr. Alvarado) *(you)*
+- [ ] **A18** Art: Mr. Alvarado, every animation and the front-view idle; replaces Ronin in the roster
 
 **The trophy and the release**
 - [ ] 💳 Approve SpriteCook spend for A19 *(you)*
@@ -201,6 +201,22 @@ Ask me the template's step-1 questions, write the answers into A13's "Agreed wit
 - **Photos to use:** the owner's photo of him (the face, and the whole body if there is one). **Still to come.**
 - **Replaces:** Adam, so the roster becomes Ronin, Mr. Canales, Mr. Sells, Coach Zain.
 - **Before A15 starts:** his photo is in the `canales` folder, and his skin and hair are agreed here.
+- **On hold (2026-11-24, the owner's call):** A15 was started, but the `canales` folder didn't exist yet, so A15 and A16 wait for the photo; L3 and Mr. Alvarado go first. When it comes, A15 restarts from its starter prompt.
+
+**A17, Mr. Alvarado (L3, 2026-11-25)**
+- **L3's call (the owner's):** **a new character in Ronin's place**, so Ronin leaves the game when A18 puts Mr. Alvarado in the roster. (Ronin is the roster's first entry and P1's starting pick, so Mr. Alvarado becomes P1's starting pick.)
+- **Who:** Mr. Alvarado, a real person who has agreed to be in the game: a **football coach and geometry teacher** at Hogg. Id: `alvarado` (the plan's pick; the owner can change it before A17). His photos go in `C:\Hogg Squash\Character References\alvarado\`, outside the repo.
+- **Name:** "Mr. Alvarado" on the select screen. A17 measures it in `large-white`; it's longer than "Mr. Sells" (80 px), so it almost certainly needs **a short name** for the score panel: ask the owner before A18 adds the roster entry.
+- **Body:** short, about **96 px** head to soles (the plan's pick in the owner's 94–98; the others are 100), with an **average build**: normal proportions, not heavy like Mr. Sells.
+- **Skin and hair:** **still to come**, from the owner's photo. Agreed and written here when it arrives, before A17's spend gate.
+- **Kit (the owner's call): his own Hogg football coach's polo,** a short-sleeved polo with a collar and a short button placket. **P1 wears a red one, P2 / CPU a black one** (the same pairing as Mr. Sells's tee). Black shorts, white socks and white shoes, as the standard kit.
+  - **Front:** small on his left chest, a red razorback with HOGG FOOTBALL under it, in white.
+  - **Back:** COACH in white block capitals with a thin black outline across the shoulders (what's mostly seen in play). No number.
+  - **Palette (the plan's suggestion):** the polo can reuse Mr. Sells's three `shirt red` entries and his `kit` swap (`[["#960e1e", "#252429"], ["#d21a28", "#3a3940"], ["#f04842", "#5a5962"]]`), since an entry only has to be the shirt's alone on its own sprite. Then the print uses the standard reds and white and stays as it is on the black polo, and there are no new palette entries (50 of 64). A17 checks that the red polo still looks different enough from Mr. Sells's tee beside him; a mirror match of the two is red against red, as any two red-kit characters are.
+- **His racket is an American football** (the owner's call over the suggested chalkboard protractor), swung like a racket: looks only, as Mr. Sells's trombone and Mr. Canales's keyboard. **He holds it from the concept on**, so A18 animates him with it in one round. Brown leather with white laces and stripes, **drawn bigger than a real football** (about the size of a racket head) so it reads at the back of the court, where it's about 70% size. Its browns can come from Ronin's auburn tones (`#8a4a24`, `#5c2e18`), which only Ronin's recolour uses and which are free once he leaves; the laces from white. The `racket <tag>` slices go on the ball's centre.
+- **Photos to use:** the owner's photo of him (the face, and the whole body if there is one). **Still to come.**
+- **Replaces:** Ronin, so the roster becomes Mr. Alvarado, Adam (Mr. Canales after A16), Mr. Sells, Coach Zain.
+- **Before A17 starts:** his photo is in the `alvarado` folder, and his skin and hair are agreed here. **Credits:** 172 on the account (2026-11-24); Mr. Sells's concept cost 192, so A17 needs a top-up or December's credits.
 
 **In scope:** as `plan-v2.md`'s A7z, for this character:
 - **Spend gate:** check the balance, list the generations with model, quality and estimated credits (reference images are billed once per variation), then stop for the owner's OK.
@@ -354,3 +370,9 @@ Each session adds a few lines here: date, what changed, numbers measured, anythi
 - 2026-11-23, L2: **Mr. Canales's look agreed** (planning only), replacing Adam: id `canales`, "Mr. Canales" (A15 measures it and asks for a short name if needed), average height and build (100 px), the standard red and black kit, and **a keyboard for a racket**, held from the concept on so A16 needs only one round of animations. Written into A15's "Agreed with the owner".
   - **Still to come:** his photo, and his skin and hair from it. Both are needed before A15's spend gate.
   - **Next:** the owner puts his photo in `C:\Hogg Squash\Character References\canales\` and his skin and hair get agreed into A15; then 💳 approve A15's spend (Mr. Sells's concept cost 192; 172 credits were left after A14, so it needs December's credits or a top-up), then A15.
+- 2026-11-24, A15 started and **put on hold** (the owner's call): the `canales` folder didn't exist yet, so his skin and hair couldn't be agreed. A15, A16 and their 💳 lines are `[-]` until the photo comes. Nothing was generated. SpriteCook: **172 credits** (apprentice tier, active).
+  - **Next:** L3, so the next character goes ahead while Mr. Canales waits.
+- 2026-11-25, L3: **a new character replaces Ronin** (the owner's call): **Mr. Alvarado** (`alvarado`), a football coach and geometry teacher who has agreed to be in the game. Short (about 96 px) and of average build. He wears **his own Hogg football coach's polo**, red for P1 and black for P2 / CPU (a small razorback and HOGG FOOTBALL on the left chest, COACH across the back), and he **swings an American football**, held from the concept on so A18 needs one round of animations. Written into A17's "Agreed with the owner", with the plan's suggestions: reuse Mr. Sells's shirt reds and `kit` swap (no new palette entries), and Ronin's freed auburn tones for the football.
+  - **Still to come:** his photo, and his skin and hair from it; his short name (A17 measures "Mr. Alvarado").
+  - **P3** stays unticked: Mr. Canales's photo is still missing (and now Mr. Alvarado's too).
+  - **Next:** the owner puts Mr. Alvarado's photo in `C:\Hogg Squash\Character References\alvarado\`, his skin and hair get agreed into A17, and credits are topped up (172 left; a concept costs about 192–224); then 💳 approve A17's spend, then A17. Mr. Canales (A15, A16) comes back whenever his photo does.
